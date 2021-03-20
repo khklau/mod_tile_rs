@@ -1,36 +1,11 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
+#[macro_use] mod apache2;
+mod server_config;
 extern crate libc;
+
 use ::std::ptr;
 use ::std::os::raw::c_char;
+use crate::apache2::{apr_pool_t, module, MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR};
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-macro_rules! cstr {
-    ($s:expr) => (
-        concat!($s, "\0") as *const str as *const [c_char] as *const c_char
-    );
-}
-
-
-pub extern "C" fn create_server_config(
-        pool: *mut apr_pool_t,
-        server: *mut server_rec)
-    -> *mut ::std::os::raw::c_void
-{
-    return ptr::null_mut()
-}
-
-pub extern "C" fn merge_server_config(
-        pool: *mut apr_pool_t,
-        base_conf: *mut ::std::os::raw::c_void,
-        new_conf: *mut ::std::os::raw::c_void)
-    -> *mut ::std::os::raw::c_void
-{
-    return ptr::null_mut()
-}
 
 pub extern "C" fn register_hooks(p: *mut apr_pool_t)
 {
@@ -50,8 +25,8 @@ pub const tile_module: module = module {
     rewrite_args: None,
     create_dir_config: None,
     merge_dir_config: None,
-    create_server_config: Some(create_server_config),
-    merge_server_config: Some(merge_server_config),
+    create_server_config: Some(server_config::create),
+    merge_server_config: Some(server_config::merge),
     cmds: ptr::null(),
     register_hooks: Some(register_hooks),
     flags: 0
