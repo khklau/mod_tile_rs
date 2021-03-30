@@ -3,8 +3,13 @@ name = "mod_tile_rs"
 version = "0.1.0"
 authors = ["Kean H Lau <khklau@users.noreply.github.com>"]
 edition = "2018"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "mod_tile_rs"
+crate-type = ["dylib"]
 
 [build-dependencies]
 bindgen = "0.57.0"
