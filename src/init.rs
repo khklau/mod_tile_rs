@@ -8,7 +8,8 @@ use std::os::raw::c_int;
 use std::path::Path;
 use std::process;
 
-pub extern "C" fn post_config(
+#[no_mangle]
+pub extern fn post_config(
     _config_pool: *mut apr_pool_t,
     _logging_pool: *mut apr_pool_t,
     _temp_pool: *mut apr_pool_t,
