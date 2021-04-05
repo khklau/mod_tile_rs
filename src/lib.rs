@@ -10,7 +10,8 @@ use crate::apache2::{
 use std::os::raw::c_int;
 use std::ptr;
 
-pub extern "C" fn register_hooks(_pool: *mut apr_pool_t) {
+#[no_mangle]
+pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
         ap_hook_post_config(
             Some(init::post_config),
@@ -21,7 +22,8 @@ pub extern "C" fn register_hooks(_pool: *mut apr_pool_t) {
     }
 }
 
-pub const TILE_MODULE: module = module {
+#[no_mangle]
+pub static TILE_MODULE: module = module {
     version: MODULE_MAGIC_NUMBER_MAJOR as i32,
     minor_version: MODULE_MAGIC_NUMBER_MINOR as i32,
     module_index: -1,
