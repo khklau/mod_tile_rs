@@ -23,7 +23,7 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
 }
 
 #[no_mangle]
-pub static TILE_MODULE: module = module {
+pub static mut TILE_MODULE: module = module {
     version: MODULE_MAGIC_NUMBER_MAJOR as i32,
     minor_version: MODULE_MAGIC_NUMBER_MINOR as i32,
     module_index: -1,
