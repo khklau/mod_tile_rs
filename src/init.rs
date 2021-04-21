@@ -2,7 +2,7 @@ use crate::apache2::{
     apr_pool_t, log_error, server_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
 use std::ffi::CString;
-use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::raw::c_int;
 use std::path::Path;
@@ -17,7 +17,10 @@ pub extern fn post_config(
 ) -> c_int {
     let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
     let trace_path = Path::new(path_str.as_str());
-    let mut trace_file = match File::create(&trace_path) {
+    let mut trace_file = match OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&trace_path) {
         Err(why) => {
             log_error(
                 cstr!(file!()),

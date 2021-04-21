@@ -1,11 +1,12 @@
 #[macro_use]
 mod apache2;
 mod init;
+mod resource;
 extern crate libc;
 
 use crate::apache2::{
-    ap_hook_post_config, apr_pool_t, module, APR_HOOK_MIDDLE, MODULE_MAGIC_COOKIE,
-    MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
+    ap_hook_post_config, ap_hook_map_to_storage, apr_pool_t, module, APR_HOOK_FIRST, APR_HOOK_MIDDLE,
+    MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
 };
 use std::os::raw::c_int;
 use std::ptr;
@@ -19,6 +20,11 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
             ptr::null_mut(),
             APR_HOOK_MIDDLE as c_int,
         );
+        ap_hook_map_to_storage(
+            Some(resource::handle_request),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            APR_HOOK_FIRST as c_int);
     }
 }
 
