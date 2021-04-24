@@ -1,7 +1,6 @@
 use crate::apache2::{
-    log_error, request_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
+    request_rec, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
-use std::ffi::CString;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::raw::c_int;
@@ -19,46 +18,22 @@ pub extern fn handle_request(
         .append(true)
         .open(&trace_path) {
         Err(why) => {
-            unsafe {
-                log_error(
-                    cstr!(file!()),
-                    line!(),
-                    APLOG_ERR,
-                    -1,
-                    (*request_info).server,
-                    match CString::new(format!(
-                        "Can't create trace file {}: {}",
-                        trace_path.display(),
-                        why
-                    )) {
-                        Err(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
-                        Ok(err_msg) => err_msg,
-                    },
-                );
-            }
+            log_error!(
+                (*request_info).server,
+                format!("Can't create trace file {}: {}", trace_path.display(), why),
+                return HTTP_INTERNAL_SERVER_ERROR as c_int
+            );
             return HTTP_INTERNAL_SERVER_ERROR as c_int;
         }
         Ok(file) => file,
     };
     match trace_file.write_all(b"resource::handle_request - start\n") {
         Err(why) => {
-            unsafe {
-                log_error(
-                    cstr!(file!()),
-                    line!(),
-                    APLOG_ERR,
-                    -1,
-                    (*request_info).server,
-                    match CString::new(format!(
-                        "Can't write to trace file {}: {}",
-                        trace_path.display(),
-                        why
-                    )) {
-                        Err(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
-                        Ok(err_msg) => err_msg,
-                    },
-                );
-            }
+            log_error!(
+                (*request_info).server,
+                format!("Can't write to trace file {}: {}", trace_path.display(), why),
+                return HTTP_INTERNAL_SERVER_ERROR as c_int
+            );
             return HTTP_INTERNAL_SERVER_ERROR as c_int;
         }
         Ok(result) => result,
