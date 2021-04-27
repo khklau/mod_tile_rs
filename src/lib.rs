@@ -1,6 +1,6 @@
 #[macro_use]
 mod apache2;
-mod init;
+mod initialisation;
 mod resource;
 extern crate libc;
 
@@ -15,7 +15,7 @@ use std::ptr;
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
         ap_hook_post_config(
-            Some(init::post_config),
+            Some(initialisation::post_config),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_MIDDLE as c_int,
