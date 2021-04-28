@@ -6,6 +6,7 @@ use std::io::Write;
 use std::os::raw::c_int;
 use std::path::Path;
 use std::process;
+use std::ptr;
 
 #[no_mangle]
 pub extern fn post_config(
@@ -14,8 +15,16 @@ pub extern fn post_config(
     temp_pool: *mut apr_pool_t,
     server_info: *mut server_rec,
 ) -> c_int {
-    unsafe {
-        return _post_config(&mut *config_pool, &mut *logging_pool, &mut *temp_pool, &mut *server_info) as c_int;
+    if config_pool != ptr::null_mut()
+        && logging_pool != ptr::null_mut()
+        && temp_pool != ptr::null_mut()
+        && server_info != ptr::null_mut() {
+        unsafe {
+            return _post_config(&mut *config_pool, &mut *logging_pool, &mut *temp_pool, &mut *server_info) as c_int;
+        }
+    }
+    else {
+        return HTTP_INTERNAL_SERVER_ERROR as c_int;
     }
 }
 
@@ -43,7 +52,7 @@ fn _post_config(
         }
         Ok(file) => file,
     };
-    match trace_file.write_all(b"init::post_config - start\n") {
+    match trace_file.write_all(b"initialisation::post_config - start\n") {
         Err(why) => {
             try_log_else!((
                 APLOG_ERR,
