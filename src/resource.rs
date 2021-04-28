@@ -6,13 +6,19 @@ use std::io::Write;
 use std::os::raw::c_int;
 use std::path::Path;
 use std::process;
+use std::ptr;
 
 #[no_mangle]
 pub extern fn handle_request(
     request_info: *mut request_rec
 ) -> c_int {
-    unsafe {
-        return _handle_request(&mut *request_info) as c_int;
+    if request_info != ptr::null_mut() {
+        unsafe {
+            return _handle_request(&mut *request_info) as c_int;
+        }
+    }
+    else {
+        return HTTP_INTERNAL_SERVER_ERROR as c_int;
     }
 }
 
