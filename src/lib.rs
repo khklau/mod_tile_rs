@@ -10,6 +10,10 @@ use crate::apache2::{
 };
 use std::os::raw::c_int;
 use std::ptr;
+use std::alloc::System;
+
+#[global_allocator]
+static GLOBAL: System = System;
 
 #[no_mangle]
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
