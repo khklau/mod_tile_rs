@@ -18,10 +18,10 @@ macro_rules! cstr {
 macro_rules! try_log_else {
     (($level: expr, $server_expr: expr, $msg_expr: expr) {$log_failure_expr: expr}) => {
         unsafe {
-            crate::apache2::ap_log_error_(
+            crate::core::apache2::ap_log_error_(
                 cstr!(file!()),
                 line!() as std::os::raw::c_int,
-                crate::apache2::APLOG_NO_MODULE as c_int,
+                crate::core::apache2::APLOG_NO_MODULE as c_int,
                 $level as c_int,
                 -1,
                 $server_expr,

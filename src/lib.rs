@@ -1,10 +1,13 @@
 #[macro_use]
-mod apache2;
+mod core {
+#[macro_use]
+    pub mod apache2;
+}
 mod initialisation;
 mod resource;
 extern crate libc;
 
-use crate::apache2::{
+use crate::core::apache2::{
     ap_hook_post_config, ap_hook_map_to_storage, apr_pool_t, module, APR_HOOK_FIRST, APR_HOOK_MIDDLE,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
 };
