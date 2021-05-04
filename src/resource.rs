@@ -1,4 +1,4 @@
-use crate::apache2::{
+use crate::core::apache2::{
     request_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
 use std::fs::OpenOptions;
