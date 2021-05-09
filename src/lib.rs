@@ -1,6 +1,8 @@
+#![feature(allocator_api)]
+
 #[macro_use]
 mod core {
-#[macro_use]
+    #[macro_use]
     pub mod apache2;
 }
 mod initialisation;
