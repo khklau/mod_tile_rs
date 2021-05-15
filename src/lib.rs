@@ -7,10 +7,14 @@ mod core {
 }
 mod initialisation;
 mod resource;
+mod storage {
+    pub mod file_system;
+}
 extern crate libc;
 
 use crate::core::apache2::{
-    ap_hook_post_config, ap_hook_map_to_storage, apr_pool_t, module, APR_HOOK_FIRST, APR_HOOK_MIDDLE,
+    ap_hook_child_init, ap_hook_post_config, ap_hook_map_to_storage, apr_pool_t, module,
+    APR_HOOK_FIRST, APR_HOOK_MIDDLE,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
 };
 use std::os::raw::c_int;
@@ -25,6 +29,12 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
         ap_hook_post_config(
             Some(initialisation::post_config),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            APR_HOOK_MIDDLE as c_int,
+        );
+        ap_hook_child_init(
+            Some(storage::file_system::initialise),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_MIDDLE as c_int,
