@@ -1,9 +1,9 @@
 #![feature(allocator_api)]
 
 #[macro_use]
-mod core {
+mod apache2 {
     #[macro_use]
-    pub mod apache2;
+    pub mod bindings;
 }
 mod initialisation;
 mod resource;
@@ -12,7 +12,7 @@ mod storage {
 }
 extern crate libc;
 
-use crate::core::apache2::{
+use crate::apache2::bindings::{
     ap_hook_child_init, ap_hook_post_config, ap_hook_map_to_storage, apr_pool_t, module,
     APR_HOOK_FIRST, APR_HOOK_MIDDLE,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
