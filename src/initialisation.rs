@@ -1,4 +1,4 @@
-use crate::core::apache2::{
+use crate::apache2::bindings::{
     apr_pool_t, server_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
 use std::fs::OpenOptions;
