@@ -1,9 +1,8 @@
-#![feature(allocator_api)]
-
 #[macro_use]
 mod apache2 {
     #[macro_use]
     pub mod bindings;
+    pub mod memory;
 }
 mod initialisation;
 mod resource;
