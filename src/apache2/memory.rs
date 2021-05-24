@@ -1,30 +1,47 @@
-use crate::apache2::bindings::{apr_palloc, memset,};
+use crate::apache2::bindings::{
+    apr_palloc, apr_pool_t, apr_size_t, memset,
+};
 
-use std::alloc::{GlobalAlloc, Layout};
-use std::boxed::Box;
+use std::alloc::Layout;
 use std::os::raw::c_ulong;
 use std::ptr;
+use std::result::Result;
 
-struct MemoryPool {
-    pool: *mut apr_pool_t,
-}
+pub struct AllocError {}
 
-unsafe impl GlobalAlloc for MemoryPool {
-
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if self.pool != ptr::null_mut() {
-            let ptr = apr_palloc(self.pool, layout.size() as apr_size_t);
-            if ptr != ptr::null_mut() {
-                return memset(ptr, 0, layout.size() as c_ulong) as *mut u8;
-            }
+pub fn alloc<'p, T>(pool: &'p mut apr_pool_t) -> Result<&'p mut T, AllocError> {
+    let layout = Layout::new::<T>();
+    unsafe {
+        let ptr_raw = apr_palloc(pool, layout.size() as apr_size_t);
+        if ptr_raw == ptr::null_mut() {
+            return Err(AllocError{});
         }
-        return ptr::null_mut()
-    }
-
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        // freeing individual allocations is not required for memory pools
-        ()
+        else {
+            let ptr_zeroed = memset(ptr_raw, 0, layout.size() as c_ulong) as *mut T;
+            return Ok(&mut *ptr_zeroed)
+        }
     }
 }
 
-type PoolBox<T> = Box<T, MemoryPool>;
+pub struct MemoryPool<'p> {
+    pub pool: &'p mut apr_pool_t,
+}
+
+impl<'p> MemoryPool<'p> {
+    pub fn new(pool_ptr: *mut apr_pool_t) -> Result<Self, AllocError> {
+        if pool_ptr != ptr::null_mut() {
+            return Err(AllocError{});
+        }
+        unsafe {
+            let pool_ref = &mut *pool_ptr;
+            let mem_pool = MemoryPool {
+                pool: pool_ref,
+            };
+            return Ok(mem_pool);
+        }
+    }
+
+    pub fn alloc<T>(&'p mut self) -> Result<&'p mut T, AllocError> {
+        return alloc(self.pool);
+    }
+}
