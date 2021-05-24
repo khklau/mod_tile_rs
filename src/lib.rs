@@ -3,6 +3,7 @@ mod apache2 {
     #[macro_use]
     pub mod bindings;
     pub mod memory;
+    pub mod request;
 }
 mod initialisation;
 mod resource;
