@@ -12,15 +12,15 @@ use std::result::Result;
 use std::ptr;
 
 pub struct Request<'r> {
-    record: &'r mut request_rec,
-    pool: MemoryPool<'r>,
-    file_name: Option<CString>,
+    pub record: &'r mut request_rec,
+    pub pool: MemoryPool<'r>,
+    pub file_name: Option<CString>,
 }
 
 impl<'r> Request<'r> {
     const USER_DATA_KEY: *const c_char = cstr!(module_path!());
 
-    fn new(record: &'r mut request_rec) -> Result<&'r mut Self, AllocError> {
+    pub fn new(record: &'r mut request_rec) -> Result<&'r mut Self, AllocError> {
         if record.pool == ptr::null_mut() {
             return Err(AllocError{})
         }
