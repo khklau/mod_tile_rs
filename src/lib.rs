@@ -7,6 +7,9 @@ mod apache2 {
 }
 mod initialisation;
 mod resource;
+mod slippy {
+    pub mod request;
+}
 mod storage {
     pub mod file_system;
 }
