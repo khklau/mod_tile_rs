@@ -81,24 +81,20 @@ fn _translate(
         .open(&trace_path) {
         Ok(file) => file,
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 request.record.server,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)) {
-                    return Err(TranslateError::Env(EnvironmentError{ reason: "Can't log" }))
-                }
+                format!("Can't create trace file {}: {}", trace_path.display(), why)
             );
             return Err(TranslateError::Env(EnvironmentError { reason: format!("Can't open {}", path_str) }));
         },
     };
     match trace_file.write_all(b"slippy::request::translate - start\n") {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 request.record.server,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)) {
-                    return Err(TranslateError::Env(EnvironmentError { reason: "Can't log" }))
-                }
+                format!("Can't write to trace file {}: {}", trace_path.display(), why)
             );
             return Err(TranslateError::Env(EnvironmentError { reason: format!("Can't write to {}", path_str) }));
         },
@@ -106,12 +102,10 @@ fn _translate(
     }
     match trace_file.write_all(b"slippy::request::translate - finish\n") {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 request.record.server,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)) {
-                    return Err(TranslateError::Env(EnvironmentError { reason: "Can't log" }))
-                }
+                format!("Can't write to trace file {}: {}", trace_path.display(), why)
             );
             return Err(TranslateError::Env(EnvironmentError { reason: format!("Can't write to {}", path_str) }));
         },

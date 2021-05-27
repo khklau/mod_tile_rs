@@ -32,12 +32,10 @@ fn _handle_request(
         .append(true)
         .open(&trace_path) {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 request_info.server,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)) {
-                    return HTTP_INTERNAL_SERVER_ERROR
-                }
+                format!("Can't create trace file {}: {}", trace_path.display(), why)
             );
             return HTTP_INTERNAL_SERVER_ERROR;
         }
@@ -45,12 +43,10 @@ fn _handle_request(
     };
     match trace_file.write_all(b"resource::handle_request - start\n") {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 request_info.server,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)) {
-                    return HTTP_INTERNAL_SERVER_ERROR
-                }
+                format!("Can't write to trace file {}: {}", trace_path.display(), why)
             );
             return HTTP_INTERNAL_SERVER_ERROR;
         }

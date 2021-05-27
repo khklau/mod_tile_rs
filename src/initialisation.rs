@@ -41,12 +41,10 @@ fn _post_config(
         .append(true)
         .open(&trace_path) {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 server_info,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)) {
-                    return HTTP_INTERNAL_SERVER_ERROR
-                }
+                format!("Can't create trace file {}: {}", trace_path.display(), why)
             );
             return HTTP_INTERNAL_SERVER_ERROR;
         }
@@ -54,12 +52,10 @@ fn _post_config(
     };
     match trace_file.write_all(b"initialisation::post_config - start\n") {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 server_info,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)) {
-                    return HTTP_INTERNAL_SERVER_ERROR
-                }
+                format!("Can't write to trace file {}: {}", trace_path.display(), why)
             );
             return HTTP_INTERNAL_SERVER_ERROR;
         }
