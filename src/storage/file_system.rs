@@ -33,24 +33,20 @@ fn _initialise(
         .open(&trace_path) {
         Ok(file) => file,
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 server_info,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)) {
-                    return
-                }
+                format!("Can't create trace file {}: {}", trace_path.display(), why)
             );
             return;
         },
     };
     match trace_file.write_all(b"storage::file_system::initialise - start\n") {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 server_info,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)) {
-                    return
-                }
+                format!("Can't write to trace file {}: {}", trace_path.display(), why)
             );
             return;
         },
@@ -58,12 +54,10 @@ fn _initialise(
     }
     match trace_file.write_all(b"storage::file_system::initialise - finish\n") {
         Err(why) => {
-            try_log_else!((
+            log!(
                 APLOG_ERR,
                 server_info,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)) {
-                    return
-                }
+                format!("Can't write to trace file {}: {}", trace_path.display(), why)
             );
             return;
         },
