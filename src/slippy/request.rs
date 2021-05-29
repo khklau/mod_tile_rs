@@ -1,8 +1,11 @@
+#![allow(unused_unsafe)]
+
 use crate::apache2::bindings::{
-    request_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, DECLINED, OK,
+    request_rec, APLOG_ERR, APLOG_NOTICE, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
 use crate::apache2::request::Request;
 
+use std::convert::From;
 use std::error::Error;
 use std::ffi::CString;
 use std::fmt;
@@ -15,20 +18,28 @@ use std::ptr;
 use std::result::Result;
 
 #[no_mangle]
-pub extern fn translate(
-    record: *mut request_rec,
-) -> c_int {
-    if record == ptr::null_mut() {
+pub extern "C" fn translate(record_ptr: *mut request_rec) -> c_int {
+    if record_ptr == ptr::null_mut() {
         return HTTP_INTERNAL_SERVER_ERROR as c_int;
-    }
-    else {
+    } else {
         unsafe {
-            match Request::new(&mut *record) {
+            let mut record = *record_ptr;
+            match Request::new(&mut record) {
                 Ok(request) => match _translate(request) {
                     Ok(_) => return OK as c_int,
                     Err(err) => match err {
-                        TranslateError::Param(_) => return DECLINED as c_int,
-                        TranslateError::Env(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
+                        TranslateError::Param(err) => {
+                            log!(
+                                APLOG_NOTICE,
+                                record.server,
+                                format!("Parameter {} error: {}", err.param, err.reason)
+                            );
+                            return DECLINED as c_int;
+                        }
+                        TranslateError::Io(why) => {
+                            log!(APLOG_ERR, record.server, format!("IO error: {}", why));
+                            return HTTP_INTERNAL_SERVER_ERROR as c_int;
+                        }
                     },
                 },
                 Err(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
@@ -40,7 +51,13 @@ pub extern fn translate(
 #[derive(Debug)]
 enum TranslateError {
     Param(InvalidParameterError),
-    Env(EnvironmentError),
+    Io(std::io::Error),
+}
+
+impl From<std::io::Error> for TranslateError {
+    fn from(error: std::io::Error) -> Self {
+        return TranslateError::Io(error);
+    }
 }
 
 #[derive(Debug)]
@@ -57,60 +74,14 @@ impl fmt::Display for InvalidParameterError {
     }
 }
 
-#[derive(Debug)]
-struct EnvironmentError {
-    reason: String,
-}
-
-impl Error for EnvironmentError {}
-
-impl fmt::Display for EnvironmentError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Environment error: {}", self.reason)
-    }
-}
-
-fn _translate(
-    request: &Request,
-) -> Result<CString, TranslateError> {
+fn _translate(request: &Request) -> Result<CString, TranslateError> {
     let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
     let trace_path = Path::new(path_str.as_str());
-    let mut trace_file = match OpenOptions::new()
+    let mut trace_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&trace_path) {
-        Ok(file) => file,
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                request.record.server,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)
-            );
-            return Err(TranslateError::Env(EnvironmentError { reason: format!("Can't open {}", path_str) }));
-        },
-    };
-    match trace_file.write_all(b"slippy::request::translate - start\n") {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                request.record.server,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)
-            );
-            return Err(TranslateError::Env(EnvironmentError { reason: format!("Can't write to {}", path_str) }));
-        },
-        Ok(result) => result,
-    }
-    match trace_file.write_all(b"slippy::request::translate - finish\n") {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                request.record.server,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)
-            );
-            return Err(TranslateError::Env(EnvironmentError { reason: format!("Can't write to {}", path_str) }));
-        },
-        Ok(result) => result,
-    }
+        .open(&trace_path)?;
+    trace_file.write_all(b"slippy::request::translate - start\n")?;
+    trace_file.write_all(b"slippy::request::translate - finish\n")?;
     Ok(CString::new("blah").unwrap())
 }
-
