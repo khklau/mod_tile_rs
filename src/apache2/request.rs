@@ -11,13 +11,13 @@ use std::os::raw::{c_char, c_void,};
 use std::result::Result;
 use std::ptr;
 
-pub struct Request<'r> {
+pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
     pub pool: MemoryPool<'r>,
     pub file_name: Option<CString>,
 }
 
-impl<'r> Request<'r> {
+impl<'r> RequestContext<'r> {
     const USER_DATA_KEY: *const c_char = cstr!(module_path!());
 
     pub fn new(record: &'r mut request_rec) -> Result<&'r mut Self, AllocError> {
@@ -26,13 +26,13 @@ impl<'r> Request<'r> {
         }
         unsafe {
             let rec_pool = &mut *(record.pool);
-            let request = alloc::<Request<'r>>(rec_pool)?;
+            let request = alloc::<RequestContext<'r>>(rec_pool)?;
             let mem_pool = MemoryPool::new(record.pool)?;
             request.record = record;
             request.pool = mem_pool;
             apr_pool_userdata_set(
                 request as *mut _ as *mut c_void,
-                Request::USER_DATA_KEY,
+                RequestContext::USER_DATA_KEY,
                 Some(drop_request),
                 request.record.pool
             );
@@ -50,7 +50,7 @@ pub unsafe extern fn drop_request(request_void: *mut c_void) -> apr_status_t {
     if request_void == ptr::null_mut() {
         return APR_BADARG as apr_status_t;
     }
-    let request_ptr = request_void as *mut Request;
+    let request_ptr = request_void as *mut RequestContext;
     let request_ref = &mut *request_ptr;
     drop(request_ref);
     return APR_SUCCESS as apr_status_t;
