@@ -4,8 +4,8 @@ mod apache2 {
     pub mod bindings;
     pub mod memory;
     pub mod request;
+    pub mod worker;
 }
-mod initialisation;
 mod resource;
 mod slippy {
     pub mod request;
@@ -16,7 +16,8 @@ mod storage {
 extern crate libc;
 
 use crate::apache2::bindings::{
-    ap_hook_child_init, ap_hook_post_config, ap_hook_map_to_storage, apr_pool_t, module,
+    ap_hook_child_init, ap_hook_post_config, ap_hook_map_to_storage, ap_hook_translate_name,
+    apr_pool_t, module,
     APR_HOOK_FIRST, APR_HOOK_MIDDLE,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
 };
@@ -26,29 +27,6 @@ use std::alloc::System;
 
 #[global_allocator]
 static GLOBAL: System = System;
-
-#[no_mangle]
-pub extern fn register_hooks(_pool: *mut apr_pool_t) {
-    unsafe {
-        ap_hook_post_config(
-            Some(initialisation::post_config),
-            ptr::null_mut(),
-            ptr::null_mut(),
-            APR_HOOK_MIDDLE as c_int,
-        );
-        ap_hook_child_init(
-            Some(storage::file_system::initialise),
-            ptr::null_mut(),
-            ptr::null_mut(),
-            APR_HOOK_MIDDLE as c_int,
-        );
-        ap_hook_map_to_storage(
-            Some(resource::handle_request),
-            ptr::null_mut(),
-            ptr::null_mut(),
-            APR_HOOK_FIRST as c_int);
-    }
-}
 
 #[no_mangle]
 pub static mut TILE_MODULE: module = module {
@@ -68,3 +46,33 @@ pub static mut TILE_MODULE: module = module {
     register_hooks: Some(register_hooks),
     flags: 0,
 };
+
+#[no_mangle]
+pub extern fn register_hooks(_pool: *mut apr_pool_t) {
+    unsafe {
+        ap_hook_post_config(
+            Some(apache2::worker::post_config),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            APR_HOOK_MIDDLE as c_int,
+        );
+        ap_hook_child_init(
+            Some(storage::file_system::initialise),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            APR_HOOK_MIDDLE as c_int,
+        );
+        ap_hook_translate_name(
+            Some(slippy::request::translate),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            APR_HOOK_MIDDLE as c_int,
+        );
+        ap_hook_map_to_storage(
+            Some(resource::handle_request),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            APR_HOOK_FIRST as c_int,
+        );
+    }
+}
