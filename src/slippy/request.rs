@@ -3,7 +3,7 @@
 use crate::apache2::bindings::{
     request_rec, APLOG_ERR, APLOG_NOTICE, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
-use crate::apache2::request::Request;
+use crate::apache2::request::RequestContext;
 
 use std::convert::From;
 use std::error::Error;
@@ -24,7 +24,7 @@ pub extern "C" fn translate(record_ptr: *mut request_rec) -> c_int {
     } else {
         unsafe {
             let mut record = *record_ptr;
-            match Request::new(&mut record) {
+            match RequestContext::new(&mut record) {
                 Ok(request) => match _translate(request) {
                     Ok(_) => return OK as c_int,
                     Err(err) => match err {
@@ -74,7 +74,7 @@ impl fmt::Display for InvalidParameterError {
     }
 }
 
-fn _translate(request: &Request) -> Result<CString, TranslateError> {
+fn _translate(request: &RequestContext) -> Result<CString, TranslateError> {
     let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
     let trace_path = Path::new(path_str.as_str());
     let mut trace_file = OpenOptions::new()
