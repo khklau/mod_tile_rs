@@ -124,7 +124,13 @@ pub extern fn on_post_config_read(
                     return HTTP_INTERNAL_SERVER_ERROR as c_int;
                 },
             };
-            return _on_post_config_read(&mut context) as c_int;
+            match _on_post_config_read(&mut context) {
+                Ok(_) => return OK as c_int,
+                Err(why) => {
+                    log!(APLOG_ERR, server_info, format!("Post config read processing failed: {}", why));
+                    return HTTP_INTERNAL_SERVER_ERROR as c_int;
+                },
+            }
         }
     }
     else {
@@ -134,17 +140,8 @@ pub extern fn on_post_config_read(
 
 fn _on_post_config_read(
     context: &WorkerContext,
-) -> u32 {
-    match context.trace_file.borrow_mut().write_all(b"apache2::worker::on_post_config_read - start\n") {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                context.record,
-                format!("Can't write to trace file {}: {}", context.trace_path.display(), why)
-            );
-            return HTTP_INTERNAL_SERVER_ERROR;
-        }
-        Ok(result) => result,
-    };
-    OK
+) -> Result<(), std::io::Error> {
+    context.trace_file.borrow_mut().write_all(b"apache2::worker::on_post_config_read - start\n")?;
+    context.trace_file.borrow_mut().write_all(b"apache2::worker::on_post_config_read - finish\n")?;
+    Ok(())
 }
