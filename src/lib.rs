@@ -2,6 +2,7 @@
 mod apache2 {
     #[macro_use]
     pub mod bindings;
+    pub mod hook;
     pub mod memory;
     pub mod request;
     pub mod worker;
@@ -51,7 +52,7 @@ pub static mut TILE_MODULE: module = module {
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
         ap_hook_post_config(
-            Some(apache2::worker::post_config),
+            Some(apache2::worker::on_post_config_read),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_MIDDLE as c_int,

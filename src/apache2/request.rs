@@ -2,10 +2,11 @@ use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     ap_set_module_config, apr_pool_userdata_set, apr_status_t, request_rec,
 };
-use crate::apache2::memory::{
-    AllocError, MemoryPool, alloc,
-};
+use crate::apache2::hook::InvalidArgError;
+use crate::apache2::memory::alloc;
 
+use std::boxed::Box;
+use std::error::Error;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void,};
 use std::result::Result;
@@ -13,23 +14,23 @@ use std::ptr;
 
 pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
-    pub pool: MemoryPool<'r>,
     pub file_name: Option<CString>,
 }
 
 impl<'r> RequestContext<'r> {
     const USER_DATA_KEY: *const c_char = cstr!(module_path!());
 
-    pub fn new(record: &'r mut request_rec) -> Result<&'r mut Self, AllocError> {
+    pub fn new(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
-            return Err(AllocError{})
+            return Err(Box::new(InvalidArgError{
+                arg: "request_rec.pool".to_string(),
+                reason: "null pointer".to_string(),
+            }));
         }
         unsafe {
             let rec_pool = &mut *(record.pool);
             let request = alloc::<RequestContext<'r>>(rec_pool)?;
-            let mem_pool = MemoryPool::new(record.pool)?;
             request.record = record;
-            request.pool = mem_pool;
             apr_pool_userdata_set(
                 request as *mut _ as *mut c_void,
                 RequestContext::USER_DATA_KEY,
