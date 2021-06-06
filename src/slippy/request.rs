@@ -12,6 +12,7 @@ use std::fmt;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::raw::c_int;
+use std::option::Option;
 use std::path::Path;
 use std::process;
 use std::ptr;
@@ -24,7 +25,7 @@ pub extern "C" fn translate(record_ptr: *mut request_rec) -> c_int {
     } else {
         unsafe {
             let mut record = *record_ptr;
-            match RequestContext::new(&mut record) {
+            match RequestContext::find_or_create(&mut record) {
                 Ok(request) => match _translate(request) {
                     Ok(_) => return OK as c_int,
                     Err(err) => match err {
@@ -48,10 +49,40 @@ pub extern "C" fn translate(record_ptr: *mut request_rec) -> c_int {
     }
 }
 
+fn _translate(request: &RequestContext) -> Result<CString, TranslateError> {
+    let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
+    let trace_path = Path::new(path_str.as_str());
+    let mut trace_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&trace_path)?;
+    trace_file.write_all(b"slippy::request::translate - start\n")?;
+    trace_file.write_all(b"slippy::request::translate - finish\n")?;
+    Ok(CString::new("blah").unwrap())
+}
+
 #[derive(Debug)]
 enum TranslateError {
     Param(InvalidParameterError),
     Io(std::io::Error),
+}
+
+impl Error for TranslateError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            TranslateError::Param(err) => return Some(err),
+            TranslateError::Io(err) => return Some(err),
+        }
+    }
+}
+
+impl fmt::Display for TranslateError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TranslateError::Param(err) => return write!(f, "{}", err),
+            TranslateError::Io(err) => return write!(f, "{}", err),
+        }
+    }
 }
 
 impl From<std::io::Error> for TranslateError {
@@ -72,16 +103,4 @@ impl fmt::Display for InvalidParameterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Parameter {} is invalid: {}", self.param, self.reason)
     }
-}
-
-fn _translate(request: &RequestContext) -> Result<CString, TranslateError> {
-    let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
-    let trace_path = Path::new(path_str.as_str());
-    let mut trace_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&trace_path)?;
-    trace_file.write_all(b"slippy::request::translate - start\n")?;
-    trace_file.write_all(b"slippy::request::translate - finish\n")?;
-    Ok(CString::new("blah").unwrap())
 }

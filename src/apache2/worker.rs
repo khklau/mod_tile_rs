@@ -42,25 +42,25 @@ impl<'w> WorkerContext<'w> {
                     reason: "null pointer".to_string(),
                 }));
             }
-            let worker = match Self::find(&mut *(proc_record.pool)) {
-                Some(existing_worker) => existing_worker,
+            let context = match Self::find(&mut *(proc_record.pool)) {
+                Some(existing_context) => existing_context,
                 None => Self::create(record, &mut *(proc_record.pool))?,
             };
-            return Ok(worker);
+            return Ok(context);
         }
     }
 
     fn find(process_pool: &'w mut apr_pool_t) -> Option<&'w mut Self> {
-        let mut worker_ptr: *mut WorkerContext<'w> = ptr::null_mut();
+        let mut context_ptr: *mut WorkerContext<'w> = ptr::null_mut();
         unsafe {
             let get_result = apr_pool_userdata_get(
-                &mut worker_ptr as *mut *mut WorkerContext<'w> as *mut *mut c_void,
+                &mut context_ptr as *mut *mut WorkerContext<'w> as *mut *mut c_void,
                 WorkerContext::USER_DATA_KEY,
                 process_pool
             );
             if get_result == (APR_SUCCESS as i32) {
-                let existing_worker = &mut (*worker_ptr);
-                return Some(existing_worker);
+                let existing_context = &mut (*context_ptr);
+                return Some(existing_context);
             } else {
                 return None;
             }
@@ -72,36 +72,36 @@ impl<'w> WorkerContext<'w> {
         process_pool: &'w mut apr_pool_t
     ) -> Result<&'w mut Self, Box<dyn Error>> {
         let pool_ptr = process_pool as *mut apr_pool_t;
-        let new_worker = alloc::<WorkerContext<'w>>(process_pool)?;
-        new_worker.record = record;
+        let new_context = alloc::<WorkerContext<'w>>(process_pool)?;
+        new_context.record = record;
         unsafe {
             apr_pool_userdata_set(
-                new_worker as *mut _ as *mut c_void,
+                new_context as *mut _ as *mut c_void,
                 WorkerContext::USER_DATA_KEY,
-                Some(drop_worker),
+                Some(drop_worker_context),
                 pool_ptr
             );
         }
 
         let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
-        new_worker.trace_path = PathBuf::from(path_str.as_str());
-        new_worker.trace_file = RefCell::new(OpenOptions::new()
+        new_context.trace_path = PathBuf::from(path_str.as_str());
+        new_context.trace_file = RefCell::new(OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&new_worker.trace_path.as_path())?
+            .open(&new_context.trace_path.as_path())?
         );
-        return Ok(new_worker);
+        return Ok(new_context);
     }
 }
 
 #[no_mangle]
-pub unsafe extern fn drop_worker(worker_void: *mut c_void) -> apr_status_t {
+pub unsafe extern fn drop_worker_context(worker_void: *mut c_void) -> apr_status_t {
     if worker_void == ptr::null_mut() {
         return APR_BADARG as apr_status_t;
     }
-    let worker_ptr = worker_void as *mut WorkerContext;
-    let worker_ref = &mut *worker_ptr;
-    drop(worker_ref);
+    let context_ptr = worker_void as *mut WorkerContext;
+    let context_ref = &mut *context_ptr;
+    drop(context_ref);
     return APR_SUCCESS as apr_status_t;
 }
 

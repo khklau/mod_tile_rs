@@ -1,9 +1,11 @@
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
-    ap_set_module_config, apr_pool_userdata_set, apr_status_t, request_rec,
+    apr_pool_t, apr_pool_userdata_get, apr_pool_userdata_set,
+    apr_status_t, request_rec, server_rec,
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::alloc;
+use crate::apache2::worker::WorkerContext;
 
 use std::boxed::Box;
 use std::error::Error;
@@ -14,40 +16,78 @@ use std::ptr;
 
 pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
+    pub worker: &'r mut WorkerContext<'r>,
     pub file_name: Option<CString>,
 }
 
 impl<'r> RequestContext<'r> {
     const USER_DATA_KEY: *const c_char = cstr!(module_path!());
 
-    pub fn new(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "request_rec.pool".to_string(),
                 reason: "null pointer".to_string(),
             }));
+        } else if record.server == ptr::null_mut() {
+            return Err(Box::new(InvalidArgError{
+                arg: "request_rec.server".to_string(),
+                reason: "null pointer".to_string(),
+            }));
         }
         unsafe {
-            let rec_pool = &mut *(record.pool);
-            let request = alloc::<RequestContext<'r>>(rec_pool)?;
-            request.record = record;
-            apr_pool_userdata_set(
-                request as *mut _ as *mut c_void,
-                RequestContext::USER_DATA_KEY,
-                Some(drop_request),
-                request.record.pool
-            );
-            ap_set_module_config(
-                request.record.request_config,
-                &crate::TILE_MODULE,
-                request as *mut _ as *mut c_void);
-            return Ok(request);
+            let context = match Self::find(&mut *(record.pool)) {
+                Some(existing_context) => existing_context,
+                None => {
+                    let server = &mut *(record.server);
+                    let pool = &mut *(record.pool);
+                    Self::create(record, server, pool)?
+                },
+            };
+            return Ok(context);
         }
+    }
+
+    fn find(request_pool: &'r mut apr_pool_t) -> Option<&'r mut Self> {
+        let mut context_ptr: *mut RequestContext<'r> = ptr::null_mut();
+        unsafe {
+            let get_result = apr_pool_userdata_get(
+                &mut context_ptr as *mut *mut RequestContext<'r> as *mut *mut c_void,
+                RequestContext::USER_DATA_KEY,
+                request_pool
+            );
+            if get_result == (APR_SUCCESS as i32) {
+                let existing_context = &mut (*context_ptr);
+                return Some(existing_context);
+            } else {
+                return None;
+            }
+        }
+    }
+
+    fn create(
+        record: &'r mut request_rec,
+        server: &'r mut server_rec,
+        record_pool: &'r mut apr_pool_t
+    ) -> Result<&'r mut Self, Box<dyn Error>> {
+        let pool_ptr = record_pool as *mut apr_pool_t;
+        let new_context = alloc::<RequestContext<'r>>(record_pool)?;
+        new_context.record = record;
+        unsafe {
+            apr_pool_userdata_set(
+                new_context as *mut _ as *mut c_void,
+                RequestContext::USER_DATA_KEY,
+                Some(drop_request_context),
+                pool_ptr
+            );
+        }
+        new_context.worker = WorkerContext::find_or_create(server)?;
+        return Ok(new_context);
     }
 }
 
 #[no_mangle]
-pub unsafe extern fn drop_request(request_void: *mut c_void) -> apr_status_t {
+pub unsafe extern fn drop_request_context(request_void: *mut c_void) -> apr_status_t {
     if request_void == ptr::null_mut() {
         return APR_BADARG as apr_status_t;
     }
