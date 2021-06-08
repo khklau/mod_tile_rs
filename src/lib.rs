@@ -2,6 +2,7 @@
 mod apache2 {
     #[macro_use]
     pub mod bindings;
+    pub mod connection;
     pub mod hook;
     pub mod memory;
     pub mod request;

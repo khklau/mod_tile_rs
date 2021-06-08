@@ -1,8 +1,9 @@
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     apr_pool_t, apr_pool_userdata_get, apr_pool_userdata_set,
-    apr_status_t, request_rec, server_rec,
+    apr_status_t, conn_rec, request_rec, server_rec,
 };
+use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::alloc;
 use crate::apache2::worker::WorkerContext;
@@ -17,6 +18,7 @@ use std::ptr;
 pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
     pub worker: &'r mut WorkerContext<'r>,
+    pub connection: &'r mut ConnectionContext<'r>,
     pub file_name: Option<CString>,
 }
 
@@ -34,6 +36,11 @@ impl<'r> RequestContext<'r> {
                 arg: "request_rec.server".to_string(),
                 reason: "null pointer".to_string(),
             }));
+        } else if record.connection == ptr::null_mut() {
+            return Err(Box::new(InvalidArgError{
+                arg: "request_rec.connection".to_string(),
+                reason: "null pointer".to_string(),
+            }));
         }
         unsafe {
             let context = match Self::find(&mut *(record.pool)) {
@@ -41,7 +48,8 @@ impl<'r> RequestContext<'r> {
                 None => {
                     let server = &mut *(record.server);
                     let pool = &mut *(record.pool);
-                    Self::create(record, server, pool)?
+                    let connection = &mut *(record.connection);
+                    Self::create(record, pool, server, connection)?
                 },
             };
             return Ok(context);
@@ -67,8 +75,9 @@ impl<'r> RequestContext<'r> {
 
     fn create(
         record: &'r mut request_rec,
+        record_pool: &'r mut apr_pool_t,
         server: &'r mut server_rec,
-        record_pool: &'r mut apr_pool_t
+        connection: &'r mut conn_rec,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         let pool_ptr = record_pool as *mut apr_pool_t;
         let new_context = alloc::<RequestContext<'r>>(record_pool)?;
@@ -82,6 +91,7 @@ impl<'r> RequestContext<'r> {
             );
         }
         new_context.worker = WorkerContext::find_or_create(server)?;
+        new_context.connection = ConnectionContext::find_or_create(connection)?;
         return Ok(new_context);
     }
 }
