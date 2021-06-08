@@ -9,12 +9,9 @@ use std::convert::From;
 use std::error::Error;
 use std::ffi::CString;
 use std::fmt;
-use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::raw::c_int;
 use std::option::Option;
-use std::path::Path;
-use std::process;
 use std::ptr;
 use std::result::Result;
 
@@ -25,39 +22,37 @@ pub extern "C" fn translate(record_ptr: *mut request_rec) -> c_int {
     } else {
         unsafe {
             let mut record = *record_ptr;
-            match RequestContext::find_or_create(&mut record) {
-                Ok(request) => match _translate(request) {
-                    Ok(_) => return OK as c_int,
-                    Err(err) => match err {
-                        TranslateError::Param(err) => {
-                            log!(
-                                APLOG_NOTICE,
-                                record.server,
-                                format!("Parameter {} error: {}", err.param, err.reason)
-                            );
-                            return DECLINED as c_int;
-                        }
-                        TranslateError::Io(why) => {
-                            log!(APLOG_ERR, record.server, format!("IO error: {}", why));
-                            return HTTP_INTERNAL_SERVER_ERROR as c_int;
-                        }
-                    },
-                },
+            let context = match RequestContext::find_or_create(&mut record) {
+                Ok(context) => context,
                 Err(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
+            };
+            match _translate(context) {
+                Ok(file_name) => {
+                    context.file_name = Some(file_name);
+                    return OK as c_int;
+                },
+                Err(err) => match err {
+                    TranslateError::Param(err) => {
+                        log!(
+                            APLOG_NOTICE,
+                            record.server,
+                            format!("Parameter {} error: {}", err.param, err.reason)
+                        );
+                        return DECLINED as c_int;
+                    }
+                    TranslateError::Io(why) => {
+                        log!(APLOG_ERR, record.server, format!("IO error: {}", why));
+                        return HTTP_INTERNAL_SERVER_ERROR as c_int;
+                    }
+                },
             }
         }
     }
 }
 
-fn _translate(request: &RequestContext) -> Result<CString, TranslateError> {
-    let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
-    let trace_path = Path::new(path_str.as_str());
-    let mut trace_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&trace_path)?;
-    trace_file.write_all(b"slippy::request::translate - start\n")?;
-    trace_file.write_all(b"slippy::request::translate - finish\n")?;
+fn _translate(context: &RequestContext) -> Result<CString, TranslateError> {
+    context.worker.trace_file.borrow_mut().write_all(b"slippy::request::translate - start\n")?;
+    context.worker.trace_file.borrow_mut().write_all(b"slippy::request::translate - finish\n")?;
     Ok(CString::new("blah").unwrap())
 }
 
