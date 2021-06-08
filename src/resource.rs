@@ -1,12 +1,14 @@
+#![allow(unused_unsafe)]
+
 use crate::apache2::bindings::{
     request_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
-use std::fs::OpenOptions;
+use crate::apache2::request::RequestContext;
+
 use std::io::Write;
 use std::os::raw::c_int;
-use std::path::Path;
-use std::process;
 use std::ptr;
+use std::result::Result;
 
 #[no_mangle]
 pub extern fn handle_request(
@@ -14,7 +16,20 @@ pub extern fn handle_request(
 ) -> c_int {
     if request_info != ptr::null_mut() {
         unsafe {
-            return _handle_request(&mut *request_info) as c_int;
+            let context = match RequestContext::find_or_create(&mut *request_info) {
+                Ok(context) => context,
+                Err(why) => {
+                    log!(APLOG_ERR, (*request_info).server, format!("Failed to create RequestContext: {}", why));
+                    return HTTP_INTERNAL_SERVER_ERROR as c_int;
+                }
+            };
+            match _handle_request(context) {
+                Ok(_) => return OK as c_int,
+                Err(why) => {
+                    log!(APLOG_ERR, (*request_info).server, format!("Resource request failed: {}", why));
+                    return HTTP_INTERNAL_SERVER_ERROR as c_int;
+                },
+            };
         }
     }
     else {
@@ -23,34 +38,9 @@ pub extern fn handle_request(
 }
 
 fn _handle_request(
-    request_info: &mut request_rec
-) -> u32 {
-    let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
-    let trace_path = Path::new(path_str.as_str());
-    let mut trace_file = match OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&trace_path) {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                request_info.server,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)
-            );
-            return HTTP_INTERNAL_SERVER_ERROR;
-        }
-        Ok(file) => file,
-    };
-    match trace_file.write_all(b"resource::handle_request - start\n") {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                request_info.server,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)
-            );
-            return HTTP_INTERNAL_SERVER_ERROR;
-        }
-        Ok(result) => result,
-    };
-    return OK
+    context: &RequestContext,
+) -> Result<(), std::io::Error> {
+    context.worker.trace_file.borrow_mut().write_all(b"resource::handle_request - start\n")?;
+    context.worker.trace_file.borrow_mut().write_all(b"resource::handle_request - finish\n")?;
+    return Ok(());
 }

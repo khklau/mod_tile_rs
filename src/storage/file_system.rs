@@ -1,66 +1,44 @@
+#![allow(unused_unsafe)]
+
 use crate::apache2::bindings::{
     apr_pool_t, server_rec, APLOG_ERR,
 };
-use std::fs::OpenOptions;
+use crate::apache2::worker::WorkerContext;
+
 use std::io::Write;
 use std::os::raw::c_int;
-use std::path::Path;
-use std::process;
 use std::ptr;
+use std::result::Result;
 
 #[no_mangle]
 pub extern fn initialise(
     child_pool: *mut apr_pool_t,
     server_info: *mut server_rec,
-) {
+) -> () {
     if child_pool != ptr::null_mut()
         && server_info != ptr::null_mut() {
         unsafe {
-            _initialise(&mut *child_pool, &mut *server_info);
+            let context = match WorkerContext::find_or_create(&mut *server_info) {
+                Ok(context) => context,
+                Err(why) => {
+                    log!(APLOG_ERR, server_info, format!("Failed to create WorkerContext: {}", why));
+                    return ();
+                }
+            };
+            match _initialise(context) {
+                Ok(_) => (),
+                Err(why) => {
+                    log!(APLOG_ERR, server_info, format!("File system initialisation failed: {}", why));
+                },
+            };
         }
     }
 }
 
 fn _initialise(
-    _child_pool: &mut apr_pool_t,
-    server_info: &mut server_rec,
-) {
-    let path_str = format!("/tmp/mod_tile_rs-trace-{}.txt", process::id());
-    let trace_path = Path::new(path_str.as_str());
-    let mut trace_file = match OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&trace_path) {
-        Ok(file) => file,
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                server_info,
-                format!("Can't create trace file {}: {}", trace_path.display(), why)
-            );
-            return;
-        },
-    };
-    match trace_file.write_all(b"storage::file_system::initialise - start\n") {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                server_info,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)
-            );
-            return;
-        },
-        Ok(result) => result,
-    }
-    match trace_file.write_all(b"storage::file_system::initialise - finish\n") {
-        Err(why) => {
-            log!(
-                APLOG_ERR,
-                server_info,
-                format!("Can't write to trace file {}: {}", trace_path.display(), why)
-            );
-            return;
-        },
-        Ok(result) => result,
-    }
+    context : &WorkerContext,
+) -> Result<(), std::io::Error> {
+    context.trace_file.borrow_mut().write_all(b"storage::file_system::initialise - start\n")?;
+    context.trace_file.borrow_mut().write_all(b"storage::file_system::initialise - finish\n")?;
+    Ok(())
 }

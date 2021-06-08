@@ -21,7 +21,7 @@ use std::ptr;
 pub struct WorkerContext<'w> {
     record: &'w mut server_rec,
     trace_path: PathBuf,
-    trace_file: RefCell<File>,
+    pub trace_file: RefCell<File>,
 }
 
 impl<'w> WorkerContext<'w> {
@@ -117,14 +117,14 @@ pub extern fn on_post_config_read(
         && temp_pool != ptr::null_mut()
         && server_info != ptr::null_mut() {
         unsafe {
-            let mut context = match WorkerContext::find_or_create(&mut *server_info) {
+            let context = match WorkerContext::find_or_create(&mut *server_info) {
                 Ok(context) => context,
                 Err(why) => {
                     log!(APLOG_ERR, server_info, format!("Failed to create WorkerContext: {}", why));
                     return HTTP_INTERNAL_SERVER_ERROR as c_int;
                 },
             };
-            match _on_post_config_read(&mut context) {
+            match _on_post_config_read(context) {
                 Ok(_) => return OK as c_int,
                 Err(why) => {
                     log!(APLOG_ERR, server_info, format!("Post config read processing failed: {}", why));
