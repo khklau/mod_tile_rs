@@ -5,7 +5,6 @@ mod apache2 {
     pub mod connection;
     pub mod hook;
     pub mod memory;
-    pub mod request;
     pub mod worker;
 }
 mod resource;
