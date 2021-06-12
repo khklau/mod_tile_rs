@@ -19,7 +19,14 @@ pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
     pub worker: &'r mut WorkerContext<'r>,
     pub connection: &'r mut ConnectionContext<'r>,
+    pub command: Option<Command>,
     pub file_name: Option<CString>,
+}
+
+pub enum Command {
+    ReportModStats,
+    DescribeLayer,
+    ServeTile,
 }
 
 impl<'r> RequestContext<'r> {
