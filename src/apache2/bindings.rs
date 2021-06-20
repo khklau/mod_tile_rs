@@ -32,10 +32,38 @@ macro_rules! _log { (
             crate::apache2::bindings::ap_log_error_(
                 cstr!(file!()),
                 line!() as std::os::raw::c_int,
-                crate::apache2::bindings::APLOG_NO_MODULE as c_int,
-                $level as c_int,
+                crate::apache2::bindings::APLOG_NO_MODULE as std::os::raw::c_int,
+                $level as std::os::raw::c_int,
                 -1,
                 $server_expr,
+                $var_sym.as_ptr(),
+            );
+        };
+    }
+}
+
+#[macro_export]
+macro_rules! plog {
+    ($level: expr, $pool_expr: expr, $msg_expr: expr) => {
+        gensym::gensym!{
+            _plog!{ $level, $pool_expr, $msg_expr } }
+    };
+}
+
+macro_rules! _plog { (
+    $var_sym: ident,
+    $level: expr,
+    $pool_expr: expr,
+    $msg_expr: expr) => {
+        let $var_sym = std::ffi::CString::new($msg_expr).unwrap();
+        unsafe {
+            crate::apache2::bindings::ap_log_perror_(
+                cstr!(file!()),
+                line!() as std::os::raw::c_int,
+                crate::apache2::bindings::APLOG_NO_MODULE as std::os::raw::c_int,
+                $level as std::os::raw::c_int,
+                -1,
+                $pool_expr,
                 $var_sym.as_ptr(),
             );
         };
