@@ -16,6 +16,7 @@ pub extern fn handle_request(
 ) -> c_int {
     if request_info != ptr::null_mut() {
         unsafe {
+            log!(APLOG_ERR, (&mut *request_info).server, "resource::handle_request - start");
             let context = match RequestContext::find_or_create(&mut *request_info) {
                 Ok(context) => context,
                 Err(why) => {
@@ -24,7 +25,10 @@ pub extern fn handle_request(
                 }
             };
             match _handle_request(context) {
-                Ok(_) => return OK as c_int,
+                Ok(_) => {
+                    log!(APLOG_ERR, context.record.server, "resource::handle_request - finish");
+                    return OK as c_int
+                },
                 Err(why) => {
                     log!(APLOG_ERR, (*request_info).server, format!("Resource request failed: {}", why));
                     return HTTP_INTERNAL_SERVER_ERROR as c_int;
@@ -40,7 +44,7 @@ pub extern fn handle_request(
 fn _handle_request(
     context: &RequestContext,
 ) -> Result<(), std::io::Error> {
-    context.worker.trace_file.borrow_mut().write_all(b"resource::handle_request - start\n")?;
-    context.worker.trace_file.borrow_mut().write_all(b"resource::handle_request - finish\n")?;
+    context.worker.trace_file.borrow_mut().write_all(b"resource::_handle_request - start\n")?;
+    context.worker.trace_file.borrow_mut().write_all(b"resource::_handle_request - finish\n")?;
     return Ok(());
 }

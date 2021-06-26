@@ -6,7 +6,6 @@ use crate::apache2::bindings::{
 use crate::apache2::worker::WorkerContext;
 
 use std::io::Write;
-use std::os::raw::c_int;
 use std::ptr;
 use std::result::Result;
 
@@ -18,6 +17,7 @@ pub extern fn initialise(
     if child_pool != ptr::null_mut()
         && server_info != ptr::null_mut() {
         unsafe {
+            log!(APLOG_ERR, server_info, "storage::file_system::initialise - start");
             let context = match WorkerContext::find_or_create(&mut *server_info) {
                 Ok(context) => context,
                 Err(why) => {
@@ -31,6 +31,7 @@ pub extern fn initialise(
                     log!(APLOG_ERR, server_info, format!("File system initialisation failed: {}", why));
                 },
             };
+            log!(APLOG_ERR, context.record, "storage::file_system::initialise - finish");
         }
     }
 }
