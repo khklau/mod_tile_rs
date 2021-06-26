@@ -2,7 +2,7 @@
 
 use crate::apache2::bindings::{
     apr_pool_t, apr_status_t, server_rec, apr_pool_userdata_get, apr_pool_userdata_set,
-    APR_BADARG, APR_SUCCESS, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
+    APR_BADARG, APR_SUCCESS, APLOG_ERR,
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::alloc;
@@ -13,12 +13,12 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::ffi::CString;
 use std::fs::{File, OpenOptions,};
-use std::io::Write;
 use std::option::Option;
-use std::os::raw::{c_int, c_void,};
+use std::os::raw::c_void;
 use std::path::PathBuf;
 use std::process;
 use std::ptr;
+use thread_id;
 
 pub struct WorkerContext<'w> {
     pub record: &'w mut server_rec,
@@ -33,10 +33,7 @@ impl<'w> WorkerContext<'w> {
             "{}-pid{}-tid{}",
             type_name::<Self>(),
             process::id(),
-            // TODO : use thread_id instead
-            unsafe {
-                libc::pthread_self()
-            },
+            thread_id::get(),
         )).unwrap();
         id
     }
@@ -105,10 +102,7 @@ impl<'w> WorkerContext<'w> {
         let path_str = format!(
             "/tmp/mod_tile_rs-trace-pid{}-tid{}.txt",
             process::id(),
-            // TODO : use thread_id instead
-            unsafe {
-                libc::pthread_self()
-            },
+            thread_id::get(),
         );
         new_context.trace_path = PathBuf::from(path_str.as_str());
         new_context.trace_file = RefCell::new(OpenOptions::new()

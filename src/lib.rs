@@ -18,7 +18,7 @@ extern crate libc;
 #[macro_use] extern crate scan_fmt;
 
 use crate::apache2::bindings::{
-    ap_hook_child_init, ap_hook_post_config, ap_hook_map_to_storage, ap_hook_translate_name,
+    ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
     apr_pool_t, module,
     APR_HOOK_FIRST, APR_HOOK_MIDDLE,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
