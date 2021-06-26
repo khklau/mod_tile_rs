@@ -15,6 +15,7 @@ mod storage {
     pub mod file_system;
 }
 extern crate libc;
+#[macro_use] extern crate scan_fmt;
 
 use crate::apache2::bindings::{
     ap_hook_child_init, ap_hook_post_config, ap_hook_map_to_storage, ap_hook_translate_name,
@@ -51,12 +52,6 @@ pub static mut TILE_MODULE: module = module {
 #[no_mangle]
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
-        ap_hook_post_config(
-            Some(apache2::worker::on_post_config_read),
-            ptr::null_mut(),
-            ptr::null_mut(),
-            APR_HOOK_MIDDLE as c_int,
-        );
         ap_hook_child_init(
             Some(storage::file_system::initialise),
             ptr::null_mut(),
@@ -64,10 +59,10 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
             APR_HOOK_MIDDLE as c_int,
         );
         ap_hook_translate_name(
-            Some(slippy::request::translate),
+            Some(slippy::request::parse),
             ptr::null_mut(),
             ptr::null_mut(),
-            APR_HOOK_MIDDLE as c_int,
+            APR_HOOK_FIRST as c_int,
         );
         ap_hook_map_to_storage(
             Some(resource::handle_request),
