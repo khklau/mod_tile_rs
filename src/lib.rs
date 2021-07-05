@@ -6,7 +6,6 @@ mod apache2 {
     pub mod hook;
     pub mod memory;
     pub mod virtual_host;
-    pub mod worker;
 }
 mod resource;
 mod slippy {

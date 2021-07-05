@@ -9,7 +9,7 @@ use crate::apache2::bindings::{
 use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::alloc;
-use crate::apache2::worker::WorkerContext;
+use crate::apache2::virtual_host::VirtualHostContext;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -27,7 +27,7 @@ use std::str::Utf8Error;
 
 pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
-    pub worker: &'r mut WorkerContext<'r>,
+    pub host: &'r mut VirtualHostContext<'r>,
     pub connection: &'r mut ConnectionContext<'r>,
     pub uri: &'r str,
     pub request: Option<Request>,
@@ -145,7 +145,7 @@ impl<'r> RequestContext<'r> {
         let pool_ptr = record_pool as *mut apr_pool_t;
         let new_context = alloc::<RequestContext<'r>>(record_pool)?;
         new_context.record = record;
-        new_context.worker = WorkerContext::find_or_create(server)?;
+        new_context.host = VirtualHostContext::find_or_create(server)?;
         new_context.connection = ConnectionContext::find_or_create(connection)?;
         new_context.uri = uri;
 
@@ -158,7 +158,7 @@ impl<'r> RequestContext<'r> {
                 pool_ptr
             );
         }
-        log!(APLOG_ERR, new_context.worker.record, "RequestContext::create - finish");
+        log!(APLOG_ERR, new_context.host.record, "RequestContext::create - finish");
         return Ok(new_context);
     }
 }
@@ -218,8 +218,8 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
 }
 
 fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
-    context.worker.trace_file.borrow_mut().write_all(b"slippy::request::_parse - start\n")?;
-    write!(context.worker.trace_file.borrow_mut(), "slippy::request::_parse - url.path={}\n", context.uri)?;
+    context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse - start\n")?;
+    write!(context.host.trace_file.borrow_mut(), "slippy::request::_parse - url.path={}\n", context.uri)?;
 
     // try match stats request
     let module_name = unsafe {
@@ -227,7 +227,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
     };
     let stats_uri = format!("/{}", module_name);
     if context.uri.eq(&stats_uri) {
-        context.worker.trace_file.borrow_mut().write_all(b"slippy::request::_parse ReportModStats - finish\n")?;
+        context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse ReportModStats - finish\n")?;
         return Ok(Request::ReportModStats);
     }
 
@@ -238,7 +238,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         String, i32, i32, i32, String, String
     ) {
         Ok((parameter, x, y, z, extension, option)) => {
-            context.worker.trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV3 - finish\n")?;
+            context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV3 - finish\n")?;
             return Ok(Request::ServeTileV3(
                 ServeTileRequestV3 {
                     parameter,
@@ -264,7 +264,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         i32, i32, i32, String, String
     ) {
         Ok((x, y, z, extension, option)) => {
-            context.worker.trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV2 - finish\n")?;
+            context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV2 - finish\n")?;
             return Ok(Request::ServeTileV2(
                 ServeTileRequestV2 {
                     x,
@@ -281,7 +281,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         },
         Err(_) => ()
     }
-    context.worker.trace_file.borrow_mut().write_all(b"slippy::request::_parse no matches - finish\n")?;
+    context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse no matches - finish\n")?;
     return Err(ParseError::Param(
         InvalidParameterError {
             param: "uri".to_string(),
