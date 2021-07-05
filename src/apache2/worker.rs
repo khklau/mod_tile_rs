@@ -28,12 +28,11 @@ pub struct WorkerContext<'w> {
 
 impl<'w> WorkerContext<'w> {
 
-    pub fn get_id() -> CString {
+    pub fn get_id(record: &server_rec) -> CString {
         let id = CString::new(format!(
-            "{}-pid{}-tid{}",
+            "{}@{:p}",
             type_name::<Self>(),
-            process::id(),
-            thread_id::get(),
+            record,
         )).unwrap();
         id
     }
@@ -54,7 +53,7 @@ impl<'w> WorkerContext<'w> {
                     reason: "null pointer".to_string(),
                 }));
             }
-            let context = match Self::find(&mut *(proc_record.pool)) {
+            let context = match Self::find(&mut *(proc_record.pool), Self::get_id(record)) {
                 Some(existing_context) => {
                     log!(APLOG_ERR, record, "WorkerContext::find_or_create - existing found");
                     existing_context
@@ -69,10 +68,12 @@ impl<'w> WorkerContext<'w> {
         }
     }
 
-    fn find(process_pool: &'w mut apr_pool_t) -> Option<&'w mut Self> {
+    fn find(
+        process_pool: &'w mut apr_pool_t,
+        user_data_key: CString,
+    ) -> Option<&'w mut Self> {
         plog!(APLOG_ERR, process_pool, "WorkerContext::find searching - start");
         let mut context_ptr: *mut WorkerContext<'w> = ptr::null_mut();
-        let user_data_key = WorkerContext::get_id();
         unsafe {
             let get_result = apr_pool_userdata_get(
                 &mut context_ptr as *mut *mut WorkerContext<'w> as *mut *mut c_void,
@@ -111,7 +112,7 @@ impl<'w> WorkerContext<'w> {
             .open(&new_context.trace_path.as_path())?
         );
 
-        let user_data_key = WorkerContext::get_id();
+        let user_data_key = Self::get_id(new_context.record);
         unsafe {
             apr_pool_userdata_set(
                 new_context as *mut _ as *mut c_void,
