@@ -44,7 +44,7 @@ pub extern fn handle_request(
 fn _handle_request(
     context: &RequestContext,
 ) -> Result<(), std::io::Error> {
-    context.worker.trace_file.borrow_mut().write_all(b"resource::_handle_request - start\n")?;
-    context.worker.trace_file.borrow_mut().write_all(b"resource::_handle_request - finish\n")?;
+    context.host.trace_file.borrow_mut().write_all(b"resource::_handle_request - start\n")?;
+    context.host.trace_file.borrow_mut().write_all(b"resource::_handle_request - finish\n")?;
     return Ok(());
 }
