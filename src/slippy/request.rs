@@ -11,13 +11,14 @@ use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::alloc;
 use crate::apache2::worker::WorkerContext;
 
+use std::any::type_name;
 use std::boxed::Box;
 use std::convert::From;
 use std::error::Error;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString,};
 use std::fmt;
 use std::io::Write;
-use std::os::raw::{c_char, c_int, c_void,};
+use std::os::raw::{c_int, c_void,};
 use std::option::Option;
 use std::ptr;
 use std::result::Result;
@@ -61,7 +62,15 @@ pub struct ServeTileRequestV2 {
 }
 
 impl<'r> RequestContext<'r> {
-    const USER_DATA_KEY: *const c_char = cstr!(module_path!());
+
+    pub fn get_id(record: &request_rec) -> CString {
+        let id = CString::new(format!(
+            "{}@{:p}",
+            type_name::<Self>(),
+            record,
+        )).unwrap();
+        id
+    }
 
     pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
@@ -87,7 +96,7 @@ impl<'r> RequestContext<'r> {
         }
         unsafe {
             log!(APLOG_ERR, record.server, "RequestContext::find_or_create - start");
-            let context = match Self::find(&mut *(record.pool)) {
+            let context = match Self::find(&mut *(record.pool), Self::get_id(record)) {
                 Some(existing_context) => existing_context,
                 None => {
                     let server = &mut *(record.server);
@@ -102,13 +111,16 @@ impl<'r> RequestContext<'r> {
         }
     }
 
-    fn find(request_pool: &'r mut apr_pool_t) -> Option<&'r mut Self> {
+    fn find(
+        request_pool: &'r mut apr_pool_t,
+        user_data_key: CString,
+    ) -> Option<&'r mut Self> {
         plog!(APLOG_ERR, request_pool, "RequestContext::find - start");
         let mut context_ptr: *mut RequestContext<'r> = ptr::null_mut();
         unsafe {
             let get_result = apr_pool_userdata_get(
                 &mut context_ptr as *mut *mut RequestContext<'r> as *mut *mut c_void,
-                RequestContext::USER_DATA_KEY,
+                user_data_key.as_ptr(),
                 request_pool
             );
             if get_result == (APR_SUCCESS as i32) {
@@ -136,10 +148,12 @@ impl<'r> RequestContext<'r> {
         new_context.worker = WorkerContext::find_or_create(server)?;
         new_context.connection = ConnectionContext::find_or_create(connection)?;
         new_context.uri = uri;
+
+        let user_data_key = Self::get_id(new_context.record);
         unsafe {
             apr_pool_userdata_set(
                 new_context as *mut _ as *mut c_void,
-                RequestContext::USER_DATA_KEY,
+                user_data_key.as_ptr(),
                 Some(drop_request_context),
                 pool_ptr
             );
