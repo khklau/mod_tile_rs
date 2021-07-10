@@ -69,7 +69,7 @@ pub fn _alloc<'p, T>(
 }
 
 pub fn find<'p, T>(
-    pool: &'p mut apr_pool_t,
+    pool: &'p apr_pool_t,
     user_data_key: &CString,
 ) -> Option<&'p mut T> {
     let mut value_ptr: *mut T = ptr::null_mut();
@@ -77,7 +77,7 @@ pub fn find<'p, T>(
         let get_result = apr_pool_userdata_get(
             &mut value_ptr as *mut *mut T as *mut *mut c_void,
             user_data_key.as_ptr(),
-            pool
+            pool as *const apr_pool_t as *mut apr_pool_t
         );
         if get_result == (APR_SUCCESS as i32) {
             let existing_value = &mut (*value_ptr);
