@@ -1,11 +1,12 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_pool_t, apr_status_t, conn_rec,
+    apr_pool_t, apr_status_t, conn_rec, server_rec,
     APLOG_ERR, APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve, };
+use crate::apache2::virtual_host::VirtualHostContext;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -15,7 +16,8 @@ use std::os::raw::c_void;
 use std::ptr;
 
 pub struct ConnectionContext<'c> {
-    record: &'c mut conn_rec,
+    pub record: &'c mut conn_rec,
+    pub host: &'c mut VirtualHostContext<'c>,
 }
 
 impl<'c> ConnectionContext<'c> {
@@ -36,13 +38,19 @@ impl<'c> ConnectionContext<'c> {
                 arg: "conn_rec.pool".to_string(),
                 reason: "null pointer".to_string(),
             }));
+        } else if record.base_server == ptr::null_mut() {
+            return Err(Box::new(InvalidArgError{
+                arg: "conn_rec.base_server".to_string(),
+                reason: "null pointer".to_string(),
+            }));
         }
         unsafe {
             let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => existing_context,
                 None => {
+                    let server = &mut *(record.base_server);
                     let pool = &mut *(record.pool);
-                    Self::create(record, pool)?
+                    Self::create(record, server, pool)?
                 },
             };
             log!(APLOG_ERR, context.record.base_server, "ConnectionContext::find_or_create - finish");
@@ -52,6 +60,7 @@ impl<'c> ConnectionContext<'c> {
 
     fn create(
         record: &'c mut conn_rec,
+        server: &'c mut server_rec,
         connection_pool: &'c mut apr_pool_t
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         log!(APLOG_ERR, record.base_server, "ConnectionContext::create - start");
@@ -61,6 +70,7 @@ impl<'c> ConnectionContext<'c> {
             Some(drop_connection_context),
         )?.0;
         new_context.record = record;
+        new_context.host = VirtualHostContext::find_or_create(server)?;
         log!(APLOG_ERR, new_context.record.base_server, "ConnectionContext::create - finish");
         return Ok(new_context);
     }
