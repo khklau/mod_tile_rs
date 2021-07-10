@@ -3,7 +3,7 @@
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     APLOG_ERR, APLOG_NOTICE, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
-    apr_pool_t, apr_status_t, conn_rec, request_rec, server_rec,
+    apr_pool_t, apr_status_t, conn_rec, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
@@ -26,7 +26,6 @@ use std::str::Utf8Error;
 
 pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
-    pub host: &'r mut VirtualHostContext<'r>,
     pub connection: &'r mut ConnectionContext<'r>,
     pub uri: &'r str,
     pub request: Option<Request>,
@@ -71,15 +70,14 @@ impl<'r> RequestContext<'r> {
         id
     }
 
+    pub fn get_host(&self) -> &VirtualHostContext {
+        self.connection.host
+    }
+
     pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "request_rec.pool".to_string(),
-                reason: "null pointer".to_string(),
-            }));
-        } else if record.server == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "request_rec.server".to_string(),
                 reason: "null pointer".to_string(),
             }));
         } else if record.connection == ptr::null_mut() {
@@ -98,11 +96,10 @@ impl<'r> RequestContext<'r> {
             let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => existing_context,
                 None => {
-                    let server = &mut *(record.server);
                     let pool = &mut *(record.pool);
                     let connection = &mut *(record.connection);
                     let uri = CStr::from_ptr(record.uri).to_str()?;
-                    Self::create(record, pool, server, connection, uri)?
+                    Self::create(record, pool, connection, uri)?
                 },
             };
             log!(APLOG_ERR, context.record.server, "RequestContext::find_or_create - finish");
@@ -113,21 +110,20 @@ impl<'r> RequestContext<'r> {
     fn create(
         record: &'r mut request_rec,
         record_pool: &'r mut apr_pool_t,
-        server: &'r mut server_rec,
         connection: &'r mut conn_rec,
         uri: &'r str,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
-        log!(APLOG_ERR, server, "RequestContext::create - start");
+        let conn_context = ConnectionContext::find_or_create(connection)?;
+        log!(APLOG_ERR, conn_context.host.record, "RequestContext::create - start");
         let new_context = alloc::<RequestContext<'r>>(
             record_pool,
             &(Self::get_id(record)),
             Some(drop_request_context),
         )?.0;
         new_context.record = record;
-        new_context.host = VirtualHostContext::find_or_create(server)?;
-        new_context.connection = ConnectionContext::find_or_create(connection)?;
+        new_context.connection = conn_context;
         new_context.uri = uri;
-        log!(APLOG_ERR, new_context.host.record, "RequestContext::create - finish");
+        log!(APLOG_ERR, new_context.connection.host.record, "RequestContext::create - finish");
         return Ok(new_context);
     }
 }
@@ -187,8 +183,8 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
 }
 
 fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
-    context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse - start\n")?;
-    write!(context.host.trace_file.borrow_mut(), "slippy::request::_parse - url.path={}\n", context.uri)?;
+    context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse - start\n")?;
+    write!(context.get_host().trace_file.borrow_mut(), "slippy::request::_parse - url.path={}\n", context.uri)?;
 
     // try match stats request
     let module_name = unsafe {
@@ -196,7 +192,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
     };
     let stats_uri = format!("/{}", module_name);
     if context.uri.eq(&stats_uri) {
-        context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse ReportModStats - finish\n")?;
+        context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse ReportModStats - finish\n")?;
         return Ok(Request::ReportModStats);
     }
 
@@ -207,7 +203,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         String, i32, i32, i32, String, String
     ) {
         Ok((parameter, x, y, z, extension, option)) => {
-            context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV3 - finish\n")?;
+            context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV3 - finish\n")?;
             return Ok(Request::ServeTileV3(
                 ServeTileRequestV3 {
                     parameter,
@@ -233,7 +229,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         i32, i32, i32, String, String
     ) {
         Ok((x, y, z, extension, option)) => {
-            context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV2 - finish\n")?;
+            context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV2 - finish\n")?;
             return Ok(Request::ServeTileV2(
                 ServeTileRequestV2 {
                     x,
@@ -250,7 +246,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         },
         Err(_) => ()
     }
-    context.host.trace_file.borrow_mut().write_all(b"slippy::request::_parse no matches - finish\n")?;
+    context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse no matches - finish\n")?;
     return Err(ParseError::Param(
         InvalidParameterError {
             param: "uri".to_string(),
