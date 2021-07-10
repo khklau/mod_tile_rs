@@ -1,17 +1,16 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_pool_t, apr_status_t, conn_rec, apr_pool_userdata_get, apr_pool_userdata_set,
+    apr_pool_t, apr_status_t, conn_rec,
     APLOG_ERR, APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::hook::InvalidArgError;
-use crate::apache2::memory::alloc;
+use crate::apache2::memory::{ alloc, retrieve, };
 
 use std::any::type_name;
 use std::boxed::Box;
 use std::error::Error;
 use std::ffi::CString;
-use std::option::Option;
 use std::os::raw::c_void;
 use std::ptr;
 
@@ -39,7 +38,7 @@ impl<'c> ConnectionContext<'c> {
             }));
         }
         unsafe {
-            let context = match Self::find(&mut *(record.pool), Self::get_id(record)) {
+            let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => existing_context,
                 None => {
                     let pool = &mut *(record.pool);
@@ -51,44 +50,17 @@ impl<'c> ConnectionContext<'c> {
         }
     }
 
-    fn find(
-        connection_pool: &'c mut apr_pool_t,
-        user_data_key: CString,
-    ) -> Option<&'c mut Self> {
-        let mut context_ptr: *mut ConnectionContext<'c> = ptr::null_mut();
-        unsafe {
-            let get_result = apr_pool_userdata_get(
-                &mut context_ptr as *mut *mut ConnectionContext<'c> as *mut *mut c_void,
-                user_data_key.as_ptr(),
-                connection_pool
-            );
-            if get_result == (APR_SUCCESS as i32) {
-                let existing_context = &mut (*context_ptr);
-                return Some(existing_context);
-            } else {
-                return None;
-            }
-        }
-    }
-
     fn create(
         record: &'c mut conn_rec,
         connection_pool: &'c mut apr_pool_t
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         log!(APLOG_ERR, record.base_server, "ConnectionContext::create - start");
-        let pool_ptr = connection_pool as *mut apr_pool_t;
-        let new_context = alloc::<ConnectionContext<'c>>(connection_pool)?;
+        let new_context = alloc::<ConnectionContext<'c>>(
+            connection_pool,
+            &(Self::get_id(record)),
+            Some(drop_connection_context),
+        )?.0;
         new_context.record = record;
-
-        let user_data_key = Self::get_id(new_context.record);
-        unsafe {
-            apr_pool_userdata_set(
-                new_context as *mut _ as *mut c_void,
-                user_data_key.as_ptr(),
-                Some(drop_connection_context),
-                pool_ptr
-            );
-        }
         log!(APLOG_ERR, new_context.record.base_server, "ConnectionContext::create - finish");
         return Ok(new_context);
     }

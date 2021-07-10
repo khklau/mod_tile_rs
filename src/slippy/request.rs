@@ -3,12 +3,11 @@
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     APLOG_ERR, APLOG_NOTICE, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
-    apr_pool_t, apr_pool_userdata_get, apr_pool_userdata_set,
-    apr_status_t, conn_rec, request_rec, server_rec,
+    apr_pool_t, apr_status_t, conn_rec, request_rec, server_rec,
 };
 use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
-use crate::apache2::memory::alloc;
+use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 
 use std::any::type_name;
@@ -96,7 +95,7 @@ impl<'r> RequestContext<'r> {
         }
         unsafe {
             log!(APLOG_ERR, record.server, "RequestContext::find_or_create - start");
-            let context = match Self::find(&mut *(record.pool), Self::get_id(record)) {
+            let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => existing_context,
                 None => {
                     let server = &mut *(record.server);
@@ -111,29 +110,6 @@ impl<'r> RequestContext<'r> {
         }
     }
 
-    fn find(
-        request_pool: &'r mut apr_pool_t,
-        user_data_key: CString,
-    ) -> Option<&'r mut Self> {
-        plog!(APLOG_ERR, request_pool, "RequestContext::find - start");
-        let mut context_ptr: *mut RequestContext<'r> = ptr::null_mut();
-        unsafe {
-            let get_result = apr_pool_userdata_get(
-                &mut context_ptr as *mut *mut RequestContext<'r> as *mut *mut c_void,
-                user_data_key.as_ptr(),
-                request_pool
-            );
-            if get_result == (APR_SUCCESS as i32) {
-                let existing_context = &mut (*context_ptr);
-                plog!(APLOG_ERR, request_pool, "RequestContext::find success - finish");
-                return Some(existing_context);
-            } else {
-                plog!(APLOG_ERR, request_pool, "RequestContext::find failed - finish");
-                return None;
-            }
-        }
-    }
-
     fn create(
         record: &'r mut request_rec,
         record_pool: &'r mut apr_pool_t,
@@ -142,22 +118,15 @@ impl<'r> RequestContext<'r> {
         uri: &'r str,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         log!(APLOG_ERR, server, "RequestContext::create - start");
-        let pool_ptr = record_pool as *mut apr_pool_t;
-        let new_context = alloc::<RequestContext<'r>>(record_pool)?;
+        let new_context = alloc::<RequestContext<'r>>(
+            record_pool,
+            &(Self::get_id(record)),
+            Some(drop_request_context),
+        )?.0;
         new_context.record = record;
         new_context.host = VirtualHostContext::find_or_create(server)?;
         new_context.connection = ConnectionContext::find_or_create(connection)?;
         new_context.uri = uri;
-
-        let user_data_key = Self::get_id(new_context.record);
-        unsafe {
-            apr_pool_userdata_set(
-                new_context as *mut _ as *mut c_void,
-                user_data_key.as_ptr(),
-                Some(drop_request_context),
-                pool_ptr
-            );
-        }
         log!(APLOG_ERR, new_context.host.record, "RequestContext::create - finish");
         return Ok(new_context);
     }

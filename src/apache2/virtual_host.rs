@@ -1,11 +1,11 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_pool_t, apr_status_t, server_rec, apr_pool_userdata_get, apr_pool_userdata_set,
+    apr_pool_t, apr_status_t, server_rec,
     APR_BADARG, APR_SUCCESS, APLOG_ERR,
 };
 use crate::apache2::hook::InvalidArgError;
-use crate::apache2::memory::alloc;
+use crate::apache2::memory::{ alloc, retrieve };
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -13,7 +13,6 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::ffi::CString;
 use std::fs::{File, OpenOptions,};
-use std::option::Option;
 use std::os::raw::c_void;
 use std::path::PathBuf;
 use std::process;
@@ -53,7 +52,7 @@ impl<'h> VirtualHostContext<'h> {
                     reason: "null pointer".to_string(),
                 }));
             }
-            let context = match Self::find(&mut *(proc_record.pool), Self::get_id(record)) {
+            let context = match retrieve(&mut *(proc_record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => {
                     log!(APLOG_ERR, record, "VirtualHostContext::find_or_create - existing found");
                     existing_context
@@ -68,36 +67,16 @@ impl<'h> VirtualHostContext<'h> {
         }
     }
 
-    fn find(
-        process_pool: &'h mut apr_pool_t,
-        user_data_key: CString,
-    ) -> Option<&'h mut Self> {
-        plog!(APLOG_ERR, process_pool, "VirtualHostContext::find searching - start");
-        let mut context_ptr: *mut VirtualHostContext<'h> = ptr::null_mut();
-        unsafe {
-            let get_result = apr_pool_userdata_get(
-                &mut context_ptr as *mut *mut VirtualHostContext<'h> as *mut *mut c_void,
-                user_data_key.as_ptr(),
-                process_pool
-            );
-            if get_result == (APR_SUCCESS as i32) {
-                let existing_context = &mut (*context_ptr);
-                plog!(APLOG_ERR, process_pool, "VirtualHostContext::find success - finish");
-                return Some(existing_context);
-            } else {
-                plog!(APLOG_ERR, process_pool, "VirtualHostContext::find failed - finish");
-                return None;
-            }
-        }
-    }
-
     fn create(
         record: &'h mut server_rec,
         process_pool: &'h mut apr_pool_t
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         log!(APLOG_ERR, record, "VirtualHostContext::create - start");
-        let pool_ptr = process_pool as *mut apr_pool_t;
-        let new_context = alloc::<VirtualHostContext<'h>>(process_pool)?;
+        let new_context = alloc::<VirtualHostContext<'h>>(
+            process_pool,
+            &(Self::get_id(record)),
+            Some(drop_virtual_host_context),
+        )?.0;
         new_context.record = record;
 
         let path_str = format!(
@@ -111,16 +90,6 @@ impl<'h> VirtualHostContext<'h> {
             .append(true)
             .open(&new_context.trace_path.as_path())?
         );
-
-        let user_data_key = Self::get_id(new_context.record);
-        unsafe {
-            apr_pool_userdata_set(
-                new_context as *mut _ as *mut c_void,
-                user_data_key.as_ptr(),
-                Some(drop_virtual_host_context),
-                pool_ptr,
-            );
-        }
         log!(APLOG_ERR, new_context.record, "VirtualHostContext::create - finish");
         return Ok(new_context);
     }

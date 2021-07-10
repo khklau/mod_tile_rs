@@ -26,23 +26,9 @@ impl fmt::Display for AllocError {
     }
 }
 
-pub fn alloc<'p, T>(pool: &'p mut apr_pool_t) -> Result<&'p mut T, AllocError> {
-    let layout = Layout::new::<T>();
-    unsafe {
-        let ptr_raw = apr_palloc(pool, layout.size() as apr_size_t);
-        if ptr_raw == ptr::null_mut() {
-            return Err(AllocError{ layout: layout });
-        }
-        else {
-            let ptr_zeroed = memset(ptr_raw, 0, layout.size() as c_ulong) as *mut T;
-            return Ok(&mut *ptr_zeroed)
-        }
-    }
-}
-
 pub type CleanUpFn = unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void) -> apr_status_t;
 
-pub fn _alloc<'p, T>(
+pub fn alloc<'p, T>(
     pool: &'p mut apr_pool_t,
     id: &CString,
     cleanup: Option<CleanUpFn>,
@@ -68,7 +54,7 @@ pub fn _alloc<'p, T>(
     }
 }
 
-pub fn find<'p, T>(
+pub fn retrieve<'p, T>(
     pool: &'p apr_pool_t,
     user_data_key: &CString,
 ) -> Option<&'p mut T> {
@@ -161,21 +147,21 @@ mod tests {
     }
 
     #[test]
-    fn test_find_when_never_allocated() -> Result<(), Box<dyn Error>> {
+    fn test_retrieve_when_never_allocated() -> Result<(), Box<dyn Error>> {
         with_pool(|pool| {
-            assert!(find::<Counter>(pool, &CString::new("foo").unwrap()).is_none(), "Find succeeded on empty pool");
+            assert!(retrieve::<Counter>(pool, &CString::new("foo").unwrap()).is_none(), "Find succeeded on empty pool");
             Ok(())
         })
     }
 
     #[test]
-    fn test_find_when_already_allocated() -> Result<(), Box<dyn Error>> {
+    fn test_retrieve_when_already_allocated() -> Result<(), Box<dyn Error>> {
         let mut counter1 = Counter::new();
         let id1 = CString::new("id1")?;
         with_pool(|pool| {
-            let wrapper1 = _alloc::<CounterWrapper>(pool, &id1, Some(increment_counter))?.0;
+            let wrapper1 = alloc::<CounterWrapper>(pool, &id1, Some(increment_counter))?.0;
             wrapper1.counter = &mut counter1;
-            assert!(find::<Counter>(pool, &id1).is_some(), "Failed to find previous allocation");
+            assert!(retrieve::<Counter>(pool, &id1).is_some(), "Failed to retrieve previous allocation");
             Ok(())
         })
     }
@@ -186,7 +172,7 @@ mod tests {
         let mut counter2 = Counter::new();
         let id1 = CString::new("id1")?;
         with_pool(|pool| {
-            let wrapper1 = _alloc::<CounterWrapper>(pool, &id1, Some(increment_counter))?.0;
+            let wrapper1 = alloc::<CounterWrapper>(pool, &id1, Some(increment_counter))?.0;
             let _wrapper2 = Box::new(CounterWrapper { counter: &mut counter2 });
             wrapper1.counter = &mut counter1;
             Ok(())
@@ -203,12 +189,12 @@ mod tests {
         let id1 = CString::new("id1")?;
         let id2 = CString::new("id2")?;
         with_pool(|pool0| {
-            let (wrapper1, pool1) = _alloc::<CounterWrapper>(pool0, &id1, Some(increment_counter))?;
-            let (wrapper2, pool2) = _alloc::<CounterWrapper>(pool1, &id2, Some(increment_counter))?;
+            let (wrapper1, pool1) = alloc::<CounterWrapper>(pool0, &id1, Some(increment_counter))?;
+            let (wrapper2, pool2) = alloc::<CounterWrapper>(pool1, &id2, Some(increment_counter))?;
             wrapper1.counter = &mut counter1;
             wrapper2.counter = &mut counter2;
-            assert!(find::<Counter>(pool2, &id1).is_some(), "Failed to find previous allocation");
-            assert!(find::<Counter>(pool2, &id2).is_some(), "Failed to find previous allocation");
+            assert!(retrieve::<Counter>(pool2, &id1).is_some(), "Failed to retrieve previous allocation");
+            assert!(retrieve::<Counter>(pool2, &id2).is_some(), "Failed to retrieve previous allocation");
             Ok(())
         })?;
         assert_eq!(1, counter1.count, "Cleanup callback not called one time");
