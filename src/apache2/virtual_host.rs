@@ -107,3 +107,84 @@ pub unsafe extern fn drop_virtual_host_context(host_void: *mut c_void) -> apr_st
     log!(APLOG_ERR, (&mut *context_ptr).record, "drop_virtual_host_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
+
+#[cfg(test)]
+pub mod test_utils {
+    use crate::apache2::bindings::{
+        __BindgenBitfieldUnit, ap_logconf,
+        apr_interval_time_t, apr_pool_t, apr_port_t,
+        process_rec, server_rec,
+    };
+    use crate::apache2::memory::test_utils::with_pool;
+    use std::boxed::Box;
+    use std::error::Error;
+    use std::ops::FnOnce;
+    use std::os::raw::{ c_char, c_int, };
+    use std::ptr;
+
+    impl ap_logconf {
+        pub fn new() -> ap_logconf {
+            ap_logconf {
+                module_levels: ptr::null_mut(),
+                level: 0,
+            }
+        }
+    }
+
+    impl server_rec {
+        pub fn new() -> server_rec {
+            server_rec {
+                process: ptr::null_mut(),
+                next: ptr::null_mut(),
+                error_fname: ptr::null_mut(),
+                error_log: ptr::null_mut(),
+                log: ap_logconf::new(),
+                module_config: ptr::null_mut(),
+                lookup_defaults: ptr::null_mut(),
+                defn_name: ptr::null(),
+                defn_line_number: 0,
+                is_virtual: '\0' as c_char,
+                port: 0 as apr_port_t,
+                server_scheme: ptr::null(),
+                server_admin: ptr::null_mut(),
+                server_hostname: ptr::null_mut(),
+                addrs: ptr::null_mut(),
+                timeout: 0 as apr_interval_time_t,
+                keep_alive_timeout: 0 as apr_interval_time_t,
+                keep_alive_max: 0 as c_int,
+                keep_alive: 0 as c_int,
+                names: ptr::null_mut(),
+                wild_names: ptr::null_mut(),
+                path: ptr::null(),
+                pathlen: 0 as c_int,
+                limit_req_line: 0 as c_int,
+                limit_req_fieldsize: 0 as c_int,
+                limit_req_fields: 0 as c_int,
+                context: ptr::null_mut(),
+                _bitfield_align_1: [],
+                _bitfield_1: __BindgenBitfieldUnit::new([0; 1usize]),
+                __bindgen_padding_0: [0; 7usize],
+            }
+        }
+    }
+
+    pub fn with_server_rec<F>(func: F) -> Result<(), Box<dyn Error>>
+    where F: FnOnce(&mut server_rec) -> Result<(), Box<dyn Error>> {
+        let mut process: process_rec = process_rec {
+            pool: ptr::null_mut(),
+            pconf: ptr::null_mut(),
+            short_name: cstr!("test"),
+            argv: ptr::null_mut(),
+            argc: 0,
+        };
+        let mut record: server_rec = server_rec::new();
+        record.process = &mut process;
+        with_pool(|proc_pool| {
+            process.pool = proc_pool as *mut apr_pool_t;
+            with_pool(|conf_pool| {
+                process.pconf = conf_pool as *mut apr_pool_t;
+                func(&mut record)
+            })
+        })
+    }
+}
