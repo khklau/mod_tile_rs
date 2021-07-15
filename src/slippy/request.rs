@@ -2,13 +2,15 @@
 
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
-    APLOG_ERR, APLOG_NOTICE, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
+    DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
     apr_pool_t, apr_status_t, conn_rec, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
+
+use scan_fmt::scan_fmt;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -92,7 +94,7 @@ impl<'r> RequestContext<'r> {
             }));
         }
         unsafe {
-            log!(APLOG_ERR, record.server, "RequestContext::find_or_create - start");
+            info!(record.server, "RequestContext::find_or_create - start");
             let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => existing_context,
                 None => {
@@ -102,7 +104,7 @@ impl<'r> RequestContext<'r> {
                     Self::create(record, pool, connection, uri)?
                 },
             };
-            log!(APLOG_ERR, context.record.server, "RequestContext::find_or_create - finish");
+            info!(context.record.server, "RequestContext::find_or_create - finish");
             return Ok(context);
         }
     }
@@ -114,7 +116,7 @@ impl<'r> RequestContext<'r> {
         uri: &'r str,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         let conn_context = ConnectionContext::find_or_create(connection)?;
-        log!(APLOG_ERR, conn_context.host.record, "RequestContext::create - start");
+        info!(conn_context.host.record, "RequestContext::create - start");
         let new_context = alloc::<RequestContext<'r>>(
             record_pool,
             &(Self::get_id(record)),
@@ -123,7 +125,7 @@ impl<'r> RequestContext<'r> {
         new_context.record = record;
         new_context.connection = conn_context;
         new_context.uri = uri;
-        log!(APLOG_ERR, new_context.connection.host.record, "RequestContext::create - finish");
+        info!(new_context.connection.host.record, "RequestContext::create - finish");
         return Ok(new_context);
     }
 }
@@ -134,10 +136,10 @@ pub unsafe extern fn drop_request_context(context_void: *mut c_void) -> apr_stat
         return APR_BADARG as apr_status_t;
     }
     let context_ptr = context_void as *mut RequestContext;
-    log!(APLOG_ERR, (&mut *context_ptr).record.server, "drop_request_context - start");
+    info!((&mut *context_ptr).record.server, "drop_request_context - start");
     let context_ref = &mut *context_ptr;
     drop(context_ref);
-    log!(APLOG_ERR, (&mut *context_ptr).record.server, "drop_request_context - finish");
+    info!((&mut *context_ptr).record.server, "drop_request_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
 
@@ -148,7 +150,7 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
     } else {
         unsafe {
             let record = &mut *record_ptr;
-            log!(APLOG_ERR, record.server, "slippy::request::parse - start");
+            info!(record.server, "slippy::request::parse - start");
             let context = match RequestContext::find_or_create(record) {
                 Ok(context) => context,
                 Err(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
@@ -156,24 +158,20 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
             match _parse(context) {
                 Ok(request) => {
                     context.request = Some(request);
-                    log!(APLOG_ERR, record.server, "slippy::request::parse - finish");
+                    info!(record.server, "slippy::request::parse - finish");
                     return OK as c_int;
                 },
                 Err(err) => match err {
                     ParseError::Param(err) => {
-                        log!(
-                            APLOG_NOTICE,
-                            record.server,
-                            format!("Parameter {} error: {}", err.param, err.reason)
-                        );
+                        info!(record.server, "Parameter {} error: {}", err.param, err.reason);
                         return DECLINED as c_int;
                     },
                     ParseError::Io(why) => {
-                        log!(APLOG_ERR, record.server, format!("IO error: {}", why));
+                        info!(record.server, "IO error: {}", why);
                         return HTTP_INTERNAL_SERVER_ERROR as c_int;
                     },
                     ParseError::Utf8(why) => {
-                        log!(APLOG_ERR, record.server, format!("UTF8 error: {}", why));
+                        info!(record.server, "UTF8 error: {}", why);
                         return HTTP_INTERNAL_SERVER_ERROR as c_int;
                     },
                 },

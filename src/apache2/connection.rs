@@ -2,7 +2,7 @@
 
 use crate::apache2::bindings::{
     apr_pool_t, apr_status_t, conn_rec, server_rec,
-    APLOG_ERR, APR_BADARG, APR_SUCCESS,
+    APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve, };
@@ -32,7 +32,7 @@ impl<'c> ConnectionContext<'c> {
     }
 
     pub fn find_or_create(record: &'c mut conn_rec) -> Result<&'c mut Self, Box<dyn Error>> {
-        log!(APLOG_ERR, record.base_server, "ConnectionContext::find_or_create - start");
+        info!(record.base_server, "ConnectionContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "conn_rec.pool".to_string(),
@@ -53,7 +53,7 @@ impl<'c> ConnectionContext<'c> {
                     Self::create(record, server, pool)?
                 },
             };
-            log!(APLOG_ERR, context.record.base_server, "ConnectionContext::find_or_create - finish");
+            info!(context.record.base_server, "ConnectionContext::find_or_create - finish");
             return Ok(context);
         }
     }
@@ -63,7 +63,7 @@ impl<'c> ConnectionContext<'c> {
         server: &'c mut server_rec,
         connection_pool: &'c mut apr_pool_t
     ) -> Result<&'c mut Self, Box<dyn Error>> {
-        log!(APLOG_ERR, record.base_server, "ConnectionContext::create - start");
+        info!(record.base_server, "ConnectionContext::create - start");
         let new_context = alloc::<ConnectionContext<'c>>(
             connection_pool,
             &(Self::get_id(record)),
@@ -71,7 +71,7 @@ impl<'c> ConnectionContext<'c> {
         )?.0;
         new_context.record = record;
         new_context.host = VirtualHostContext::find_or_create(server)?;
-        log!(APLOG_ERR, new_context.record.base_server, "ConnectionContext::create - finish");
+        info!(new_context.record.base_server, "ConnectionContext::create - finish");
         return Ok(new_context);
     }
 }
@@ -82,10 +82,10 @@ pub unsafe extern fn drop_connection_context(connection_void: *mut c_void) -> ap
         return APR_BADARG as apr_status_t;
     }
     let context_ptr = connection_void as *mut ConnectionContext;
-    log!(APLOG_ERR, (&mut *context_ptr).record.base_server, "drop_connection_context - start");
+    info!((&mut *context_ptr).record.base_server, "drop_connection_context - start");
     let context_ref = &mut *context_ptr;
     drop(context_ref);
-    log!(APLOG_ERR, (&mut *context_ptr).record.base_server, "drop_connection_context - finish");
+    info!((&mut *context_ptr).record.base_server, "drop_connection_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
 

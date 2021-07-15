@@ -1,7 +1,7 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    request_rec, APLOG_ERR, HTTP_INTERNAL_SERVER_ERROR, OK,
+    request_rec, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
 use crate::slippy::request::RequestContext;
 
@@ -16,21 +16,21 @@ pub extern fn handle_request(
 ) -> c_int {
     if request_info != ptr::null_mut() {
         unsafe {
-            log!(APLOG_ERR, (&mut *request_info).server, "resource::handle_request - start");
+            info!((&mut *request_info).server, "resource::handle_request - start");
             let context = match RequestContext::find_or_create(&mut *request_info) {
                 Ok(context) => context,
                 Err(why) => {
-                    log!(APLOG_ERR, (*request_info).server, format!("Failed to create RequestContext: {}", why));
+                    info!((*request_info).server, "Failed to create RequestContext: {}", why);
                     return HTTP_INTERNAL_SERVER_ERROR as c_int;
                 }
             };
             match _handle_request(context) {
                 Ok(_) => {
-                    log!(APLOG_ERR, context.record.server, "resource::handle_request - finish");
+                    info!(context.record.server, "resource::handle_request - finish");
                     return OK as c_int
                 },
                 Err(why) => {
-                    log!(APLOG_ERR, (*request_info).server, format!("Resource request failed: {}", why));
+                    info!((*request_info).server, "Resource request failed: {}", why);
                     return HTTP_INTERNAL_SERVER_ERROR as c_int;
                 },
             };

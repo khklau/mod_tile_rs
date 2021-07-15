@@ -2,7 +2,7 @@
 
 use crate::apache2::bindings::{
     apr_pool_t, apr_status_t, server_rec,
-    APR_BADARG, APR_SUCCESS, APLOG_ERR,
+    APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve };
@@ -37,7 +37,7 @@ impl<'h> VirtualHostContext<'h> {
     }
 
     pub fn find_or_create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
-        log!(APLOG_ERR, record, "VirtualHostContext::find_or_create - start");
+        info!(record, "VirtualHostContext::find_or_create - start");
         if record.process == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "server_rec.process".to_string(),
@@ -54,15 +54,15 @@ impl<'h> VirtualHostContext<'h> {
             }
             let context = match retrieve(&mut *(proc_record.pool), &(Self::get_id(record))) {
                 Some(existing_context) => {
-                    log!(APLOG_ERR, record, "VirtualHostContext::find_or_create - existing found");
+                    info!(record, "VirtualHostContext::find_or_create - existing found");
                     existing_context
                 },
                 None => {
-                    log!(APLOG_ERR, record, "VirtualHostContext::find_or_create - not found");
+                    info!(record, "VirtualHostContext::find_or_create - not found");
                     Self::create(record, &mut *(proc_record.pool))?
                 },
             };
-            log!(APLOG_ERR, context.record, "VirtualHostContext::find_or_create - finish");
+            info!(context.record, "VirtualHostContext::find_or_create - finish");
             return Ok(context);
         }
     }
@@ -71,7 +71,7 @@ impl<'h> VirtualHostContext<'h> {
         record: &'h mut server_rec,
         process_pool: &'h mut apr_pool_t
     ) -> Result<&'h mut Self, Box<dyn Error>> {
-        log!(APLOG_ERR, record, "VirtualHostContext::create - start");
+        info!(record, "VirtualHostContext::create - start");
         let new_context = alloc::<VirtualHostContext<'h>>(
             process_pool,
             &(Self::get_id(record)),
@@ -90,7 +90,7 @@ impl<'h> VirtualHostContext<'h> {
             .append(true)
             .open(&new_context.trace_path.as_path())?
         );
-        log!(APLOG_ERR, new_context.record, "VirtualHostContext::create - finish");
+        info!(new_context.record, "VirtualHostContext::create - finish");
         return Ok(new_context);
     }
 }
@@ -101,10 +101,10 @@ pub unsafe extern fn drop_virtual_host_context(host_void: *mut c_void) -> apr_st
         return APR_BADARG as apr_status_t;
     }
     let context_ptr = host_void as *mut VirtualHostContext;
-    log!(APLOG_ERR, (&mut *context_ptr).record, "drop_virtual_host_context - start");
+    info!((&mut *context_ptr).record, "drop_virtual_host_context - start");
     let context_ref = &mut *context_ptr;
     drop(context_ref);
-    log!(APLOG_ERR, (&mut *context_ptr).record, "drop_virtual_host_context - finish");
+    info!((&mut *context_ptr).record, "drop_virtual_host_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
 

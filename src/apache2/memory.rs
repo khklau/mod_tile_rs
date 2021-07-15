@@ -77,22 +77,12 @@ pub fn retrieve<'p, T>(
 #[cfg(test)]
 pub mod test_utils {
     use crate::apache2::bindings::{
-        APR_SUCCESS, apr_initialize, apr_pool_create_ex, apr_pool_t, apr_pool_destroy, apr_terminate,
+        APR_SUCCESS, apr_pool_create_ex, apr_pool_t, apr_pool_destroy,
     };
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;
     use std::ptr;
-
-    #[ctor::ctor]
-    unsafe fn mod_test_setup() {
-        apr_initialize();
-    }
-
-    #[ctor::dtor]
-    unsafe fn mod_test_teardown() {
-        apr_terminate();
-    }
 
     pub fn with_pool<F>(func: F) -> Result<(), Box<dyn Error>>
     where F: FnOnce(&mut apr_pool_t) -> Result<(), Box<dyn Error>> {

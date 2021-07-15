@@ -2,6 +2,8 @@
 mod apache2 {
     #[macro_use]
     pub mod bindings;
+    #[macro_use]
+    pub mod logger;
     pub mod connection;
     pub mod hook;
     pub mod memory;
@@ -14,8 +16,6 @@ mod slippy {
 mod storage {
     pub mod file_system;
 }
-extern crate libc;
-#[macro_use] extern crate scan_fmt;
 
 use crate::apache2::bindings::{
     ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
