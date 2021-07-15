@@ -1,7 +1,7 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_pool_t, server_rec, APLOG_ERR,
+    apr_pool_t, server_rec,
 };
 use crate::apache2::virtual_host::VirtualHostContext;
 
@@ -17,21 +17,21 @@ pub extern fn initialise(
     if child_pool != ptr::null_mut()
         && server_info != ptr::null_mut() {
         unsafe {
-            log!(APLOG_ERR, server_info, "storage::file_system::initialise - start");
+            info!(server_info, "storage::file_system::initialise - start");
             let context = match VirtualHostContext::find_or_create(&mut *server_info) {
                 Ok(context) => context,
                 Err(why) => {
-                    log!(APLOG_ERR, server_info, format!("Failed to create VirtualHostContext: {}", why));
+                    info!(server_info, "Failed to create VirtualHostContext: {}", why);
                     return ();
                 }
             };
             match _initialise(context) {
                 Ok(_) => (),
                 Err(why) => {
-                    log!(APLOG_ERR, server_info, format!("File system initialisation failed: {}", why));
+                    info!(server_info, "File system initialisation failed: {}", why);
                 },
             };
-            log!(APLOG_ERR, context.record, "storage::file_system::initialise - finish");
+            info!(context.record, "storage::file_system::initialise - finish");
         }
     }
 }
