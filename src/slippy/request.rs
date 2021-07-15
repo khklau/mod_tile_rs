@@ -455,3 +455,23 @@ pub mod test_utils {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::test_utils::with_request_rec;
+    use super::*;
+    use std::boxed::Box;
+    use std::error::Error;
+
+    #[test]
+    fn test_parse_report_mod_stats() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/mod_tile_rs")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let request = _parse(context)?;
+            assert!(matches!(request, Request::ReportModStats));
+            Ok(())
+        })
+    }
+}
