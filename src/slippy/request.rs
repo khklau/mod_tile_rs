@@ -18,7 +18,6 @@ use std::convert::From;
 use std::error::Error;
 use std::ffi::{CStr, CString,};
 use std::fmt;
-use std::io::Write;
 use std::os::raw::{c_int, c_void,};
 use std::option::Option;
 use std::ptr;
@@ -33,6 +32,8 @@ pub struct RequestContext<'r> {
     pub request: Option<Request>,
 }
 
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub enum Request {
     ReportModStats,
     DescribeLayer,
@@ -44,6 +45,8 @@ pub struct DescribeLayerRequest {
     layer: i32,
 }
 
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub struct ServeTileRequestV3 {
     parameter: String,
     x: i32,
@@ -53,6 +56,8 @@ pub struct ServeTileRequestV3 {
     option: Option<String>,
 }
 
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub struct ServeTileRequestV2 {
     x: i32,
     y: i32,
@@ -181,8 +186,7 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
 }
 
 fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
-    context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse - start\n")?;
-    write!(context.get_host().trace_file.borrow_mut(), "slippy::request::_parse - url.path={}\n", context.uri)?;
+    info!(context.get_host().record, "slippy::request::_parse - uri={}", context.uri);
 
     // try match stats request
     let module_name = unsafe {
@@ -190,18 +194,18 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
     };
     let stats_uri = format!("/{}", module_name);
     if context.uri.eq(&stats_uri) {
-        context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse ReportModStats - finish\n")?;
+        info!(context.get_host().record, "slippy::request::_parse - parsed ReportModStats");
         return Ok(Request::ReportModStats);
     }
 
-    // try match ServeTileV3
+    // try match ServeTileV3 with option
     match scan_fmt!(
         context.uri,
-        "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10}",
+        "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
         String, i32, i32, i32, String, String
     ) {
         Ok((parameter, x, y, z, extension, option)) => {
-            context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV3 - finish\n")?;
+            info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV3 with option");
             return Ok(Request::ServeTileV3(
                 ServeTileRequestV3 {
                     parameter,
@@ -209,42 +213,78 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
                     y,
                     z,
                     extension,
-                    option: if option.is_empty() {
-                        None
-                    } else {
-                        Some(option)
-                    },
+                    option: Some(option)
                 }
-            ))
+            ));
         },
         Err(_) => ()
     }
 
-    // try match ServeTileV2
+    // try match ServeTileV3 no option
     match scan_fmt!(
         context.uri,
-        "/{d}/{d}/{d}.{255[a-z]}/{10}",
+        "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}{///?/}",
+        String, i32, i32, i32, String
+    ) {
+        Ok((parameter, x, y, z, extension)) => {
+            info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV3 no option");
+            return Ok(Request::ServeTileV3(
+                ServeTileRequestV3 {
+                    parameter,
+                    x,
+                    y,
+                    z,
+                    extension,
+                    option: None,
+                }
+            ));
+        },
+        Err(_) => ()
+    }
+
+    // try match ServeTileV2 with option
+    match scan_fmt!(
+        context.uri,
+        "/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
         i32, i32, i32, String, String
     ) {
         Ok((x, y, z, extension, option)) => {
-            context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse ServeTileV2 - finish\n")?;
+            info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV2");
             return Ok(Request::ServeTileV2(
                 ServeTileRequestV2 {
                     x,
                     y,
                     z,
                     extension,
-                    option: if option.is_empty() {
-                        None
-                    } else {
-                        Some(option)
-                    },
+                    option: Some(option),
                 }
-            ))
+            ));
         },
         Err(_) => ()
     }
-    context.get_host().trace_file.borrow_mut().write_all(b"slippy::request::_parse no matches - finish\n")?;
+
+    // try match ServeTileV2 no option
+    match scan_fmt!(
+        context.uri,
+        "/{d}/{d}/{d}.{255[a-z]}{///?/}",
+        i32, i32, i32, String
+    ) {
+        Ok((x, y, z, extension)) => {
+            info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV2");
+            return Ok(Request::ServeTileV2(
+                ServeTileRequestV2 {
+                    x,
+                    y,
+                    z,
+                    extension,
+                    option: None,
+                }
+            ));
+        },
+        Err(_) => ()
+    }
+
+    info!(context.get_host().record, "slippy::request::_parse - no match");
     return Err(ParseError::Param(
         InvalidParameterError {
             param: "uri".to_string(),
@@ -471,6 +511,135 @@ mod tests {
             let context = RequestContext::find_or_create(record)?;
             let request = _parse(context)?;
             assert!(matches!(request, Request::ReportModStats));
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/foo/7/8/9.png/bar")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let actual_request = _parse(context)?;
+            let expected_request = Request::ServeTileV3(
+                ServeTileRequestV3 {
+                    parameter: String::from("foo"),
+                    x: 7,
+                    y: 8,
+                    z: 9,
+                    extension: String::from("png"),
+                    option: Some(String::from("bar")),
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/foo/7/8/9.png/")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let actual_request = _parse(context)?;
+            let expected_request = Request::ServeTileV3(
+                ServeTileRequestV3 {
+                    parameter: String::from("foo"),
+                    x: 7,
+                    y: 8,
+                    z: 9,
+                    extension: String::from("png"),
+                    option: None,
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/foo/7/8/9.png")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let actual_request = _parse(context)?;
+            let expected_request = Request::ServeTileV3(
+                ServeTileRequestV3 {
+                    parameter: String::from("foo"),
+                    x: 7,
+                    y: 8,
+                    z: 9,
+                    extension: String::from("png"),
+                    option: None,
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/1/2/3.jpg/blah")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let actual_request = _parse(context)?;
+            let expected_request = Request::ServeTileV2(
+                ServeTileRequestV2 {
+                    x: 1,
+                    y: 2,
+                    z: 3,
+                    extension: String::from("jpg"),
+                    option: Some(String::from("blah")),
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/1/2/3.jpg/")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let actual_request = _parse(context)?;
+            let expected_request = Request::ServeTileV2(
+                ServeTileRequestV2 {
+                    x: 1,
+                    y: 2,
+                    z: 3,
+                    extension: String::from("jpg"),
+                    option: None,
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let uri = CString::new("/1/2/3.jpg")?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::find_or_create(record)?;
+            let actual_request = _parse(context)?;
+            let expected_request = Request::ServeTileV2(
+                ServeTileRequestV2 {
+                    x: 1,
+                    y: 2,
+                    z: 3,
+                    extension: String::from("jpg"),
+                    option: None,
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
     }
