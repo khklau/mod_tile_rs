@@ -16,6 +16,9 @@ mod slippy {
 mod storage {
     pub mod file_system;
 }
+mod tile {
+    pub mod config;
+}
 
 use crate::apache2::bindings::{
     ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
