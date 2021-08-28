@@ -188,19 +188,31 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
 fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
     info!(context.get_host().record, "slippy::request::_parse - uri={}", context.uri);
 
+    let base_url = context.get_host().tile_config.base_url.as_str();
+    let request_url = if let Some(found) = context.uri.find(base_url) {
+        let after_base = found + base_url.len();
+        if let Some(input_url) = context.uri.get(after_base..) {
+            input_url
+        } else {
+            ""
+        }
+    } else {
+        context.uri
+    };
+
     // try match stats request
     let module_name = unsafe {
         CStr::from_ptr(crate::TILE_MODULE.name).to_str()?
     };
     let stats_uri = format!("/{}", module_name);
-    if context.uri.eq(&stats_uri) {
+    if request_url.eq(&stats_uri) {
         info!(context.get_host().record, "slippy::request::_parse - parsed ReportModStats");
         return Ok(Request::ReportModStats);
     }
 
     // try match ServeTileV3 with option
     match scan_fmt!(
-        context.uri,
+        request_url,
         "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
         String, i32, i32, i32, String, String
     ) {
@@ -222,7 +234,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
 
     // try match ServeTileV3 no option
     match scan_fmt!(
-        context.uri,
+        request_url,
         "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}{///?/}",
         String, i32, i32, i32, String
     ) {
@@ -244,7 +256,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
 
     // try match ServeTileV2 with option
     match scan_fmt!(
-        context.uri,
+        request_url,
         "/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
         i32, i32, i32, String, String
     ) {
@@ -265,7 +277,7 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
 
     // try match ServeTileV2 no option
     match scan_fmt!(
-        context.uri,
+        request_url,
         "/{d}/{d}/{d}.{255[a-z]}{///?/}",
         i32, i32, i32, String
     ) {
@@ -284,10 +296,11 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         Err(_) => ()
     }
 
-    info!(context.get_host().record, "slippy::request::_parse - no match");
+    info!(context.get_host().record, "slippy::request::_parse - URI {} does not match any known request types", request_url);
     return Err(ParseError::Param(
         InvalidParameterError {
             param: "uri".to_string(),
+            value: request_url.to_string(),
             reason: "Does not match any known request types".to_string(),
         }
     ));
@@ -335,6 +348,7 @@ impl From<Utf8Error> for ParseError {
 #[derive(Debug)]
 struct InvalidParameterError {
     param: String,
+    value: String,
     reason: String,
 }
 
@@ -342,7 +356,7 @@ impl Error for InvalidParameterError {}
 
 impl fmt::Display for InvalidParameterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Parameter {} is invalid: {}", self.param, self.reason)
+        write!(f, "Parameter {} value {} is invalid: {}", self.param, self.value, self.reason)
     }
 }
 
@@ -500,13 +514,15 @@ pub mod test_utils {
 mod tests {
     use super::test_utils::with_request_rec;
     use super::*;
+    use crate::tile::config::TileConfig;
     use std::boxed::Box;
     use std::error::Error;
 
     #[test]
     fn test_parse_report_mod_stats() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/mod_tile_rs")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/mod_tile_rs", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let request = _parse(context)?;
@@ -518,7 +534,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/foo/7/8/9.png/bar")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/foo/7/8/9.png/bar", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let actual_request = _parse(context)?;
@@ -540,7 +557,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/foo/7/8/9.png/")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/foo/7/8/9.png/", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let actual_request = _parse(context)?;
@@ -562,7 +580,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/foo/7/8/9.png")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/foo/7/8/9.png", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let actual_request = _parse(context)?;
@@ -584,7 +603,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/1/2/3.jpg/blah")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/1/2/3.jpg/blah", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let actual_request = _parse(context)?;
@@ -605,7 +625,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/1/2/3.jpg/")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/1/2/3.jpg/", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let actual_request = _parse(context)?;
@@ -626,7 +647,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let uri = CString::new("/1/2/3.jpg")?;
+            let tile_config = TileConfig::new();
+            let uri = CString::new(format!("{}/1/2/3.jpg", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::find_or_create(record)?;
             let actual_request = _parse(context)?;

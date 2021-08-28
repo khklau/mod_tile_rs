@@ -6,6 +6,7 @@ use crate::apache2::bindings::{
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve };
+use crate::tile::config::TileConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -21,6 +22,7 @@ use thread_id;
 
 pub struct VirtualHostContext<'h> {
     pub record: &'h mut server_rec,
+    pub tile_config: TileConfig,
     pub trace_path: PathBuf,
     pub trace_file: RefCell<File>,
 }
@@ -78,6 +80,7 @@ impl<'h> VirtualHostContext<'h> {
             Some(drop_virtual_host_context),
         )?.0;
         new_context.record = record;
+        new_context.tile_config = TileConfig::new();
 
         let path_str = format!(
             "/tmp/mod_tile_rs-trace-pid{}-tid{}.txt",
