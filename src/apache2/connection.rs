@@ -44,33 +44,39 @@ impl<'c> ConnectionContext<'c> {
                 reason: "null pointer".to_string(),
             }));
         }
-        unsafe {
-            let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
-                Some(existing_context) => existing_context,
-                None => {
-                    let server = &mut *(record.base_server);
-                    let pool = &mut *(record.pool);
-                    Self::create(record, server, pool)?
-                },
-            };
-            info!(context.record.base_server, "ConnectionContext::find_or_create - finish");
-            return Ok(context);
-        }
+        let context = match retrieve(
+            unsafe { &mut *(record.pool) },
+            &(Self::get_id(record))
+        ) {
+            Some(existing_context) => existing_context,
+            None => {
+                let server = unsafe { &mut *(record.base_server) };
+                let host_context = VirtualHostContext::find_or_create(server)?;
+                Self::create(record, host_context)?
+            },
+        };
+        info!(context.record.base_server, "ConnectionContext::find_or_create - finish");
+        return Ok(context);
     }
 
-    fn create(
+    pub fn create(
         record: &'c mut conn_rec,
-        server: &'c mut server_rec,
-        connection_pool: &'c mut apr_pool_t
+        host_context: &'c mut VirtualHostContext<'c>,
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::create - start");
+        if record.pool == ptr::null_mut() {
+            return Err(Box::new(InvalidArgError{
+                arg: "conn_rec.pool".to_string(),
+                reason: "null pointer".to_string(),
+            }));
+        }
         let new_context = alloc::<ConnectionContext<'c>>(
-            connection_pool,
+            unsafe { &mut *(record.pool) },
             &(Self::get_id(record)),
             Some(drop_connection_context),
         )?.0;
         new_context.record = record;
-        new_context.host = VirtualHostContext::find_or_create(server)?;
+        new_context.host = host_context;
         info!(new_context.record.base_server, "ConnectionContext::create - finish");
         return Ok(new_context);
     }
@@ -91,16 +97,30 @@ pub unsafe extern fn drop_connection_context(connection_void: *mut c_void) -> ap
 
 #[cfg(test)]
 pub mod test_utils {
+    use super::ConnectionContext;
     use crate::apache2::bindings::{
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
     use crate::apache2::memory::test_utils::with_pool;
+    use crate::apache2::virtual_host::VirtualHostContext;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
+    use crate::tile::config::TileConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;
     use std::os::raw::{ c_int, c_long, c_uint, };
     use std::ptr;
+
+    impl<'c> ConnectionContext<'c> {
+        pub fn create_with_tile_config(
+            record: &'c mut conn_rec,
+            tile_config: TileConfig,
+        ) -> Result<&'c mut Self, Box<dyn Error>> {
+            let server = unsafe { &mut *(record.base_server) };
+            let host_context = VirtualHostContext::create(server, tile_config)?;
+            ConnectionContext::create(record, host_context)
+        }
+    }
 
     impl conn_rec {
         pub fn new() -> conn_rec {

@@ -82,6 +82,7 @@ impl<'r> RequestContext<'r> {
     }
 
     pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
+        info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "request_rec.pool".to_string(),
@@ -92,35 +93,40 @@ impl<'r> RequestContext<'r> {
                 arg: "request_rec.connection".to_string(),
                 reason: "null pointer".to_string(),
             }));
+        }
+        let context = match retrieve(
+            unsafe { &mut *(record.pool) },
+            &(Self::get_id(record))
+        ) {
+            Some(existing_context) => existing_context,
+            None => {
+                let connection = unsafe { &mut *(record.connection) };
+                let conn_context = ConnectionContext::find_or_create(connection)?;
+                Self::create(record, conn_context)?
+            },
+        };
+        info!(context.record.server, "RequestContext::find_or_create - finish");
+        return Ok(context);
+    }
+
+    pub fn create(
+        record: &'r mut request_rec,
+        conn_context: &'r mut ConnectionContext<'r>,
+    ) -> Result<&'r mut Self, Box<dyn Error>> {
+        if record.pool == ptr::null_mut() {
+            return Err(Box::new(InvalidArgError{
+                arg: "request_rec.pool".to_string(),
+                reason: "null pointer".to_string(),
+            }));
         } else if record.uri == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "request_rec.uri".to_string(),
                 reason: "null pointer".to_string(),
             }));
         }
-        unsafe {
-            info!(record.server, "RequestContext::find_or_create - start");
-            let context = match retrieve(&mut *(record.pool), &(Self::get_id(record))) {
-                Some(existing_context) => existing_context,
-                None => {
-                    let pool = &mut *(record.pool);
-                    let connection = &mut *(record.connection);
-                    let uri = CStr::from_ptr(record.uri).to_str()?;
-                    Self::create(record, pool, connection, uri)?
-                },
-            };
-            info!(context.record.server, "RequestContext::find_or_create - finish");
-            return Ok(context);
-        }
-    }
+        let record_pool = unsafe { &mut *(record.pool) };
+        let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
 
-    fn create(
-        record: &'r mut request_rec,
-        record_pool: &'r mut apr_pool_t,
-        connection: &'r mut conn_rec,
-        uri: &'r str,
-    ) -> Result<&'r mut Self, Box<dyn Error>> {
-        let conn_context = ConnectionContext::find_or_create(connection)?;
         info!(conn_context.host.record, "RequestContext::create - start");
         let new_context = alloc::<RequestContext<'r>>(
             record_pool,
@@ -362,6 +368,7 @@ impl fmt::Display for InvalidParameterError {
 
 #[cfg(test)]
 pub mod test_utils {
+    use super::RequestContext;
     use crate::apache2::bindings::{
         __BindgenBitfieldUnit, apr_dev_t, apr_fileperms_t, apr_filetype_e, apr_finfo_t, apr_gid_t,
         apr_ino_t, apr_int32_t, apr_int64_t,
@@ -369,12 +376,25 @@ pub mod test_utils {
         conn_rec, request_rec,
     };
     use crate::apache2::memory::test_utils::with_pool;
+    use crate::apache2::connection::ConnectionContext;
     use crate::apache2::connection::test_utils::with_conn_rec;
+    use crate::tile::config::TileConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;
     use std::os::raw::{ c_int, c_uint, };
     use std::ptr;
+
+    impl<'r> RequestContext<'r> {
+        pub fn create_with_tile_config(
+            record: &'r mut request_rec,
+            tile_config: TileConfig,
+        ) -> Result<&'r mut Self, Box<dyn Error>> {
+            let connection = unsafe { &mut *(record.connection) };
+            let conn_context = ConnectionContext::create_with_tile_config(connection, tile_config)?;
+            RequestContext::create(record, conn_context)
+        }
+    }
 
     impl apr_uri_t {
         pub fn new() -> apr_uri_t {
@@ -524,7 +544,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/mod_tile_rs", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let request = _parse(context)?;
             assert!(matches!(request, Request::ReportModStats));
             Ok(())
@@ -537,7 +557,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = _parse(context)?;
             let expected_request = Request::ServeTileV3(
                 ServeTileRequestV3 {
@@ -560,7 +580,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/foo/7/8/9.png/", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = _parse(context)?;
             let expected_request = Request::ServeTileV3(
                 ServeTileRequestV3 {
@@ -583,7 +603,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/foo/7/8/9.png", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = _parse(context)?;
             let expected_request = Request::ServeTileV3(
                 ServeTileRequestV3 {
@@ -606,7 +626,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = _parse(context)?;
             let expected_request = Request::ServeTileV2(
                 ServeTileRequestV2 {
@@ -628,7 +648,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/1/2/3.jpg/", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = _parse(context)?;
             let expected_request = Request::ServeTileV2(
                 ServeTileRequestV2 {
@@ -650,7 +670,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new(format!("{}/1/2/3.jpg", tile_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::find_or_create(record)?;
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = _parse(context)?;
             let expected_request = Request::ServeTileV2(
                 ServeTileRequestV2 {

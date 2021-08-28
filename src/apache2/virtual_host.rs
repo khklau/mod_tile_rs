@@ -1,7 +1,7 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_pool_t, apr_status_t, server_rec,
+    apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::hook::InvalidArgError;
@@ -40,47 +40,56 @@ impl<'h> VirtualHostContext<'h> {
 
     pub fn find_or_create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::find_or_create - start");
-        if record.process == ptr::null_mut() {
+        let proc_record = Self::access_proc_record(record.process)?;
+        let context = match retrieve(
+            unsafe { &mut *(proc_record.pool) },
+            &(Self::get_id(record))
+        ) {
+            Some(existing_context) => {
+                info!(record, "VirtualHostContext::find_or_create - existing found");
+                existing_context
+            },
+            None => {
+                info!(record, "VirtualHostContext::find_or_create - not found");
+                // TODO read the tile config from a file
+                let tile_config = TileConfig::new();
+                Self::create(record, tile_config)?
+            },
+        };
+        info!(context.record, "VirtualHostContext::find_or_create - finish");
+        return Ok(context);
+    }
+
+    fn access_proc_record(process: *mut process_rec) -> Result<&'h mut process_rec, Box<dyn Error>> {
+        if process == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "server_rec.process".to_string(),
                 reason: "null pointer".to_string(),
             }));
         }
-        unsafe {
-            let proc_record = &mut *(record.process);
-            if proc_record.pool == ptr::null_mut() {
-                return Err(Box::new(InvalidArgError{
-                    arg: "server_rec.process.pool".to_string(),
-                    reason: "null pointer".to_string(),
-                }));
-            }
-            let context = match retrieve(&mut *(proc_record.pool), &(Self::get_id(record))) {
-                Some(existing_context) => {
-                    info!(record, "VirtualHostContext::find_or_create - existing found");
-                    existing_context
-                },
-                None => {
-                    info!(record, "VirtualHostContext::find_or_create - not found");
-                    Self::create(record, &mut *(proc_record.pool))?
-                },
-            };
-            info!(context.record, "VirtualHostContext::find_or_create - finish");
-            return Ok(context);
+        let proc_record = unsafe { &mut *process };
+        if proc_record.pool == ptr::null_mut() {
+            return Err(Box::new(InvalidArgError{
+                arg: "server_rec.process.pool".to_string(),
+                reason: "null pointer".to_string(),
+            }));
         }
+        Ok(proc_record)
     }
 
-    fn create(
+    pub fn create(
         record: &'h mut server_rec,
-        process_pool: &'h mut apr_pool_t
+        tile_config: TileConfig,
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::create - start");
+        let proc_record = Self::access_proc_record(record.process)?;
         let new_context = alloc::<VirtualHostContext<'h>>(
-            process_pool,
+            unsafe { &mut *(proc_record.pool) },
             &(Self::get_id(record)),
             Some(drop_virtual_host_context),
         )?.0;
         new_context.record = record;
-        new_context.tile_config = TileConfig::new();
+        new_context.tile_config = tile_config;
 
         let path_str = format!(
             "/tmp/mod_tile_rs-trace-pid{}-tid{}.txt",
