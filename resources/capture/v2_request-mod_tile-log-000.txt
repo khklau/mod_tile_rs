@@ -1,0 +1,19 @@
+[Sun Aug 22 17:06:30.723080 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1470): [client 127.0.0.1:42320] tile_translate: uri(/osm/0/0/0.png)
+[Sun Aug 22 17:06:30.723115 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1487): [client 127.0.0.1:42320] tile_translate: testing baseuri(/osm/) name(default) extension(png)
+[Sun Aug 22 17:06:30.723123 2021] [tile:info] [pid 9770:tid 140221026895616] [client 127.0.0.1:42320] tile_translate: request URI /osm/0/0/0.png matches tile config with store /var/cache/renderd and xml default
+[Sun Aug 22 17:06:30.723137 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1540): [client 127.0.0.1:42320] tile_translate: matched request v2 - z=0, x=0, y=0, extension=png, option=
+[Sun Aug 22 17:06:30.723143 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1561): [client 127.0.0.1:42320] tile_translate: request for default was 0 0 1
+[Sun Aug 22 17:06:30.723149 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1576): [client 127.0.0.1:42320] tile_translate: getting storage backend for layer number 0
+[Sun Aug 22 17:06:30.723156 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(386): [client 127.0.0.1:42320] get_storage_backend: Retrieving storage back end for tile layer 0 in pool 7f87cb943028 and thread 140221026895616
+[Sun Aug 22 17:06:30.723162 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(401): [client 127.0.0.1:42320] get_storage_backend: No storage backends for this lifecycle 7f87cb943028, creating it in thread 140221026895616
+[Sun Aug 22 17:06:30.723170 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(418): [client 127.0.0.1:42320] get_storage_backend: No storage backend in current lifecycle 7f87cb943028 in thread 140221026895616 for current tile layer 0
+[Sun Aug 22 17:06:30.723202 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(421): [client 127.0.0.1:42320] get_storage_backend: initialised storage backend /var/cache/renderd
+[Sun Aug 22 17:06:30.723208 2021] [tile:info] [pid 9770:tid 140221026895616] [client 127.0.0.1:42320] get_storage_backend: retrieving backend /var/cache/renderd
+[Sun Aug 22 17:06:30.723213 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1610): [client 127.0.0.1:42320] tile_translate: request will be handled by serving a tile
+[Sun Aug 22 17:06:30.723219 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1614): [client 127.0.0.1:42320] tile_translate: op(tile_serve) xml(default) mime(image/png) z(0) x(0) y(0)
+[Sun Aug 22 17:06:30.723225 2021] [tile:info] [pid 9770:tid 140221026895616] [client 127.0.0.1:42320] tile_storage_hook: handler(tile_serve), uri(/osm/0/0/0.png)
+[Sun Aug 22 17:06:30.723276 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(441): [client 127.0.0.1:42320] tile_state: determined state of default 0 0 0 on store 7f87b8001f60: Tile size: -1, expired: 1 created: 0
+[Sun Aug 22 17:06:30.723292 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(204): [client 127.0.0.1:42320] Connecting to renderd on Unix socket /var/run/renderd/renderd.sock
+[Sun Aug 22 17:06:30.723323 2021] [tile:info] [pid 9770:tid 140221026895616] [client 127.0.0.1:42320] Requesting style(default) z(0) x(0) y(0) from renderer with priority 5
+[Sun Aug 22 17:06:40.733117 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(343): [client 127.0.0.1:42320] request_tile: Request xml(default) z(0) x(0) y(0) could not be rendered in 10 seconds
+[Sun Aug 22 17:06:40.733326 2021] [tile:debug] [pid 9770:tid 140221026895616] ./src/mod_tile.c(1114): [client 127.0.0.1:42320] tile_storage_hook: Missing tile was not rendered in time. Returning File Not Found

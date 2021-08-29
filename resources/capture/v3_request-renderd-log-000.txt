@@ -1,0 +1,11 @@
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Got incoming connection, fd 5, number 1
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Got incoming request with protocol version 3
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Got command Dirty fd(5) xml(default), z(0), x(0), y(0), mime(image/png), options(global)
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Sending NotDone response(4)
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Sending render cmd(4 default 0/0/0) with protocol version 3 to fd 5
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: WARNING: Failed to send render cmd on fd 5
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: START TILE default 0 0-0 0-0, new metatile
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Failed to read cmd on fd 5
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: Rendering projected coordinates 0 0 0 -> -20037508.342800|-20037508.342800 20037508.342800|20037508.342800 to a 1 x 1 tile
+Aug 29 19:34:52 kean-UX303UA renderd[6912]: DEBUG: Connection 0, fd 5 closed, now 0 left
+Aug 29 19:34:53 kean-UX303UA renderd[6912]: DEBUG: DONE TILE default 0 0-0 0-0 in 1.088 seconds

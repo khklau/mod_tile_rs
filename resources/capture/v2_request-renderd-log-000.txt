@@ -1,0 +1,12 @@
+Aug 20 17:00:03 kean-UX303UA renderd[7234]: DEBUG: Got incoming connection, fd 11, number 1
+Aug 20 17:00:03 kean-UX303UA renderd[7234]: DEBUG: Got incoming request with protocol version 2
+Aug 20 17:00:03 kean-UX303UA renderd[7234]: DEBUG: Got command RenderPrio fd(11) xml(default), z(0), x(0), y(0), mime(image/png), options()
+Aug 20 17:00:13 kean-UX303UA renderd[7234]: DEBUG: Failed to read cmd on fd 11
+Aug 20 17:00:13 kean-UX303UA renderd[7234]: DEBUG: Connection 0, fd 11 closed, now 0 left
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: Using web mercator projection settings
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: DEBUG: START TILE default 0 0-0 0-0, new metatile
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: Rendering projected coordinates 0 0 0 -> -20037508.342800|-20037508.342800 20037508.342800|20037508.342800 to a 1 x 1 tile
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: Using web mercator projection settings
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: Using web mercator projection settings
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: Using web mercator projection settings
+Aug 20 17:00:22 kean-UX303UA renderd[7234]: DEBUG: DONE TILE default 0 0-0 0-0 in 0.760 seconds

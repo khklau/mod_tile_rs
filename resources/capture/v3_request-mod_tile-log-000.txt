@@ -1,0 +1,18 @@
+[Sun Aug 29 19:34:52.015313 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1470): [client 127.0.0.1:59070] tile_translate: uri(/osm/global/0/0/0.png/dirty)
+[Sun Aug 29 19:34:52.015435 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1487): [client 127.0.0.1:59070] tile_translate: testing baseuri(/osm/) name(default) extension(png)
+[Sun Aug 29 19:34:52.015466 2021] [tile:info] [pid 6829:tid 140505790641920] [client 127.0.0.1:59070] tile_translate: request URI /osm/global/0/0/0.png/dirty matches tile config with store /var/cache/renderd and xml default
+[Sun Aug 29 19:34:52.015509 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1522): [client 127.0.0.1:59070] tile_translate: matched request v3 - parameters=global, z=0, x=0, y=0, extension=png, option=dirty
+[Sun Aug 29 19:34:52.015534 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1561): [client 127.0.0.1:59070] tile_translate: request for default was 0 0 1
+[Sun Aug 29 19:34:52.015558 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1576): [client 127.0.0.1:59070] tile_translate: getting storage backend for layer number 0
+[Sun Aug 29 19:34:52.015583 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(386): [client 127.0.0.1:59070] get_storage_backend: Retrieving storage back end for tile layer 0 in pool 7fca1198a028 and thread 140505790641920
+[Sun Aug 29 19:34:52.015611 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(401): [client 127.0.0.1:59070] get_storage_backend: No storage backends for this lifecycle 7fca1198a028, creating it in thread 140505790641920
+[Sun Aug 29 19:34:52.015642 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(418): [client 127.0.0.1:59070] get_storage_backend: No storage backend in current lifecycle 7fca1198a028 in thread 140505790641920 for current tile layer 0
+[Sun Aug 29 19:34:52.015759 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(421): [client 127.0.0.1:59070] get_storage_backend: initialised storage backend /var/cache/renderd
+[Sun Aug 29 19:34:52.015817 2021] [tile:info] [pid 6829:tid 140505790641920] [client 127.0.0.1:59070] get_storage_backend: retrieving backend /var/cache/renderd
+[Sun Aug 29 19:34:52.015844 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1603): [client 127.0.0.1:59070] tile_translate: option is dirty
+[Sun Aug 29 19:34:52.015863 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(1614): [client 127.0.0.1:59070] tile_translate: op(tile_dirty) xml(default) mime(image/png) z(0) x(0) y(0)
+[Sun Aug 29 19:34:52.015885 2021] [tile:info] [pid 6829:tid 140505790641920] [client 127.0.0.1:59070] tile_storage_hook: handler(tile_dirty), uri(/osm/global/0/0/0.png/dirty)
+[Sun Aug 29 19:34:52.015931 2021] [authz_core:debug] [pid 6829:tid 140505790641920] mod_authz_core.c(845): [client 127.0.0.1:59070] AH01628: authorization result: granted (no directives)
+[Sun Aug 29 19:34:52.015976 2021] [tile:debug] [pid 6829:tid 140505790641920] ./src/mod_tile.c(204): [client 127.0.0.1:59070] Connecting to renderd on Unix socket /var/run/renderd/renderd.sock
+[Sun Aug 29 19:34:52.016068 2021] [tile:info] [pid 6829:tid 140505790641920] [client 127.0.0.1:59070] Requesting style(default) z(0) x(0) y(0) from renderer with priority 2
+[Sun Aug 29 19:34:52.016122 2021] [tile:info] [pid 6829:tid 140505790641920] [client 127.0.0.1:59070] Tile submitted for rendering
