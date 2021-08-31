@@ -216,48 +216,50 @@ fn _parse(context: &RequestContext) -> Result<Request, ParseError> {
         return Ok(Request::ReportModStats);
     }
 
-    // try match ServeTileV3 with option
-    match scan_fmt!(
-        request_url,
-        "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
-        String, i32, i32, i32, String, String
-    ) {
-        Ok((parameter, x, y, z, extension, option)) => {
-            info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV3 with option");
-            return Ok(Request::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter,
-                    x,
-                    y,
-                    z,
-                    extension,
-                    option: Some(option)
-                }
-            ));
-        },
-        Err(_) => ()
-    }
+    if context.get_host().tile_config.parameters_allowed {
+        // try match ServeTileV3 with option
+        match scan_fmt!(
+            request_url,
+            "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
+            String, i32, i32, i32, String, String
+        ) {
+            Ok((parameter, x, y, z, extension, option)) => {
+                info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV3 with option");
+                return Ok(Request::ServeTileV3(
+                    ServeTileRequestV3 {
+                        parameter,
+                        x,
+                        y,
+                        z,
+                        extension,
+                        option: Some(option)
+                    }
+                ));
+            },
+            Err(_) => ()
+        }
 
-    // try match ServeTileV3 no option
-    match scan_fmt!(
-        request_url,
-        "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}{///?/}",
-        String, i32, i32, i32, String
-    ) {
-        Ok((parameter, x, y, z, extension)) => {
-            info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV3 no option");
-            return Ok(Request::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter,
-                    x,
-                    y,
-                    z,
-                    extension,
-                    option: None,
-                }
-            ));
-        },
-        Err(_) => ()
+        // try match ServeTileV3 no option
+        match scan_fmt!(
+            request_url,
+            "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}{///?/}",
+            String, i32, i32, i32, String
+        ) {
+            Ok((parameter, x, y, z, extension)) => {
+                info!(context.get_host().record, "slippy::request::_parse - parsed ServeTileV3 no option");
+                return Ok(Request::ServeTileV3(
+                    ServeTileRequestV3 {
+                        parameter,
+                        x,
+                        y,
+                        z,
+                        extension,
+                        option: None,
+                    }
+                ));
+            },
+            Err(_) => ()
+        }
     }
 
     // try match ServeTileV2 with option
@@ -554,7 +556,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let tile_config = TileConfig::new();
+            let mut tile_config = TileConfig::new();
+            tile_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
@@ -577,7 +580,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let tile_config = TileConfig::new();
+            let mut tile_config = TileConfig::new();
+            tile_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
@@ -600,7 +604,8 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let tile_config = TileConfig::new();
+            let mut tile_config = TileConfig::new();
+            tile_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", tile_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
