@@ -1,0 +1,8 @@
+[Fri Sep 03 22:07:01.677314 2021] [tile:debug] [pid 1253:tid 139639872841472] ./src/mod_tile.c(1470): [client 127.0.0.1:41758] tile_translate: uri(/osm/tile-layer.json)
+[Fri Sep 03 22:07:01.677371 2021] [tile:debug] [pid 1253:tid 139639872841472] ./src/mod_tile.c(1487): [client 127.0.0.1:41758] tile_translate: testing baseuri(/osm/) name(default) extension(png)
+[Fri Sep 03 22:07:01.677382 2021] [tile:info] [pid 1253:tid 139639872841472] [client 127.0.0.1:41758] tile_translate: request URI /osm/tile-layer.json matches tile config with store /var/cache/renderd and xml default
+[Fri Sep 03 22:07:01.677389 2021] [tile:debug] [pid 1253:tid 139639872841472] ./src/mod_tile.c(1505): [client 127.0.0.1:41758] tile_translate: Requesting tileJSON for tilelayer default
+[Fri Sep 03 22:07:01.677395 2021] [tile:info] [pid 1253:tid 139639872841472] [client 127.0.0.1:41758] tile_storage_hook: handler(tile_json), uri(/osm/tile-layer.json)
+[Fri Sep 03 22:07:01.677421 2021] [authz_core:debug] [pid 1253:tid 139639872841472] mod_authz_core.c(845): [client 127.0.0.1:41758] AH01628: authorization result: granted (no directives)
+[Fri Sep 03 22:07:01.677479 2021] [tile:debug] [pid 1253:tid 139639872841472] ./src/mod_tile.c(1184): [client 127.0.0.1:41758] Handling tile json request
+[Fri Sep 03 22:07:01.677489 2021] [tile:debug] [pid 1253:tid 139639872841472] ./src/mod_tile.c(1191): [client 127.0.0.1:41758] Handling tile json request for layer default
