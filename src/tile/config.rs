@@ -8,6 +8,10 @@ use std::string::String;
 
 pub struct TileConfig {
     pub name: String,
+    pub description: String,
+    pub attribution: String,
+    pub min_zoom: u64,
+    pub max_zoom: u64,
     pub store_uri: String,
     pub base_url: String,
     pub ipc_uri: String,
@@ -19,6 +23,10 @@ impl TileConfig {
     pub fn new() -> TileConfig {
         TileConfig {
             name: String::from("default"),
+            description: String::from("default"),
+            attribution: String::from("default"),
+            min_zoom: 0,
+            max_zoom: 20,
             store_uri: String::from("/var/cache/renderd"),
             base_url: String::from("/osm"),
             ipc_uri: String::from("/var/run/renderd/renderd.sock"),
@@ -41,6 +49,18 @@ fn _parse(ini: &Ini) -> Result<TileConfig, ParseError> {
             "renderd" | "mapnik" => config.name,
             _ => section_name.to_string(),
         };
+        if let Some(description) = ini.get(section_name.as_str(), "description") {
+            config.description = description;
+        }
+        if let Some(attribution) = ini.get(section_name.as_str(), "attribution") {
+            config.attribution = attribution;
+        }
+        if let Some(min_zoom) = ini.getuint(section_name.as_str(), "minzoom")? {
+            config.min_zoom = min_zoom;
+        }
+        if let Some(max_zoom) = ini.getuint(section_name.as_str(), "maxzoom")? {
+            config.max_zoom = max_zoom;
+        }
         if let Some(tile_dir) = ini.get(section_name.as_str(), "tile_dir") {
             config.store_uri = tile_dir;
         }
