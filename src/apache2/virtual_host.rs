@@ -12,8 +12,8 @@ use std::any::type_name;
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::error::Error;
-use std::ffi::CString;
-use std::fs::{File, OpenOptions,};
+use std::ffi::{ CStr, CString, };
+use std::fs::{ File, OpenOptions, };
 use std::os::raw::c_void;
 use std::path::PathBuf;
 use std::process;
@@ -52,7 +52,13 @@ impl<'h> VirtualHostContext<'h> {
             None => {
                 info!(record, "VirtualHostContext::find_or_create - not found");
                 // TODO read the tile config from a file
-                let tile_config = TileConfig::new();
+                let mut tile_config = TileConfig::new();
+                for (_, config) in &mut (tile_config.layers) {
+                    if config.hostnames.is_empty() {
+                        let hostname = unsafe { CStr::from_ptr(record.server_hostname) };
+                        config.hostnames.push(hostname.to_str()?.to_string());
+                    }
+                }
                 Self::create(record, tile_config)?
             },
         };
@@ -159,7 +165,7 @@ pub mod test_utils {
                 port: 0 as apr_port_t,
                 server_scheme: ptr::null(),
                 server_admin: ptr::null_mut(),
-                server_hostname: ptr::null_mut(),
+                server_hostname: cstr!("localhost") as *mut i8,
                 addrs: ptr::null_mut(),
                 timeout: 0 as apr_interval_time_t,
                 keep_alive_timeout: 0 as apr_interval_time_t,
