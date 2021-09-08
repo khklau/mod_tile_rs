@@ -3,7 +3,7 @@
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
-    apr_pool_t, apr_status_t, conn_rec, request_rec,
+    apr_status_t, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
@@ -37,13 +37,15 @@ pub struct RequestContext<'r> {
 #[derive(Debug)]
 pub enum Request {
     ReportModStats,
-    DescribeLayer,
+    DescribeLayer(DescribeLayerRequest),
     ServeTileV3(ServeTileRequestV3),
     ServeTileV2(ServeTileRequestV2),
 }
 
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub struct DescribeLayerRequest {
-    layer: i32,
+    layer: String,
 }
 
 #[derive(PartialEq)]
@@ -242,6 +244,15 @@ fn parse_layer_request(
         layer_config.name,
         request_url,
     );
+
+    // try match the JSON layer description request
+    if request_url.eq_ignore_ascii_case("/tile-layer.json") {
+        return Ok(Some(Request::DescribeLayer(
+            DescribeLayerRequest {
+                layer: layer_config.name.clone(),
+            }
+        )));
+    }
 
     if layer_config.parameters_allowed {
         // try match ServeTileV3 with option
@@ -576,6 +587,26 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let request = parse_request(context)?.unwrap();
             assert!(matches!(request, Request::ReportModStats));
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_describe_layer() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let layer_name = "default";
+            let mut tile_config = TileConfig::new();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let actual_request = parse_request(context)?.unwrap();
+            let expected_request = Request::DescribeLayer(
+                DescribeLayerRequest {
+                    layer: String::from(layer_name),
+                }
+            );
+            assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
     }
