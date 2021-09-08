@@ -1,7 +1,7 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_pool_t, apr_status_t, process_rec, server_rec,
+    apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::hook::InvalidArgError;

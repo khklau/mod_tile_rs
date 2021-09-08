@@ -2,6 +2,7 @@
 mod apache2 {
     #[macro_use]
     pub mod bindings;
+    pub mod config;
     #[macro_use]
     pub mod logger;
     pub mod connection;
@@ -22,9 +23,9 @@ mod tile {
 
 use crate::apache2::bindings::{
     ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
-    apr_pool_t, module,
+    apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, command_rec, module,
     APR_HOOK_FIRST, APR_HOOK_MIDDLE,
-    MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
+    MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR, OR_OPTIONS,
 };
 use std::ptr;
 use std::alloc::System;
@@ -46,10 +47,24 @@ pub static mut TILE_MODULE: module = module {
     merge_dir_config: None,
     create_server_config: None,
     merge_server_config: None,
-    cmds: ptr::null(),
+    cmds: tile_cmds.as_ptr(),
     register_hooks: Some(register_hooks),
     flags: 0,
 };
+
+#[no_mangle]
+static tile_cmds: [command_rec; 1] = [
+    command_rec {
+        name: cstr!("LoadTileConfigFile"),
+        func: cmd_func {
+            take1: Some(apache2::config::load_tile_config),
+        },
+        cmd_data: ptr::null_mut(),
+        req_override: OR_OPTIONS as i32,
+        args_how: cmd_how_TAKE1 as cmd_how,
+        errmsg: cstr!("load the mod_tile/renderd/mapnik shared config file"),
+    }
+];
 
 #[cfg(not(test))]
 #[no_mangle]

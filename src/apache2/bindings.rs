@@ -16,3 +16,5 @@ macro_rules! cstr {
 
 unsafe impl Send for module {}
 unsafe impl Sync for module {}
+unsafe impl Send for command_rec {}
+unsafe impl Sync for command_rec {}

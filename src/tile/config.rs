@@ -85,7 +85,7 @@ fn parse(ini: &Ini) -> Result<TileConfig, ParseError> {
                 config.renderd = parse_renderd(ini, section_name)?;
             },
             _ => {
-                let layer = parse_layer(ini, section_name, &mut config)?;
+                let layer = parse_layer(ini, section_name)?;
                 config.layers.insert(section_name.clone(), layer);
             },
         };
@@ -104,7 +104,7 @@ fn parse_renderd(ini: &Ini, section_name: &String) -> Result<RenderdConfig, Pars
     return Ok(config);
 }
 
-fn parse_layer(ini: &Ini, section_name: &String, config: &mut TileConfig) -> Result<LayerConfig, ParseError> {
+fn parse_layer(ini: &Ini, section_name: &String) -> Result<LayerConfig, ParseError> {
     let mut config = LayerConfig::new();
     config.name = section_name.to_string();
     if let Some(description) = ini.get(section_name.as_str(), "description") {
