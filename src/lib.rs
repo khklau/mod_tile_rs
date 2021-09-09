@@ -12,6 +12,8 @@ mod apache2 {
 }
 mod resource;
 mod slippy {
+    pub mod context;
+    pub mod parser;
     pub mod request;
 }
 mod storage {
@@ -77,7 +79,7 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
             APR_HOOK_MIDDLE as std::os::raw::c_int,
         );
         ap_hook_translate_name(
-            Some(slippy::request::parse),
+            Some(slippy::parser::parse),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_FIRST as std::os::raw::c_int,

@@ -3,7 +3,7 @@
 use crate::apache2::bindings::{
     request_rec, HTTP_INTERNAL_SERVER_ERROR, OK,
 };
-use crate::slippy::request::RequestContext;
+use crate::slippy::context::RequestContext;
 
 use std::io::Write;
 use std::os::raw::c_int;
