@@ -2,7 +2,7 @@
 
 use crate::slippy::context::RequestContext;
 use crate::slippy::request::{
-    Request, DescribeLayerRequest, ServeTileRequestV2, ServeTileRequestV3
+    BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
 
 use crate::apache2::bindings::{
@@ -79,7 +79,14 @@ fn parse_request(context: &RequestContext) -> Result<Option<Request>, ParseError
     let stats_uri = format!("/{}", module_name);
     if context.uri.eq(&stats_uri) {
         info!(context.get_host().record, "slippy::request::parse_layer_request - parsed ReportModStats");
-        return Ok(Some(Request::ReportModStats));
+        return Ok(Some(Request {
+            header: Header::new(
+                context.record,
+                context.connection.record,
+                context.get_host().record
+            ),
+            body: BodyVariant::ReportModStats,
+        }));
     }
 
     for (layer, config) in &(context.get_host().tile_config.layers) {
@@ -115,11 +122,15 @@ fn parse_layer_request(
 
     // try match the JSON layer description request
     if request_url.eq_ignore_ascii_case("/tile-layer.json") {
-        return Ok(Some(Request::DescribeLayer(
-            DescribeLayerRequest {
-                layer: layer_config.name.clone(),
-            }
-        )));
+        return Ok(Some(Request {
+            header: Header::new_with_layer(
+                context.record,
+                context.connection.record,
+                context.get_host().record,
+                &(layer_config.name),
+            ),
+            body: BodyVariant::DescribeLayer
+        }));
     }
 
     if layer_config.parameters_allowed {
@@ -131,16 +142,24 @@ fn parse_layer_request(
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
                 info!(context.get_host().record, "slippy::request::parse_layer_request - parsed ServeTileV3 with option");
-                return Ok(Some(Request::ServeTileV3(
-                    ServeTileRequestV3 {
-                        parameter,
-                        x,
-                        y,
-                        z,
-                        extension,
-                        option: Some(option)
-                    }
-                )));
+                return Ok(Some(Request {
+                    header: Header::new_with_layer(
+                        context.record,
+                        context.connection.record,
+                        context.get_host().record,
+                        &(layer_config.name),
+                    ),
+                    body: BodyVariant::ServeTileV3(
+                        ServeTileRequestV3 {
+                            parameter,
+                            x,
+                            y,
+                            z,
+                            extension,
+                            option: Some(option)
+                        }
+                    ),
+                }));
             },
             Err(_) => ()
         }
@@ -153,16 +172,24 @@ fn parse_layer_request(
         ) {
             Ok((parameter, x, y, z, extension)) => {
                 info!(context.get_host().record, "slippy::request::parse_layer_request - parsed ServeTileV3 no option");
-                return Ok(Some(Request::ServeTileV3(
-                    ServeTileRequestV3 {
-                        parameter,
-                        x,
-                        y,
-                        z,
-                        extension,
-                        option: None,
-                    }
-                )));
+                return Ok(Some(Request {
+                    header: Header::new_with_layer(
+                        context.record,
+                        context.connection.record,
+                        context.get_host().record,
+                        &(layer_config.name),
+                    ),
+                    body: BodyVariant::ServeTileV3(
+                        ServeTileRequestV3 {
+                            parameter,
+                            x,
+                            y,
+                            z,
+                            extension,
+                            option: None,
+                        }
+                    ),
+                }));
             },
             Err(_) => ()
         }
@@ -176,15 +203,23 @@ fn parse_layer_request(
     ) {
         Ok((x, y, z, extension, option)) => {
             info!(context.get_host().record, "slippy::request::parse_layer_request - parsed ServeTileV2");
-            return Ok(Some(Request::ServeTileV2(
-                ServeTileRequestV2 {
-                    x,
-                    y,
-                    z,
-                    extension,
-                    option: Some(option),
-                }
-            )));
+            return Ok(Some(Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &(layer_config.name),
+                ),
+                body: BodyVariant::ServeTileV2(
+                    ServeTileRequestV2 {
+                        x,
+                        y,
+                        z,
+                        extension,
+                        option: Some(option),
+                    }
+                ),
+            }));
         },
         Err(_) => ()
     }
@@ -197,15 +232,23 @@ fn parse_layer_request(
     ) {
         Ok((x, y, z, extension)) => {
             info!(context.get_host().record, "slippy::request::parse_layer_request - parsed ServeTileV2");
-            return Ok(Some(Request::ServeTileV2(
-                ServeTileRequestV2 {
-                    x,
-                    y,
-                    z,
-                    extension,
-                    option: None,
-                }
-            )));
+            return Ok(Some(Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &(layer_config.name),
+                ),
+                body: BodyVariant::ServeTileV2(
+                    ServeTileRequestV2 {
+                        x,
+                        y,
+                        z,
+                        extension,
+                        option: None,
+                    }
+                )
+            }));
         },
         Err(_) => ()
     }
@@ -290,8 +333,14 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
-            let request = parse_request(context)?.unwrap();
-            assert!(matches!(request, Request::ReportModStats));
+            let actual_request = parse_request(context)?.unwrap();
+            let expected_header = Header::new(
+                context.record,
+                context.connection.record,
+                context.get_host().record
+            );
+            assert_eq!(expected_header, actual_request.header, "Wrong header generated");
+            assert!(matches!(actual_request.body, BodyVariant::ReportModStats));
             Ok(())
         })
     }
@@ -306,11 +355,16 @@ mod tests {
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::DescribeLayer(
-                DescribeLayerRequest {
-                    layer: String::from(layer_name),
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::DescribeLayer,
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
@@ -319,23 +373,33 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
+            let layer_name = "default";
             let mut tile_config = TileConfig::new();
-            let layer_config = tile_config.layers.get_mut("default").unwrap();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter: String::from("foo"),
-                    x: 7,
-                    y: 8,
-                    z: 9,
-                    extension: String::from("png"),
-                    option: Some(String::from("bar")),
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::ServeTileV3(
+                    ServeTileRequestV3 {
+                        parameter: String::from("foo"),
+                        x: 7,
+                        y: 8,
+                        z: 9,
+                        extension: String::from("png"),
+                        option: Some(String::from("bar")),
+                    }
+                ),
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
@@ -344,23 +408,33 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
+            let layer_name = "default";
             let mut tile_config = TileConfig::new();
-            let layer_config = tile_config.layers.get_mut("default").unwrap();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter: String::from("foo"),
-                    x: 7,
-                    y: 8,
-                    z: 9,
-                    extension: String::from("png"),
-                    option: None,
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::ServeTileV3(
+                    ServeTileRequestV3 {
+                        parameter: String::from("foo"),
+                        x: 7,
+                        y: 8,
+                        z: 9,
+                        extension: String::from("png"),
+                        option: None,
+                    }
+                ),
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
@@ -369,23 +443,33 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
+            let layer_name = "default";
             let mut tile_config = TileConfig::new();
-            let layer_config = tile_config.layers.get_mut("default").unwrap();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter: String::from("foo"),
-                    x: 7,
-                    y: 8,
-                    z: 9,
-                    extension: String::from("png"),
-                    option: None,
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::ServeTileV3(
+                    ServeTileRequestV3 {
+                        parameter: String::from("foo"),
+                        x: 7,
+                        y: 8,
+                        z: 9,
+                        extension: String::from("png"),
+                        option: None,
+                    }
+                ),
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
@@ -394,21 +478,31 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
+            let layer_name = "default";
             let mut tile_config = TileConfig::new();
-            let layer_config = tile_config.layers.get_mut("default").unwrap();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::ServeTileV2(
-                ServeTileRequestV2 {
-                    x: 1,
-                    y: 2,
-                    z: 3,
-                    extension: String::from("jpg"),
-                    option: Some(String::from("blah")),
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::ServeTileV2(
+                    ServeTileRequestV2 {
+                        x: 1,
+                        y: 2,
+                        z: 3,
+                        extension: String::from("jpg"),
+                        option: Some(String::from("blah")),
+                    }
+                ),
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
@@ -417,21 +511,31 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
+            let layer_name = "default";
             let mut tile_config = TileConfig::new();
-            let layer_config = tile_config.layers.get_mut("default").unwrap();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::ServeTileV2(
-                ServeTileRequestV2 {
-                    x: 1,
-                    y: 2,
-                    z: 3,
-                    extension: String::from("jpg"),
-                    option: None,
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::ServeTileV2(
+                    ServeTileRequestV2 {
+                        x: 1,
+                        y: 2,
+                        z: 3,
+                        extension: String::from("jpg"),
+                        option: None,
+                    }
+                ),
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
@@ -440,21 +544,31 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
+            let layer_name = "default";
             let mut tile_config = TileConfig::new();
-            let layer_config = tile_config.layers.get_mut("default").unwrap();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, tile_config)?;
             let actual_request = parse_request(context)?.unwrap();
-            let expected_request = Request::ServeTileV2(
-                ServeTileRequestV2 {
-                    x: 1,
-                    y: 2,
-                    z: 3,
-                    extension: String::from("jpg"),
-                    option: None,
-                }
-            );
+            let expected_layer = String::from(layer_name);
+            let expected_request = Request {
+                header: Header::new_with_layer(
+                    context.record,
+                    context.connection.record,
+                    context.get_host().record,
+                    &expected_layer,
+                ),
+                body: BodyVariant::ServeTileV2(
+                    ServeTileRequestV2 {
+                        x: 1,
+                        y: 2,
+                        z: 3,
+                        extension: String::from("jpg"),
+                        option: None,
+                    }
+                ),
+            };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
             Ok(())
         })
