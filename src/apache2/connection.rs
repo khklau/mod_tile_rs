@@ -24,9 +24,9 @@ impl<'c> ConnectionContext<'c> {
 
     pub fn get_id(record: &conn_rec) -> CString {
         let id = CString::new(format!(
-            "{}@{:p}",
+            "{}@-{}",
             type_name::<Self>(),
-            record,
+            record.id,
         )).unwrap();
         id
     }
