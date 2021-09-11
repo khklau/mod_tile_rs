@@ -10,7 +10,6 @@ mod apache2 {
     pub mod memory;
     pub mod virtual_host;
 }
-mod resource;
 mod slippy {
     pub mod context;
     pub mod parser;
@@ -22,6 +21,7 @@ mod storage {
 mod tile {
     pub mod config;
 }
+mod tile_server;
 
 use crate::apache2::bindings::{
     ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
@@ -85,7 +85,7 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
             APR_HOOK_FIRST as std::os::raw::c_int,
         );
         ap_hook_map_to_storage(
-            Some(resource::handle_request),
+            Some(tile_server::handle_request),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_FIRST as std::os::raw::c_int,
