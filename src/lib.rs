@@ -11,6 +11,7 @@ mod apache2 {
 }
 mod slippy {
     pub mod context;
+    pub mod error;
     pub mod parser;
     pub mod request;
 }
