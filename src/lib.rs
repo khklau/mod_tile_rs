@@ -2,7 +2,6 @@
 mod apache2 {
     #[macro_use]
     pub mod bindings;
-    pub mod config;
     #[macro_use]
     pub mod logger;
     pub mod connection;
@@ -59,7 +58,7 @@ static tile_cmds: [command_rec; 1] = [
     command_rec {
         name: cstr!("LoadTileConfigFile"),
         func: cmd_func {
-            take1: Some(apache2::config::load_tile_config),
+            take1: Some(tile_server::load_tile_config),
         },
         cmd_data: ptr::null_mut(),
         req_override: OR_OPTIONS as i32,
@@ -73,7 +72,7 @@ static tile_cmds: [command_rec; 1] = [
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
         ap_hook_child_init(
-            Some(storage::file_system::initialise),
+            Some(tile_server::initialise),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_MIDDLE as std::os::raw::c_int,

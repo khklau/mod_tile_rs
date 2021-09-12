@@ -10,7 +10,7 @@ use std::ptr;
 use std::result::Result;
 
 #[no_mangle]
-pub extern fn initialise(
+pub extern fn initialise_file_system(
     child_pool: *mut apr_pool_t,
     server_info: *mut server_rec,
 ) -> () {
