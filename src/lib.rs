@@ -14,6 +14,7 @@ mod slippy {
     pub mod error;
     pub mod parser;
     pub mod request;
+    pub mod traits;
 }
 mod storage {
     pub mod file_system;

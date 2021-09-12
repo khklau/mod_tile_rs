@@ -7,12 +7,13 @@ use crate::slippy::error::{
 use crate::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
+use crate::slippy::traits::RequestParser;
 
 use crate::apache2::bindings::{
     DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
     request_rec,
 };
-use crate::tile::config::LayerConfig;
+use crate::tile::config::{ LayerConfig, TileConfig, };
 
 use scan_fmt::scan_fmt;
 
@@ -22,6 +23,19 @@ use std::option::Option;
 use std::ptr;
 use std::result::Result;
 use std::string::String;
+
+
+struct Parser<'c> {
+    pub config: &'c TileConfig,
+}
+
+impl<'c> RequestParser for Parser<'c> {
+
+    fn parse(&self, context: &RequestContext) -> Result<Option<Request>, ParseError> {
+        Ok(None)
+    }
+
+}
 
 
 #[no_mangle]
