@@ -1,9 +1,7 @@
 #![allow(unused_unsafe)]
 
 use crate::slippy::context::RequestContext;
-use crate::slippy::error::{
-    InvalidParameterError, ParseError
-};
+use crate::slippy::error::ParseError;
 use crate::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
@@ -313,10 +311,6 @@ pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
                     }
                 },
                 Err(err) => match err {
-                    ParseError::Param(err) => {
-                        info!(record.server, "Parameter {} error: {}", err.param, err.reason);
-                        return DECLINED as c_int;
-                    },
                     ParseError::Io(why) => {
                         info!(record.server, "IO error: {}", why);
                         return HTTP_INTERNAL_SERVER_ERROR as c_int;
