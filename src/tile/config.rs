@@ -8,6 +8,8 @@ use std::result::Result;
 use std::string::String;
 use std::vec::Vec;
 
+
+#[derive(Debug)]
 pub struct TileConfig {
     pub renderd: RenderdConfig,
     pub layers: HashMap<String, LayerConfig>,
@@ -24,6 +26,7 @@ impl TileConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct RenderdConfig {
     pub store_uri: String,
     pub ipc_uri: String,
@@ -38,6 +41,7 @@ impl RenderdConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct LayerConfig {
     pub name: String,
     pub base_url: String,

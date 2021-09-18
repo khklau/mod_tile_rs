@@ -52,7 +52,7 @@ impl Header {
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub enum BodyVariant {
-    ReportModStats,
+    ReportStatistics,
     DescribeLayer,
     ServeTileV3(ServeTileRequestV3),
     ServeTileV2(ServeTileRequestV2),
