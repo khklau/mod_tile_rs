@@ -1,7 +1,5 @@
 #![allow(unused_unsafe)]
 
-use crate::slippy::request::Request;
-
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     apr_status_t, request_rec,
@@ -16,7 +14,6 @@ use std::boxed::Box;
 use std::error::Error;
 use std::ffi::{CStr, CString,};
 use std::os::raw::c_void;
-use std::option::Option;
 use std::ptr;
 use std::result::Result;
 
@@ -25,7 +22,6 @@ pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
     pub connection: &'r mut ConnectionContext<'r>,
     pub uri: &'r str,
-    pub request: Option<Request>,
 }
 
 impl<'r> RequestContext<'r> {

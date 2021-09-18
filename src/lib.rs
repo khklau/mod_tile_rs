@@ -80,7 +80,7 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
             APR_HOOK_MIDDLE as std::os::raw::c_int,
         );
         ap_hook_translate_name(
-            Some(slippy::parser::parse),
+            Some(tile_server::handle_request),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_FIRST as std::os::raw::c_int,

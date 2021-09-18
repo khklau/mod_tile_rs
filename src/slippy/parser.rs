@@ -7,23 +7,17 @@ use crate::slippy::request::{
 };
 use crate::slippy::traits::{ RequestParser, LayerRequestParser };
 
-use crate::apache2::bindings::{
-    DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
-    request_rec,
-};
 use crate::tile::config::{ LayerConfig, TileConfig, };
 
 use scan_fmt::scan_fmt;
 
 use std::ffi::CStr;
-use std::os::raw::c_int;
 use std::option::Option;
-use std::ptr;
 use std::result::Result;
 use std::string::String;
 
 
-struct SlippyRequestParser;
+pub struct SlippyRequestParser;
 
 impl RequestParser for SlippyRequestParser {
     fn parse(
@@ -280,48 +274,6 @@ impl LayerRequestParser for ServeTileV2RequestParser {
     }
         info!(context.get_host().record, "ServeTileV2RequestParser::parse - no match");
         return Ok(None)
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn parse(record_ptr: *mut request_rec) -> c_int {
-    if record_ptr == ptr::null_mut() {
-        return HTTP_INTERNAL_SERVER_ERROR as c_int;
-    } else {
-        unsafe {
-            let record = &mut *record_ptr;
-            info!(record.server, "slippy::request::parse - start");
-            let context = match RequestContext::find_or_create(record) {
-                Ok(context) => context,
-                Err(_) => return HTTP_INTERNAL_SERVER_ERROR as c_int,
-            };
-            let config = &(context.get_host().tile_config);
-            let request_url = context.uri;
-            match SlippyRequestParser::parse(context, config, request_url) {
-                Ok(result) => {
-                    match result {
-                        Some(request) => {
-                            context.request = Some(request);
-                            info!(record.server, "slippy::request::parse - finish");
-                            return OK as c_int;
-                        },
-                        None => {
-                            return DECLINED as c_int;
-                        },
-                    }
-                },
-                Err(err) => match err {
-                    ParseError::Io(why) => {
-                        info!(record.server, "IO error: {}", why);
-                        return HTTP_INTERNAL_SERVER_ERROR as c_int;
-                    },
-                    ParseError::Utf8(why) => {
-                        info!(record.server, "UTF8 error: {}", why);
-                        return HTTP_INTERNAL_SERVER_ERROR as c_int;
-                    },
-                },
-            }
-        }
     }
 }
 
