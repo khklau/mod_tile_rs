@@ -1,7 +1,9 @@
 #![allow(unused_unsafe)]
 
 use crate::slippy::context::RequestContext;
-use crate::slippy::error::ParseError;
+use crate::slippy::error::{
+    InvalidParameterError, ParseError
+};
 use crate::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
@@ -25,6 +27,7 @@ impl RequestParser for SlippyRequestParser {
         config: &TileConfig,
         request_url: &str,
     ) -> Result<Option<Request>, ParseError> {
+        debug!(context.get_host().record, "SlippyRequestParser::parse - start");
         // try match stats request
         if let Some(request) = StatisticsRequestParser::parse(context, config, request_url)? {
             return Ok(Some(request));
@@ -52,7 +55,14 @@ impl RequestParser for SlippyRequestParser {
                 }
             };
         }
-        return Ok(None);
+        info!(context.get_host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
+        return Err(ParseError::Param(
+            InvalidParameterError {
+                param: String::from("uri"),
+                value: request_url.to_string(),
+                reason: "Does not match any known request types".to_string(),
+            }
+        ));
     }
 }
 

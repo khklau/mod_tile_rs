@@ -205,6 +205,10 @@ impl<'s> TileServer<'s> {
                 }
             },
             Err(err) => match err {
+                ParseError::Param(err) => {
+                    error!(record.server, "Parameter {} error: {}", err.param, err.reason);
+                    return Ok(DECLINED as c_int);
+                },
                 ParseError::Io(why) => {
                     error!(record.server, "IO error: {}", why);
                     return Ok(HTTP_INTERNAL_SERVER_ERROR as c_int);
