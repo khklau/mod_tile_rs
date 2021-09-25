@@ -25,13 +25,18 @@ mod tile {
 mod tile_server;
 
 use crate::apache2::bindings::{
-    ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
-    apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, command_rec, module,
-    APR_HOOK_FIRST, APR_HOOK_MIDDLE,
+    APR_HOOK_FIRST, APR_HOOK_MIDDLE, HTTP_INTERNAL_SERVER_ERROR,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR, OR_OPTIONS,
+    ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
+    apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, cmd_parms, command_rec,
+    module, request_rec, server_rec,
 };
-use std::ptr;
+use crate::tile_server::TileServer;
+
 use std::alloc::System;
+use std::ffi::CStr;
+use std::ptr;
+use std::os::raw::{ c_char, c_int, c_void, };
 
 #[global_allocator]
 static GLOBAL: System = System;
@@ -60,7 +65,7 @@ static tile_cmds: [command_rec; 1] = [
     command_rec {
         name: cstr!("LoadTileConfigFile"),
         func: cmd_func {
-            take1: Some(tile_server::load_tile_config),
+            take1: Some(load_tile_config),
         },
         cmd_data: ptr::null_mut(),
         req_override: OR_OPTIONS as i32,
@@ -69,24 +74,53 @@ static tile_cmds: [command_rec; 1] = [
     }
 ];
 
+#[no_mangle]
+pub extern "C" fn load_tile_config(
+    cmd_ptr: *mut cmd_parms,
+    _: *mut c_void,
+    value: *const c_char,
+) -> *const c_char {
+    if cmd_ptr == ptr::null_mut() {
+        return cstr!("Null cmd_parms");
+    }
+    let command = unsafe { &mut *cmd_ptr };
+    if command.server == ptr::null_mut() {
+        return cstr!("Nullptr server_rec");
+    }
+    let record = unsafe { &mut *(command.server) };
+    debug!(record, "tile_server::load_tile_config - start");
+    let path_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
+    let tile_server = TileServer::find_or_create(record).unwrap();
+    match tile_server.load_tile_config(path_str) {
+        Ok(_) => {
+            info!(record, "tile_server::load_tile_config - loaded config from {}", path_str);
+            return ptr::null();
+        },
+        Err(why) => {
+            error!(record, "tile_server::load_tile_config - failed because {}", why);
+            return cstr!("Failed to load tile config file");
+        },
+    };
+}
+
 #[cfg(not(test))]
 #[no_mangle]
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     unsafe {
         ap_hook_child_init(
-            Some(tile_server::initialise),
+            Some(initialise),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_MIDDLE as std::os::raw::c_int,
         );
         ap_hook_translate_name(
-            Some(tile_server::handle_request),
+            Some(handle_request),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_FIRST as std::os::raw::c_int,
         );
         ap_hook_map_to_storage(
-            Some(tile_server::handle_request),
+            Some(handle_request),
             ptr::null_mut(),
             ptr::null_mut(),
             APR_HOOK_FIRST as std::os::raw::c_int,
@@ -97,4 +131,47 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
 #[cfg(test)]
 pub extern fn register_hooks(_pool: *mut apr_pool_t) {
     // this function is a no-op for tests
+}
+
+#[no_mangle]
+pub extern "C" fn initialise(
+    child_pool: *mut apr_pool_t,
+    record: *mut server_rec,
+) -> () {
+    if child_pool != ptr::null_mut() && record != ptr::null_mut() {
+        info!(record, "initialise - start");
+        let server = TileServer::find_or_create(unsafe { &mut *record }).unwrap();
+        if let Err(why) = server.initialise(unsafe { &mut *record }) {
+            error!(record, "initialise - failed to initialise TileServer: {}", why);
+        } else {
+            info!(server.record, "initialise - finish");
+        };
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn handle_request(
+    record_ptr: *mut request_rec
+) -> c_int {
+    if record_ptr == ptr::null_mut() {
+        return HTTP_INTERNAL_SERVER_ERROR as c_int;
+    }
+    let record = &mut unsafe { *record_ptr };
+    if record.server == ptr::null_mut() {
+        return HTTP_INTERNAL_SERVER_ERROR as c_int;
+    }
+
+    debug!(record.server, "tile_server::handle_request - start");
+    let server = &mut unsafe { *(record.server) };
+    let tile_server = TileServer::find_or_create(server).unwrap();
+    match tile_server.handle_request(record) {
+        Ok(result) => {
+            debug!(record.server, "tile_server::handle_request - request handled");
+            return result;
+        },
+        Err(why) => {
+            error!(record.server, "tile_server::handle_request - failed: {}", why);
+            return HTTP_INTERNAL_SERVER_ERROR as c_int;
+        },
+    };
 }
