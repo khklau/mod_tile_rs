@@ -23,12 +23,12 @@ use std::ptr;
 use std::result::Result;
 
 
-pub struct TileServer<'s> {
-    pub record: &'s mut server_rec,
+pub struct TileProxy<'p> {
+    pub record: &'p mut server_rec,
     pub config: TileConfig,
 }
 
-impl<'s> TileServer<'s> {
+impl<'p> TileProxy<'p> {
     pub fn get_id(record: &server_rec) -> CString {
         let id = CString::new(format!(
             "{}@{:p}",
@@ -38,7 +38,7 @@ impl<'s> TileServer<'s> {
         id
     }
 
-    pub fn find_or_create(record: &'s mut server_rec) -> Result<&'s mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'p mut server_rec) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::find_or_create - start");
         let proc_record = Self::access_proc_record(record.process)?;
         let context = match retrieve(
@@ -65,7 +65,7 @@ impl<'s> TileServer<'s> {
         return Ok(context);
     }
 
-    fn access_proc_record(process: *mut process_rec) -> Result<&'s mut process_rec, Box<dyn Error>> {
+    fn access_proc_record(process: *mut process_rec) -> Result<&'p mut process_rec, Box<dyn Error>> {
         if process == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
                 arg: "server_rec.process".to_string(),
@@ -83,12 +83,12 @@ impl<'s> TileServer<'s> {
     }
 
     pub fn create(
-        record: &'s mut server_rec,
+        record: &'p mut server_rec,
         tile_config: TileConfig,
-    ) -> Result<&'s mut Self, Box<dyn Error>> {
+    ) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::create - start");
         let proc_record = Self::access_proc_record(record.process)?;
-        let new_server = alloc::<TileServer<'s>>(
+        let new_server = alloc::<TileProxy<'p>>(
             unsafe { &mut *(proc_record.pool) },
             &(Self::get_id(record)),
             Some(drop_tile_server),
@@ -159,7 +159,7 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
     if server_void == ptr::null_mut() {
         return APR_BADARG as apr_status_t;
     }
-    let server_ptr = server_void as *mut TileServer;
+    let server_ptr = server_void as *mut TileProxy;
     info!((&mut *server_ptr).record, "drop_tile_server - start");
     let server_ref = unsafe { &mut *server_ptr };
     drop(server_ref);

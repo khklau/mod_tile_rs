@@ -31,7 +31,7 @@ use crate::apache2::bindings::{
     apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, cmd_parms, command_rec,
     module, request_rec, server_rec,
 };
-use crate::tile_proxy::TileServer;
+use crate::tile_proxy::TileProxy;
 
 use std::alloc::System;
 use std::ffi::CStr;
@@ -90,7 +90,7 @@ pub extern "C" fn load_tile_config(
     let record = unsafe { &mut *(command.server) };
     debug!(record, "tile_server::load_tile_config - start");
     let path_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
-    let tile_server = TileServer::find_or_create(record).unwrap();
+    let tile_server = TileProxy::find_or_create(record).unwrap();
     match tile_server.load_tile_config(path_str) {
         Ok(_) => {
             info!(record, "tile_server::load_tile_config - loaded config from {}", path_str);
@@ -140,7 +140,7 @@ pub extern "C" fn initialise(
 ) -> () {
     if child_pool != ptr::null_mut() && record != ptr::null_mut() {
         info!(record, "initialise - start");
-        let server = TileServer::find_or_create(unsafe { &mut *record }).unwrap();
+        let server = TileProxy::find_or_create(unsafe { &mut *record }).unwrap();
         if let Err(why) = server.initialise(unsafe { &mut *record }) {
             error!(record, "initialise - failed to initialise TileServer: {}", why);
         } else {
@@ -163,7 +163,7 @@ pub extern "C" fn handle_request(
 
     debug!(record.server, "tile_server::handle_request - start");
     let server = &mut unsafe { *(record.server) };
-    let tile_server = TileServer::find_or_create(server).unwrap();
+    let tile_server = TileProxy::find_or_create(server).unwrap();
     match tile_server.handle_request(record) {
         Ok(result) => {
             debug!(record.server, "tile_server::handle_request - request handled");
