@@ -22,7 +22,7 @@ mod storage {
 mod tile {
     pub mod config;
 }
-mod tile_server;
+mod tile_proxy;
 
 use crate::apache2::bindings::{
     APR_HOOK_FIRST, APR_HOOK_MIDDLE, HTTP_INTERNAL_SERVER_ERROR,
@@ -31,7 +31,7 @@ use crate::apache2::bindings::{
     apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, cmd_parms, command_rec,
     module, request_rec, server_rec,
 };
-use crate::tile_server::TileServer;
+use crate::tile_proxy::TileServer;
 
 use std::alloc::System;
 use std::ffi::CStr;
