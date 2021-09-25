@@ -6,6 +6,7 @@ use std::fmt;
 use std::path::Path;
 use std::result::Result;
 use std::string::String;
+use std::time::Duration;
 use std::vec::Vec;
 
 
@@ -30,6 +31,7 @@ impl TileConfig {
 pub struct RenderdConfig {
     pub store_uri: String,
     pub ipc_uri: String,
+    pub render_timeout: Duration,
 }
 
 impl RenderdConfig {
@@ -37,6 +39,7 @@ impl RenderdConfig {
         RenderdConfig {
             store_uri: String::from("/var/cache/renderd"),
             ipc_uri: String::from("/var/run/renderd/renderd.sock"),
+            render_timeout: Duration::new(0, 0),
         }
     }
 }

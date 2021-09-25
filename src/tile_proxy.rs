@@ -21,6 +21,7 @@ use std::os::raw::{ c_int, c_void, };
 use std::path::Path;
 use std::ptr;
 use std::result::Result;
+use std::time::Duration;
 
 
 pub struct TileProxy<'p> {
@@ -107,6 +108,13 @@ impl<'p> TileProxy<'p> {
         let tile_config = load(file_path)?;
         self.config = tile_config;
         return Ok(());
+    }
+
+    pub fn set_render_timeout(
+        &mut self,
+        timeout: &Duration,
+    ) -> () {
+        self.config.renderd.render_timeout = *timeout;
     }
 
     pub fn initialise(

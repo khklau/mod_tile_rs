@@ -33,10 +33,13 @@ use crate::apache2::bindings::{
 };
 use crate::tile_proxy::TileProxy;
 
+use scan_fmt::scan_fmt;
+
 use std::alloc::System;
 use std::ffi::CStr;
 use std::ptr;
 use std::os::raw::{ c_char, c_int, c_void, };
+use std::time::Duration;
 
 #[global_allocator]
 static GLOBAL: System = System;
@@ -61,7 +64,7 @@ pub static mut TILE_MODULE: module = module {
 };
 
 #[no_mangle]
-static tile_cmds: [command_rec; 1] = [
+static tile_cmds: [command_rec; 2] = [
     command_rec {
         name: cstr!("LoadTileConfigFile"),
         func: cmd_func {
@@ -71,7 +74,17 @@ static tile_cmds: [command_rec; 1] = [
         req_override: OR_OPTIONS as i32,
         args_how: cmd_how_TAKE1 as cmd_how,
         errmsg: cstr!("load the mod_tile/renderd/mapnik shared config file"),
-    }
+    },
+    command_rec {
+        name: cstr!("ModTileRequestTimeout"),
+        func: cmd_func {
+            take1: Some(load_request_timeout),
+        },
+        cmd_data: ptr::null_mut(),
+        req_override: OR_OPTIONS as i32,
+        args_how: cmd_how_TAKE1 as cmd_how,
+        errmsg: cstr!("tile rendering request timeout threshold in seconds"),
+    },
 ];
 
 #[no_mangle]
@@ -101,6 +114,35 @@ pub extern "C" fn load_tile_config(
             return cstr!("Failed to load tile config file");
         },
     };
+}
+
+#[no_mangle]
+pub extern "C" fn load_request_timeout(
+    cmd_ptr: *mut cmd_parms,
+    _: *mut c_void,
+    value: *const c_char,
+) -> *const c_char {
+    if cmd_ptr == ptr::null_mut() {
+        return cstr!("Null cmd_parms");
+    }
+    let command = unsafe { &mut *cmd_ptr };
+    if command.server == ptr::null_mut() {
+        return cstr!("Nullptr server_rec");
+    }
+    let record = unsafe { &mut *(command.server) };
+    debug!(record, "tile_server::load_request_timeout - start");
+    let timeout_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
+    let timeout_uint = match scan_fmt!(timeout_str, "{d}", i32) {
+        Ok(timeout) => timeout as u64,
+        Err(_) => {
+            return cstr!("ModTileRequestTimeout needs an integer argument");
+        },
+    };
+    let duration = Duration::new(timeout_uint, 0);
+    let tile_server = TileProxy::find_or_create(record).unwrap();
+    tile_server.set_render_timeout(&duration);
+    info!(record, "tile_server::load_request_timeout - set threshold to {} seconds", timeout_uint);
+    return ptr::null();
 }
 
 #[cfg(not(test))]
