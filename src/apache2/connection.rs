@@ -32,10 +32,6 @@ impl<'c> ConnectionContext<'c> {
         id
     }
 
-    pub fn get_config(&self) -> &TileConfig{
-        self.host.tile_config
-    }
-
     pub fn find_or_create(
         record: &'c mut conn_rec,
         config: &'c TileConfig,

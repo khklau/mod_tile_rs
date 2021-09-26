@@ -146,7 +146,7 @@ impl<'p> TileProxy<'p> {
         let context = RequestContext::find_or_create(record, &self.config).unwrap();
         let request_url = context.uri;
         let parse = self.parse_request;
-        let request = match parse(context, &self.config, request_url) {
+        let request = match parse(context, request_url) {
             Ok(result) => {
                 match result {
                     Some(request) => request,

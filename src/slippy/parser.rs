@@ -8,7 +8,7 @@ use crate::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
 
-use crate::tile::config::{ LayerConfig, TileConfig, };
+use crate::tile::config::LayerConfig;
 
 use scan_fmt::scan_fmt;
 
@@ -22,12 +22,11 @@ pub struct SlippyRequestParser;
 impl SlippyRequestParser {
     pub fn parse(
         context: &RequestContext,
-        config: &TileConfig,
         request_url: &str,
     ) -> Result<Option<Request>, ParseError> {
         debug!(context.get_host().record, "SlippyRequestParser::parse - start");
         // try match stats request
-        if let Some(request) = StatisticsRequestParser::parse(context, config, request_url)? {
+        if let Some(request) = StatisticsRequestParser::parse(context, request_url)? {
             return Ok(Some(request));
         }
         let parse_layer_request = LayerParserCombinator::or_else(
@@ -37,7 +36,7 @@ impl SlippyRequestParser {
                 ServeTileV2RequestParser::parse,
             )
         );
-        for (layer, config) in &(context.get_host().tile_config.layers) {
+        for (layer, config) in &(context.get_config().layers) {
             info!(
                 context.get_host().record,
                 "SlippyRequestParser::parse - comparing layer {} with base URL {} to uri",
@@ -89,7 +88,6 @@ struct StatisticsRequestParser;
 impl StatisticsRequestParser {
     fn parse(
         context: &RequestContext,
-        _config: &TileConfig,
         request_url: &str,
     ) -> Result<Option<Request>, ParseError> {
         let module_name = unsafe {
@@ -302,10 +300,9 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_header = Header::new(
                 context.record,
                 context.connection.record,
@@ -326,10 +323,9 @@ mod tests {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -355,10 +351,9 @@ mod tests {
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -393,10 +388,9 @@ mod tests {
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -431,10 +425,9 @@ mod tests {
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -468,10 +461,9 @@ mod tests {
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -504,10 +496,9 @@ mod tests {
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -540,10 +531,9 @@ mod tests {
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, config, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
