@@ -127,13 +127,10 @@ impl<'p> TileProxy<'p> {
         &mut self,
         record: &mut server_rec,
     ) -> Result<(), Box<dyn Error>> {
-        let path_copy = match &self.config_file_path {
-            Some(path_original) => path_original.clone(),
-            None => {
-                return Ok(());
-            },
-        };
-        self.load_tile_config(path_copy)?;
+        if let Some(original_path) = &self.config_file_path {
+            let copied_path = original_path.clone();
+            self.load_tile_config(copied_path)?;
+        }
         let context = VirtualHostContext::find_or_create(record).unwrap();
         file_system::initialise(context)?;
         return Ok(());
