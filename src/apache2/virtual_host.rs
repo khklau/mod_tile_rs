@@ -22,7 +22,7 @@ use thread_id;
 
 pub struct VirtualHostContext<'h> {
     pub record: &'h mut server_rec,
-    pub tile_config: TileConfig,
+    pub tile_config: &'h TileConfig,
     pub trace_path: PathBuf,
     pub trace_file: RefCell<File>,
 }
@@ -38,7 +38,10 @@ impl<'h> VirtualHostContext<'h> {
         id
     }
 
-    pub fn find_or_create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+    pub fn find_or_create(
+        record: &'h mut server_rec,
+        config: &'h TileConfig,
+    ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::find_or_create - start");
         let proc_record = Self::access_proc_record(record.process)?;
         let context = match retrieve(
@@ -59,7 +62,7 @@ impl<'h> VirtualHostContext<'h> {
                         config.hostnames.push(hostname.to_str()?.to_string());
                     }
                 }
-                Self::create(record, tile_config)?
+                Self::create(record, config)?
             },
         };
         info!(context.record, "VirtualHostContext::find_or_create - finish");
@@ -85,7 +88,7 @@ impl<'h> VirtualHostContext<'h> {
 
     pub fn create(
         record: &'h mut server_rec,
-        tile_config: TileConfig,
+        config: &'h TileConfig,
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::create - start");
         let proc_record = Self::access_proc_record(record.process)?;
@@ -95,7 +98,7 @@ impl<'h> VirtualHostContext<'h> {
             Some(drop_virtual_host_context),
         )?.0;
         new_context.record = record;
-        new_context.tile_config = tile_config;
+        new_context.tile_config = config;
 
         let path_str = format!(
             "/tmp/mod_tile_rs-trace-pid{}-tid{}.txt",

@@ -301,7 +301,7 @@ mod tests {
             let tile_config = TileConfig::new();
             let uri = CString::new("/mod_tile_rs")?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -325,7 +325,7 @@ mod tests {
             let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -354,7 +354,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -392,7 +392,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -430,7 +430,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -467,7 +467,7 @@ mod tests {
             let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -503,7 +503,7 @@ mod tests {
             let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 
@@ -539,7 +539,7 @@ mod tests {
             let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let config = &(context.get_host().tile_config);
             let request_url = context.uri;
 

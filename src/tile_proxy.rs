@@ -133,7 +133,7 @@ impl<'p> TileProxy<'p> {
             let copied_path = original_path.clone();
             self.load_tile_config(copied_path)?;
         }
-        let context = VirtualHostContext::find_or_create(record).unwrap();
+        let context = VirtualHostContext::find_or_create(record, &self.config).unwrap();
         file_system::initialise(context)?;
         return Ok(());
     }
@@ -143,7 +143,7 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> Result<c_int, ParseError> {
         debug!(record.server, "TileServer::handle_request - start");
-        let context = RequestContext::find_or_create(record).unwrap();
+        let context = RequestContext::find_or_create(record, &self.config).unwrap();
         let request_url = context.uri;
         let parse = self.parse_request;
         let request = match parse(context, &self.config, request_url) {

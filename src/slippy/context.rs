@@ -8,6 +8,7 @@ use crate::apache2::connection::ConnectionContext;
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
+use crate::tile::config::TileConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -39,7 +40,14 @@ impl<'r> RequestContext<'r> {
         self.connection.host
     }
 
-    pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
+    pub fn get_config(&self) -> &TileConfig{
+        self.get_host().tile_config
+    }
+
+    pub fn find_or_create(
+        record: &'r mut request_rec,
+        config: &'r TileConfig,
+    ) -> Result<&'r mut Self, Box<dyn Error>> {
         info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidArgError{
@@ -59,7 +67,7 @@ impl<'r> RequestContext<'r> {
             Some(existing_context) => existing_context,
             None => {
                 let connection = unsafe { &mut *(record.connection) };
-                let conn_context = ConnectionContext::find_or_create(connection)?;
+                let conn_context = ConnectionContext::find_or_create(connection, config)?;
                 Self::create(record, conn_context)?
             },
         };
@@ -134,10 +142,10 @@ pub mod test_utils {
     impl<'r> RequestContext<'r> {
         pub fn create_with_tile_config(
             record: &'r mut request_rec,
-            tile_config: TileConfig,
+            config: &'r TileConfig,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
             let connection = unsafe { &mut *(record.connection) };
-            let conn_context = ConnectionContext::create_with_tile_config(connection, tile_config)?;
+            let conn_context = ConnectionContext::create_with_tile_config(connection, config)?;
             RequestContext::create(record, conn_context)
         }
     }
