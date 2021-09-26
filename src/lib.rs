@@ -25,9 +25,9 @@ mod tile {
 mod tile_proxy;
 
 use crate::apache2::bindings::{
-    APR_HOOK_FIRST, APR_HOOK_MIDDLE, HTTP_INTERNAL_SERVER_ERROR,
+    APR_HOOK_MIDDLE, HTTP_INTERNAL_SERVER_ERROR,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR, OR_OPTIONS,
-    ap_hook_child_init, ap_hook_map_to_storage, ap_hook_translate_name,
+    ap_hook_child_init, ap_hook_handler,
     apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, cmd_parms, command_rec,
     module, request_rec, server_rec,
 };
@@ -158,17 +158,11 @@ pub extern fn register_hooks(_pool: *mut apr_pool_t) {
             ptr::null_mut(),
             APR_HOOK_MIDDLE as std::os::raw::c_int,
         );
-        ap_hook_translate_name(
+        ap_hook_handler(
             Some(handle_request),
             ptr::null_mut(),
             ptr::null_mut(),
-            APR_HOOK_FIRST as std::os::raw::c_int,
-        );
-        ap_hook_map_to_storage(
-            Some(handle_request),
-            ptr::null_mut(),
-            ptr::null_mut(),
-            APR_HOOK_FIRST as std::os::raw::c_int,
+            APR_HOOK_MIDDLE as std::os::raw::c_int,
         );
     }
 }

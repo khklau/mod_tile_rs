@@ -1,0 +1,20 @@
+[Sun Sep 26 14:18:35.044443 2021] [mpm_event:notice] [pid 1235:tid 140119263517760] AH00493: SIGUSR1 received.  Doing graceful restart
+[Sun Sep 26 14:18:35.055629 2021] [tile:debug] [pid 1235:tid 140119263517760] ./src/mod_tile.c(2316): Committing tile config default
+[Sun Sep 26 14:18:35.055660 2021] [tile:warn] [pid 1235:tid 140119263517760] Could not determine host name of server to configure tile-json request. Using localhost instead
+[Sun Sep 26 14:18:35.055669 2021] [tile:notice] [pid 1235:tid 140119263517760] Loading tile config default at /osm/ for zooms 0 - 20 from tile directory /var/cache/renderd with extension .png and mime type image/png
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 127.0.1.1. Set the 'ServerName' directive globally to suppress this message
+[Sun Sep 26 14:18:35.058970 2021] [watchdog:debug] [pid 1235:tid 140119263517760] mod_watchdog.c(452): AH010033: Watchdog: Running with WatchdogInterval 1000ms
+[Sun Sep 26 14:18:35.059006 2021] [watchdog:debug] [pid 1235:tid 140119263517760] mod_watchdog.c(461): AH02974: Watchdog: found parent providers.
+[Sun Sep 26 14:18:35.059033 2021] [watchdog:debug] [pid 1235:tid 140119263517760] mod_watchdog.c(507): AH02977: Watchdog: found child providers.
+[Sun Sep 26 14:18:35.059038 2021] [watchdog:debug] [pid 1235:tid 140119263517760] mod_watchdog.c(515): AH02978: Watchdog: Looking for child (_singleton_).
+[Sun Sep 26 14:18:35.059044 2021] [watchdog:debug] [pid 1235:tid 140119263517760] mod_watchdog.c(515): AH02978: Watchdog: Looking for child (_default_).
+[Sun Sep 26 14:18:35.059133 2021] [mpm_event:notice] [pid 1235:tid 140119263517760] AH00489: Apache/2.4.41 (Ubuntu) configured -- resuming normal operations
+[Sun Sep 26 14:18:35.059141 2021] [mpm_event:info] [pid 1235:tid 140119263517760] AH00490: Server built: 2021-07-05T07:16:56
+[Sun Sep 26 14:18:35.059147 2021] [core:notice] [pid 1235:tid 140119263517760] AH00094: Command line: '/usr/sbin/apache2'
+[Sun Sep 26 14:18:35.059152 2021] [core:debug] [pid 1235:tid 140119263517760] log.c(1568): AH02639: Using SO_REUSEPORT: yes (1)
+[Sun Sep 26 14:18:35.061428 2021] [watchdog:debug] [pid 11841:tid 140119263517760] mod_watchdog.c(566): AH02980: Watchdog: nothing configured?
+[Sun Sep 26 14:18:35.061505 2021] [tile:debug] [pid 11841:tid 140119263517760] ./src/mod_tile.c(1864): Initialising a new Apache child instance
+[Sun Sep 26 14:18:35.061558 2021] [watchdog:debug] [pid 11842:tid 140119263517760] mod_watchdog.c(566): AH02980: Watchdog: nothing configured?
+[Sun Sep 26 14:18:35.061611 2021] [tile:debug] [pid 11842:tid 140119263517760] ./src/mod_tile.c(1864): Initialising a new Apache child instance
+[Sun Sep 26 14:18:35.061740 2021] [mpm_event:debug] [pid 11842:tid 140119239939840] event.c(2312): AH02471: start_threads: Using epoll (wakeable)
+[Sun Sep 26 14:18:35.061757 2021] [mpm_event:debug] [pid 11841:tid 140119239939840] event.c(2312): AH02471: start_threads: Using epoll (wakeable)
