@@ -9,8 +9,8 @@ use crate::apache2::memory::{ alloc, retrieve };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::slippy::context::RequestContext;
 use crate::slippy::error::ParseError;
+use crate::slippy::interface::ParseRequestFunc;
 use crate::slippy::parser::SlippyRequestParser;
-use crate::slippy::traits::ParseRequestFunc;
 use crate::storage::file_system;
 use crate::tile::config::{ TileConfig, load };
 

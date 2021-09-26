@@ -12,9 +12,9 @@ mod apache2 {
 mod slippy {
     pub mod context;
     pub mod error;
+    pub mod interface;
     pub mod parser;
     pub mod request;
-    pub mod traits;
 }
 mod storage {
     pub mod file_system;
