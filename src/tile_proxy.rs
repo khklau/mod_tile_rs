@@ -108,8 +108,10 @@ impl<'p> TileProxy<'p> {
         &mut self,
         file_path: PathBuf,
     ) -> Result<(), Box<dyn Error>> {
+        let original_request_timeout = self.config.renderd.render_timeout.clone();
         let tile_config = load(file_path.as_path())?;
         self.config = tile_config;
+        self.config.renderd.render_timeout = original_request_timeout;
         self.config_file_path = Some(file_path.clone());
         return Ok(());
     }
@@ -184,4 +186,32 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
     drop(server_ref);
     info!((&mut *server_ptr).record, "drop_tile_server - finish");
     return APR_SUCCESS as apr_status_t;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::apache2::virtual_host::test_utils::with_server_rec;
+
+    #[test]
+    fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|record| {
+            let tile_config = TileConfig::new();
+            let proxy = TileProxy::create(record, tile_config).unwrap();
+
+            let expected_timeout = Duration::new(30, 50);
+            proxy.set_render_timeout(&expected_timeout);
+            let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            expected_path.push("resources/test/tile/basic_valid.conf");
+            proxy.load_tile_config(expected_path.clone())?;
+
+            let actual_timeout = proxy.config.renderd.render_timeout.clone();
+            assert_eq!(expected_timeout, actual_timeout, "Failed to preserve request timeout during reload");
+            assert!(proxy.config_file_path.is_some(), "Config file path is None");
+            if let Some(actual_path) = &proxy.config_file_path {
+                assert_eq!(&expected_path, actual_path, "Failed to preserve config file path during reload");
+            }
+            Ok(())
+        })
+    }
 }
