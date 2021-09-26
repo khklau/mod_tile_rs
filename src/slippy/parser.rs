@@ -7,7 +7,6 @@ use crate::slippy::error::{
 use crate::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
-use crate::slippy::traits::{ RequestParser, LayerRequestParser };
 
 use crate::tile::config::{ LayerConfig, TileConfig, };
 
@@ -20,9 +19,8 @@ use std::string::String;
 
 
 pub struct SlippyRequestParser;
-
-impl RequestParser for SlippyRequestParser {
-    fn parse(
+impl SlippyRequestParser {
+    pub fn parse(
         context: &RequestContext,
         config: &TileConfig,
         request_url: &str,
@@ -88,7 +86,7 @@ impl LayerParserCombinator {
 }
 
 struct StatisticsRequestParser;
-impl RequestParser for StatisticsRequestParser {
+impl StatisticsRequestParser {
     fn parse(
         context: &RequestContext,
         _config: &TileConfig,
@@ -116,7 +114,7 @@ impl RequestParser for StatisticsRequestParser {
 }
 
 struct DescribeLayerRequestParser;
-impl LayerRequestParser for DescribeLayerRequestParser {
+impl DescribeLayerRequestParser {
     fn parse(
         context: &RequestContext,
         layer_config: &LayerConfig,
@@ -141,7 +139,7 @@ impl LayerRequestParser for DescribeLayerRequestParser {
 }
 
 struct ServeTileV3RequestParser;
-impl LayerRequestParser for ServeTileV3RequestParser {
+impl ServeTileV3RequestParser {
     fn parse(
         context: &RequestContext,
         layer_config: &LayerConfig,
@@ -218,7 +216,7 @@ impl LayerRequestParser for ServeTileV3RequestParser {
 }
 
 struct ServeTileV2RequestParser;
-impl LayerRequestParser for ServeTileV2RequestParser {
+impl ServeTileV2RequestParser {
     fn parse(
         context: &RequestContext,
         layer_config: &LayerConfig,

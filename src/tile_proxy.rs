@@ -10,7 +10,7 @@ use crate::apache2::virtual_host::VirtualHostContext;
 use crate::slippy::context::RequestContext;
 use crate::slippy::error::ParseError;
 use crate::slippy::parser::SlippyRequestParser;
-use crate::slippy::traits::RequestParser;
+use crate::slippy::traits::ParseRequestFunc;
 use crate::storage::file_system;
 use crate::tile::config::{ TileConfig, load };
 
@@ -30,6 +30,7 @@ pub struct TileProxy<'p> {
     pub record: &'p mut server_rec,
     pub config: TileConfig,
     pub config_file_path: Option<PathBuf>,
+    pub parse_request: ParseRequestFunc,
 }
 
 impl<'p> TileProxy<'p> {
@@ -100,6 +101,7 @@ impl<'p> TileProxy<'p> {
         new_server.record = record;
         new_server.config = tile_config;
         new_server.config_file_path = None;
+        new_server.parse_request = SlippyRequestParser::parse;
         info!(new_server.record, "TileServer::create - finish");
         return Ok(new_server);
     }
@@ -143,7 +145,8 @@ impl<'p> TileProxy<'p> {
         debug!(record.server, "TileServer::handle_request - start");
         let context = RequestContext::find_or_create(record).unwrap();
         let request_url = context.uri;
-        let request = match SlippyRequestParser::parse(context, &self.config, request_url) {
+        let parse = self.parse_request;
+        let request = match parse(context, &self.config, request_url) {
             Ok(result) => {
                 match result {
                     Some(request) => request,
