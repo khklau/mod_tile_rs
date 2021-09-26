@@ -37,6 +37,7 @@ use scan_fmt::scan_fmt;
 
 use std::alloc::System;
 use std::ffi::CStr;
+use std::path::PathBuf;
 use std::ptr;
 use std::os::raw::{ c_char, c_int, c_void, };
 use std::time::Duration;
@@ -104,7 +105,9 @@ pub extern "C" fn load_tile_config(
     debug!(record, "tile_server::load_tile_config - start");
     let path_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
     let tile_server = TileProxy::find_or_create(record).unwrap();
-    match tile_server.load_tile_config(path_str) {
+    let mut file_path = PathBuf::new();
+    file_path.push(path_str);
+    match tile_server.load_tile_config(file_path) {
         Ok(_) => {
             info!(record, "tile_server::load_tile_config - loaded config from {}", path_str);
             return ptr::null();

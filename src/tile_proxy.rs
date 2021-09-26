@@ -15,10 +15,12 @@ use crate::storage::file_system;
 use crate::tile::config::{ TileConfig, load };
 
 use std::any::type_name;
+use std::boxed::Box;
 use std::error::Error;
 use std::ffi::{ CStr, CString };
+use std::option::Option;
 use std::os::raw::{ c_int, c_void, };
-use std::path::Path;
+use std::path::PathBuf;
 use std::ptr;
 use std::result::Result;
 use std::time::Duration;
@@ -27,6 +29,7 @@ use std::time::Duration;
 pub struct TileProxy<'p> {
     pub record: &'p mut server_rec,
     pub config: TileConfig,
+    pub config_file_path: Option<PathBuf>,
 }
 
 impl<'p> TileProxy<'p> {
@@ -96,17 +99,18 @@ impl<'p> TileProxy<'p> {
         )?.0;
         new_server.record = record;
         new_server.config = tile_config;
+        new_server.config_file_path = None;
         info!(new_server.record, "TileServer::create - finish");
         return Ok(new_server);
     }
 
     pub fn load_tile_config(
         &mut self,
-        path_str: &str,
+        file_path: PathBuf,
     ) -> Result<(), Box<dyn Error>> {
-        let file_path = Path::new(path_str);
-        let tile_config = load(file_path)?;
+        let tile_config = load(file_path.as_path())?;
         self.config = tile_config;
+        self.config_file_path = Some(file_path.clone());
         return Ok(());
     }
 
@@ -121,6 +125,13 @@ impl<'p> TileProxy<'p> {
         &mut self,
         record: &mut server_rec,
     ) -> Result<(), Box<dyn Error>> {
+        let path_copy = match &self.config_file_path {
+            Some(path_original) => path_original.clone(),
+            None => {
+                return Ok(());
+            },
+        };
+        self.load_tile_config(path_copy)?;
         let context = VirtualHostContext::find_or_create(record).unwrap();
         file_system::initialise(context)?;
         return Ok(());
