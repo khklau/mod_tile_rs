@@ -4,7 +4,7 @@ use crate::apache2::bindings::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::apache2::error::InvalidArgError;
+use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::tile::config::TileConfig;
@@ -38,15 +38,15 @@ impl<'c> ConnectionContext<'c> {
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "conn_rec.pool".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const conn_rec,
+                "pool field is null pointer",
+            )));
         } else if record.base_server == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "conn_rec.base_server".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const conn_rec,
+                "base_server field is null pointer",
+            )));
         }
         let context = match retrieve(
             unsafe { &mut *(record.pool) },
@@ -69,10 +69,10 @@ impl<'c> ConnectionContext<'c> {
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::create - start");
         if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "conn_rec.pool".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const conn_rec,
+                "pool field is null pointer",
+            )));
         }
         let new_context = alloc::<ConnectionContext<'c>>(
             unsafe { &mut *(record.pool) },

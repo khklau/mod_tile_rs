@@ -4,7 +4,7 @@ use crate::apache2::bindings::{
     apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::apache2::error::InvalidArgError;
+use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ alloc, retrieve };
 use crate::tile::config::TileConfig;
 
@@ -71,17 +71,17 @@ impl<'h> VirtualHostContext<'h> {
 
     fn access_proc_record(process: *mut process_rec) -> Result<&'h mut process_rec, Box<dyn Error>> {
         if process == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "server_rec.process".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                process,
+                "null pointer",
+            )));
         }
         let proc_record = unsafe { &mut *process };
         if proc_record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "server_rec.process.pool".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                proc_record as *const process_rec,
+                "pool field is null pointer",
+            )));
         }
         Ok(proc_record)
     }

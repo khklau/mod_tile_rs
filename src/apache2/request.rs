@@ -5,7 +5,7 @@ use crate::apache2::bindings::{
     apr_status_t, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
-use crate::apache2::error::InvalidArgError;
+use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::tile::config::TileConfig;
@@ -50,15 +50,15 @@ impl<'r> RequestContext<'r> {
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "request_rec.pool".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const request_rec,
+                "pool field is null pointer",
+            )));
         } else if record.connection == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "request_rec.connection".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const request_rec,
+                "connection field is null pointer",
+            )));
         }
         let context = match retrieve(
             unsafe { &mut *(record.pool) },
@@ -80,15 +80,15 @@ impl<'r> RequestContext<'r> {
         conn_context: &'r mut ConnectionContext<'r>,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "request_rec.pool".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const request_rec,
+                "pool field is null pointer",
+            )));
         } else if record.uri == ptr::null_mut() {
-            return Err(Box::new(InvalidArgError{
-                arg: "request_rec.uri".to_string(),
-                reason: "null pointer".to_string(),
-            }));
+            return Err(Box::new(InvalidRecordError::new(
+                record as *const request_rec,
+                "uri field is null pointer",
+            )));
         }
         let record_pool = unsafe { &mut *(record.pool) };
         let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
