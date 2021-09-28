@@ -5,7 +5,7 @@ use crate::apache2::bindings::{
     apr_status_t, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
-use crate::apache2::hook::InvalidArgError;
+use crate::apache2::error::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::tile::config::TileConfig;

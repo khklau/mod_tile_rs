@@ -5,7 +5,7 @@ mod apache2 {
     #[macro_use]
     pub mod logger;
     pub mod connection;
-    pub mod hook;
+    pub mod error;
     pub mod memory;
     pub mod request;
     pub mod virtual_host;

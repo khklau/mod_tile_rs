@@ -4,7 +4,7 @@ use crate::apache2::bindings::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::apache2::hook::InvalidArgError;
+use crate::apache2::error::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::tile::config::TileConfig;
