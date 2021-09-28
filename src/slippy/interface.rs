@@ -1,4 +1,4 @@
-use crate::slippy::context::RequestContext;
+use crate::apache2::request::RequestContext;
 use crate::slippy::error::ParseError;
 use crate::slippy::request::Request;
 

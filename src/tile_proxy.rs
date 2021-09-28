@@ -6,8 +6,8 @@ use crate::apache2::bindings::{
 };
 use crate::apache2::hook::InvalidArgError;
 use crate::apache2::memory::{ alloc, retrieve };
+use crate::apache2::request::RequestContext;
 use crate::apache2::virtual_host::VirtualHostContext;
-use crate::slippy::context::RequestContext;
 use crate::slippy::error::ParseError;
 use crate::slippy::interface::ParseRequestFunc;
 use crate::slippy::parser::SlippyRequestParser;

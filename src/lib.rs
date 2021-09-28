@@ -7,10 +7,10 @@ mod apache2 {
     pub mod connection;
     pub mod hook;
     pub mod memory;
+    pub mod request;
     pub mod virtual_host;
 }
 mod slippy {
-    pub mod context;
     pub mod error;
     pub mod interface;
     pub mod parser;

@@ -1,6 +1,6 @@
 #![allow(unused_unsafe)]
 
-use crate::slippy::context::RequestContext;
+use crate::apache2::request::RequestContext;
 use crate::slippy::error::{
     InvalidParameterError, ParseError
 };
@@ -287,7 +287,7 @@ impl ServeTileV2RequestParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::slippy::context::test_utils::with_request_rec;
+    use crate::apache2::request::test_utils::with_request_rec;
     use crate::tile::config::TileConfig;
     use std::boxed::Box;
     use std::error::Error;
