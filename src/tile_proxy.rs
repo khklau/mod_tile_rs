@@ -1,5 +1,7 @@
 #![allow(unused_unsafe)]
 
+use crate::analytics::interface::ParseRequestObserver;
+use crate::analytics::statistics::ModuleStatistics;
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
     apr_status_t, process_rec, request_rec, server_rec,
@@ -31,6 +33,7 @@ pub struct TileProxy<'p> {
     pub config: TileConfig,
     pub config_file_path: Option<PathBuf>,
     pub parse_request: ParseRequestFunc,
+    pub statistics: ModuleStatistics,
 }
 
 impl<'p> TileProxy<'p> {
@@ -102,6 +105,7 @@ impl<'p> TileProxy<'p> {
         new_server.config = tile_config;
         new_server.config_file_path = None;
         new_server.parse_request = SlippyRequestParser::parse;
+        new_server.statistics = ModuleStatistics {};
         info!(new_server.record, "TileServer::create - finish");
         return Ok(new_server);
     }
@@ -139,14 +143,21 @@ impl<'p> TileProxy<'p> {
     }
 
     pub fn handle_request(
-        &self,
+        &mut self,
         record: &mut request_rec,
     ) -> Result<c_int, ParseError> {
         debug!(record.server, "TileServer::handle_request - start");
         let context = RequestContext::find_or_create(record, &self.config).unwrap();
         let request_url = context.uri;
         let parse = self.parse_request;
-        let request = match parse(context, request_url) {
+        let mut parse_observers: [&mut dyn ParseRequestObserver; 1] = [&mut self.statistics];
+
+        let parse_result = parse(context, request_url);
+        for observer_iter in parse_observers.iter_mut() {
+            (*observer_iter).on_parse(parse, context, request_url, &parse_result);
+        }
+
+        match parse_result {
             Ok(result) => {
                 match result {
                     Some(request) => request,
@@ -170,6 +181,7 @@ impl<'p> TileProxy<'p> {
                 },
             },
         };
+
         debug!(record.server, "TileServer::handle_request - finish");
         return Ok(OK as c_int);
     }

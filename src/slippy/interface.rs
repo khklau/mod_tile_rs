@@ -6,4 +6,5 @@ use std::option::Option;
 use std::result::Result;
 
 
-pub type ParseRequestFunc = fn(&RequestContext, &str) -> Result<Option<Request>, ParseError>;
+pub type ParseRequestResult = Result<Option<Request>, ParseError>;
+pub type ParseRequestFunc = fn(&RequestContext, &str) -> ParseRequestResult;

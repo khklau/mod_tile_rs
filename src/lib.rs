@@ -10,6 +10,9 @@ mod apache2 {
     pub mod request;
     pub mod virtual_host;
 }
+mod tile {
+    pub mod config;
+}
 mod slippy {
     pub mod error;
     pub mod interface;
@@ -19,10 +22,12 @@ mod slippy {
 mod storage {
     pub mod file_system;
 }
-mod tile {
-    pub mod config;
+mod analytics {
+    pub mod interface;
+    pub mod statistics;
 }
 mod tile_proxy;
+
 
 use crate::apache2::bindings::{
     APR_HOOK_MIDDLE, HTTP_INTERNAL_SERVER_ERROR,
@@ -41,6 +46,7 @@ use std::path::PathBuf;
 use std::ptr;
 use std::os::raw::{ c_char, c_int, c_void, };
 use std::time::Duration;
+
 
 #[global_allocator]
 static GLOBAL: System = System;
@@ -87,6 +93,7 @@ static tile_cmds: [command_rec; 2] = [
         errmsg: cstr!("tile rendering request timeout threshold in seconds"),
     },
 ];
+
 
 #[no_mangle]
 pub extern "C" fn load_tile_config(
