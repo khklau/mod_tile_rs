@@ -149,6 +149,8 @@ impl<'p> TileProxy<'p> {
         debug!(record.server, "TileServer::handle_request - start");
         let context = RequestContext::find_or_create(record, &self.config).unwrap();
         let request_url = context.uri;
+        // TODO: use the macros & traits in the moveit crate to create a move constructor for TileProxy
+        //       then move the following self referential values below into TileProxy
         let parse = self.parse_request;
         let mut parse_observers: [&mut dyn ParseRequestObserver; 1] = [&mut self.statistics];
 

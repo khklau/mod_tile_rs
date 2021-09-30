@@ -18,6 +18,11 @@ mod slippy {
     pub mod interface;
     pub mod parser;
     pub mod request;
+    pub mod response;
+}
+mod handler {
+    pub mod error;
+    pub mod interface;
 }
 mod storage {
     pub mod file_system;
