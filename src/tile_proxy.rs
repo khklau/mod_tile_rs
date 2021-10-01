@@ -11,7 +11,7 @@ use crate::apache2::memory::{ alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::slippy::error::ParseError;
-use crate::slippy::interface::ParseRequestFunc;
+use crate::slippy::interface::{ ParseOutcome, ParseRequestFunc };
 use crate::slippy::parser::SlippyRequestParser;
 use crate::storage::file_system;
 use crate::tile::config::{ TileConfig, load };
@@ -162,8 +162,8 @@ impl<'p> TileProxy<'p> {
         match parse_result {
             Ok(result) => {
                 match result {
-                    Some(request) => request,
-                    None => {
+                    ParseOutcome::Match(request) => request,
+                    ParseOutcome::NoMatch => {
                         return Ok(DECLINED as c_int);
                     },
                 }

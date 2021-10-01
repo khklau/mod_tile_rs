@@ -4,6 +4,7 @@ use crate::apache2::request::RequestContext;
 use crate::slippy::error::{
     InvalidParameterError, ParseError
 };
+use crate::slippy::interface::ParseOutcome;
 use crate::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
@@ -13,7 +14,6 @@ use crate::tile::config::LayerConfig;
 use scan_fmt::scan_fmt;
 
 use std::ffi::CStr;
-use std::option::Option;
 use std::result::Result;
 use std::string::String;
 
@@ -23,11 +23,11 @@ impl SlippyRequestParser {
     pub fn parse(
         context: &RequestContext,
         request_url: &str,
-    ) -> Result<Option<Request>, ParseError> {
+    ) -> Result<ParseOutcome, ParseError> {
         debug!(context.get_host().record, "SlippyRequestParser::parse - start");
         // try match stats request
-        if let Some(request) = StatisticsRequestParser::parse(context, request_url)? {
-            return Ok(Some(request));
+        if let ParseOutcome::Match(request) = StatisticsRequestParser::parse(context, request_url)? {
+            return Ok(ParseOutcome::Match(request));
         }
         let parse_layer_request = LayerParserCombinator::or_else(
             DescribeLayerRequestParser::parse,
@@ -46,20 +46,14 @@ impl SlippyRequestParser {
             if let Some(found) = request_url.find(&config.base_url) {
                 let after_base = found + config.base_url.len();
                 if let Some(layer_url) = request_url.get(after_base..) {
-                    if let Some(request) = parse_layer_request(context, config, layer_url)? {
-                        return Ok(Some(request));
+                    if let ParseOutcome::Match(request) = parse_layer_request(context, config, layer_url)? {
+                        return Ok(ParseOutcome::Match(request));
                     }
                 }
             };
         }
         info!(context.get_host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
-        return Err(ParseError::Param(
-            InvalidParameterError {
-                param: String::from("uri"),
-                value: request_url.to_string(),
-                reason: "Does not match any known request types".to_string(),
-            }
-        ));
+        return Ok(ParseOutcome::NoMatch);
     }
 }
 
@@ -69,14 +63,14 @@ impl LayerParserCombinator {
     fn or_else<F, G>(
         func1: F,
         func2: G,
-    ) -> impl Fn(&RequestContext, &LayerConfig, &str) -> Result<Option<Request>, ParseError>
+    ) -> impl Fn(&RequestContext, &LayerConfig, &str) -> Result<ParseOutcome, ParseError>
     where
-        F: Fn(&RequestContext, &LayerConfig, &str) -> Result<Option<Request>, ParseError>,
-        G: Fn(&RequestContext, &LayerConfig, &str) -> Result<Option<Request>, ParseError>,
+        F: Fn(&RequestContext, &LayerConfig, &str) -> Result<ParseOutcome, ParseError>,
+        G: Fn(&RequestContext, &LayerConfig, &str) -> Result<ParseOutcome, ParseError>,
     {
         move |context, config, request_url| {
-            if let Some(request) = func1(context, config, request_url)? {
-                return Ok(Some(request));
+            if let ParseOutcome::Match(request) = func1(context, config, request_url)? {
+                return Ok(ParseOutcome::Match(request));
             } else {
                 return func2(context, config, request_url);
             }
@@ -89,14 +83,14 @@ impl StatisticsRequestParser {
     fn parse(
         context: &RequestContext,
         request_url: &str,
-    ) -> Result<Option<Request>, ParseError> {
+    ) -> Result<ParseOutcome, ParseError> {
         let module_name = unsafe {
             CStr::from_ptr(crate::TILE_MODULE.name).to_str()?
         };
         let stats_uri = format!("/{}", module_name);
         if request_url.eq(&stats_uri) {
             info!(context.get_host().record, "StatisticsRequestParser::parse - matched ReportStatistics");
-            return Ok(Some(Request {
+            return Ok(ParseOutcome::Match(Request {
                 header: Header::new(
                     context.record,
                     context.connection.record,
@@ -106,7 +100,7 @@ impl StatisticsRequestParser {
             }));
         } else {
             info!(context.get_host().record, "StatisticsRequestParser::parse - no match");
-            return Ok(None);
+            return Ok(ParseOutcome::NoMatch);
         }
     }
 }
@@ -117,10 +111,10 @@ impl DescribeLayerRequestParser {
         context: &RequestContext,
         layer_config: &LayerConfig,
         request_url: &str,
-    ) -> Result<Option<Request>, ParseError> {
+    ) -> Result<ParseOutcome, ParseError> {
         if request_url.eq_ignore_ascii_case("/tile-layer.json") {
             info!(context.get_host().record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
-            return Ok(Some(Request {
+            return Ok(ParseOutcome::Match(Request {
                 header: Header::new_with_layer(
                     context.record,
                     context.connection.record,
@@ -131,7 +125,7 @@ impl DescribeLayerRequestParser {
             }));
         } else {
             info!(context.get_host().record, "DescribeLayerRequestParser::parse - no match");
-            return Ok(None);
+            return Ok(ParseOutcome::NoMatch);
         }
     }
 }
@@ -142,10 +136,26 @@ impl ServeTileV3RequestParser {
         context: &RequestContext,
         layer_config: &LayerConfig,
         request_url: &str,
-    ) -> Result<Option<Request>, ParseError> {
+    ) -> Result<ParseOutcome, ParseError> {
         // TODO: replace with a more modular parser that better handles with option and no option
-        if !(layer_config.parameters_allowed) {
-            return Ok(None);
+        let has_parameter = match scan_fmt!(
+            request_url,
+            "/{40[^0-9/]}/",
+            String
+        ) {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+        if !has_parameter {
+            return Ok(ParseOutcome::NoMatch);
+        } else if has_parameter && !(layer_config.parameters_allowed) {
+            return Err(ParseError::Param(
+                InvalidParameterError {
+                    param: String::from("uri"),
+                    value: request_url.to_string(),
+                    reason: "Request has parameter but parameterize_style not set in config".to_string(),
+                }
+            ));
         }
 
         // try match with option
@@ -156,7 +166,7 @@ impl ServeTileV3RequestParser {
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
                 info!(context.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
-                return Ok(Some(Request {
+                return Ok(ParseOutcome::Match(Request {
                     header: Header::new_with_layer(
                         context.record,
                         context.connection.record,
@@ -186,7 +196,7 @@ impl ServeTileV3RequestParser {
         ) {
             Ok((parameter, x, y, z, extension)) => {
                 info!(context.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
-                return Ok(Some(Request {
+                return Ok(ParseOutcome::Match(Request {
                     header: Header::new_with_layer(
                         context.record,
                         context.connection.record,
@@ -209,7 +219,7 @@ impl ServeTileV3RequestParser {
         }
 
         info!(context.get_host().record, "ServeTileV3RequestParser::parse - no match");
-        return Ok(None);
+        return Ok(ParseOutcome::NoMatch);
     }
 }
 
@@ -219,7 +229,7 @@ impl ServeTileV2RequestParser {
         context: &RequestContext,
         layer_config: &LayerConfig,
         request_url: &str,
-    ) -> Result<Option<Request>, ParseError> {
+    ) -> Result<ParseOutcome, ParseError> {
     // TODO: replace with a more modular parser that better handles with option and no option
     // try match with option
     match scan_fmt!(
@@ -229,7 +239,7 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension, option)) => {
             info!(context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
-            return Ok(Some(Request {
+            return Ok(ParseOutcome::Match(Request {
                 header: Header::new_with_layer(
                     context.record,
                     context.connection.record,
@@ -258,7 +268,7 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension)) => {
             info!(context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
-            return Ok(Some(Request {
+            return Ok(ParseOutcome::Match(Request {
                 header: Header::new_with_layer(
                     context.record,
                     context.connection.record,
@@ -279,7 +289,7 @@ impl ServeTileV2RequestParser {
         Err(_) => ()
     }
         info!(context.get_host().record, "ServeTileV2RequestParser::parse - no match");
-        return Ok(None)
+        return Ok(ParseOutcome::NoMatch)
     }
 }
 
@@ -302,7 +312,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_header = Header::new(
                 context.record,
                 context.connection.record,
@@ -325,7 +335,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -353,7 +363,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -390,7 +400,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -427,7 +437,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -463,7 +473,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -498,7 +508,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -533,7 +543,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.unwrap();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
