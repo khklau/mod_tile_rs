@@ -12,7 +12,7 @@ use std::any::type_name;
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::error::Error;
-use std::ffi::{ CStr, CString, };
+use std::ffi::CString;
 use std::fs::{ File, OpenOptions, };
 use std::os::raw::c_void;
 use std::path::PathBuf;
@@ -54,14 +54,6 @@ impl<'h> VirtualHostContext<'h> {
             },
             None => {
                 info!(record, "VirtualHostContext::find_or_create - not found");
-                // TODO read the tile config from a file
-                let mut tile_config = TileConfig::new();
-                for (_, config) in &mut (tile_config.layers) {
-                    if config.hostnames.is_empty() {
-                        let hostname = unsafe { CStr::from_ptr(record.server_hostname) };
-                        config.hostnames.push(hostname.to_str()?.to_string());
-                    }
-                }
                 Self::create(record, config)?
             },
         };
