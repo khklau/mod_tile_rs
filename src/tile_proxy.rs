@@ -59,13 +59,7 @@ impl<'p> TileProxy<'p> {
             },
             None => {
                 info!(record, "TileServer::find_or_create - not found");
-                let mut tile_config = TileConfig::new();
-                for (_, config) in &mut (tile_config.layers) {
-                    if config.hostnames.is_empty() {
-                        let hostname = unsafe { CStr::from_ptr(record.server_hostname) };
-                        config.hostnames.push(hostname.to_str()?.to_string());
-                    }
-                }
+                let tile_config = TileConfig::new();
                 Self::create(record, tile_config)?
             },
         };
@@ -115,7 +109,12 @@ impl<'p> TileProxy<'p> {
         file_path: PathBuf,
     ) -> Result<(), Box<dyn Error>> {
         let original_request_timeout = self.config.renderd.render_timeout.clone();
-        let tile_config = load(file_path.as_path())?;
+        let server_name = if self.record.server_hostname == ptr::null_mut() {
+            None
+        } else {
+            Some(unsafe { CStr::from_ptr(self.record.server_hostname).to_str()? })
+        };
+        let tile_config = load(file_path.as_path(), server_name)?;
         self.config = tile_config;
         self.config.renderd.render_timeout = original_request_timeout;
         self.config_file_path = Some(file_path.clone());

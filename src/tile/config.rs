@@ -3,11 +3,11 @@ use configparser::ini::Ini;
 use std::collections::hash_map::HashMap;
 use std::error::Error;
 use std::fmt;
+use std::option::Option;
 use std::path::Path;
 use std::result::Result;
 use std::string::String;
 use std::time::Duration;
-use std::vec::Vec;
 
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ pub struct LayerConfig {
     pub max_zoom: u64,
     pub file_extension: String,
     pub mime_type: String,
-    pub hostnames: Vec<String>,
+    pub host_name: String,
     pub parameters_allowed: bool,
 }
 
@@ -69,19 +69,25 @@ impl LayerConfig {
             max_zoom: 20,
             file_extension: String::from("png"),
             mime_type: String::from("image/png"),
-            hostnames: Vec::new(),
+            host_name: String::new(),
             parameters_allowed: false,
         }
     }
 }
 
-pub fn load(path: &Path) -> Result<TileConfig, ParseError> {
+pub fn load(
+    path: &Path,
+    server_name: Option<&str>,
+) -> Result<TileConfig, ParseError> {
     let mut ini = Ini::new();
     ini.load(path)?;
-    return parse(&ini);
+    return parse(&ini, server_name);
 }
 
-fn parse(ini: &Ini) -> Result<TileConfig, ParseError> {
+fn parse(
+    ini: &Ini,
+    server_name: Option<&str>,
+) -> Result<TileConfig, ParseError> {
     let mut config = TileConfig::new();
     'sections: for section_name in &(ini.sections()) {
         match section_name.to_lowercase().as_str() {
@@ -92,7 +98,7 @@ fn parse(ini: &Ini) -> Result<TileConfig, ParseError> {
                 config.renderd = parse_renderd(ini, section_name)?;
             },
             _ => {
-                let layer = parse_layer(ini, section_name)?;
+                let layer = parse_layer(ini, section_name, server_name)?;
                 config.layers.insert(section_name.clone(), layer);
             },
         };
@@ -111,7 +117,11 @@ fn parse_renderd(ini: &Ini, section_name: &String) -> Result<RenderdConfig, Pars
     return Ok(config);
 }
 
-fn parse_layer(ini: &Ini, section_name: &String) -> Result<LayerConfig, ParseError> {
+fn parse_layer(
+    ini: &Ini,
+    section_name: &String,
+    server_name: Option<&str>,
+) -> Result<LayerConfig, ParseError> {
     let mut config = LayerConfig::new();
     config.name = section_name.to_string();
     if let Some(description) = ini.get(section_name.as_str(), "description") {
@@ -129,12 +139,19 @@ fn parse_layer(ini: &Ini, section_name: &String) -> Result<LayerConfig, ParseErr
     if let Some(uri) = ini.get(section_name.as_str(), "uri") {
         config.base_url = uri.trim_end_matches("/").to_string();
     }
-    if let Some(alias) = ini.get(section_name.as_str(), "server_alias") {
-        config.hostnames.push(alias);
-    }
     if let Some(parameters_allowed) = ini.getbool(section_name.as_str(), "parameterize_style")? {
         config.parameters_allowed = parameters_allowed;
     }
+    let chosen_hostname = {
+        if let Some(alias) = ini.get(section_name.as_str(), "server_alias") {
+            alias
+        } else if let Some(name) = server_name {
+            name.to_string()
+        } else {
+            String::from("localhost")
+        }
+    };
+    config.host_name = format!("http://{}", chosen_hostname);
     return Ok(config);
 }
 
@@ -168,7 +185,7 @@ mod tests {
     fn test_load_basic_valid_file() -> Result<(), ParseError> {
         let mut file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         file_path.push("resources/test/tile/basic_valid.conf");
-        let actual_config = load(file_path.as_path())?;
+        let actual_config = load(file_path.as_path(), None)?;
         let layer = "basic";
         assert_eq!(
             "basic",
@@ -184,6 +201,11 @@ mod tests {
             "png",
             actual_config.layers.get(layer).unwrap().file_extension,
             "Failed to load file_extension"
+        );
+        assert_eq!(
+            "http://localhost",
+            actual_config.layers.get(layer).unwrap().host_name,
+            "Failed to load default hostname"
         );
         assert_eq!(
             "/var/cache/test",
@@ -202,7 +224,7 @@ mod tests {
     fn test_load_basic_invalid_file() -> Result<(), Box<dyn Error>> {
         let mut file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         file_path.push("resources/test/tile/basic_invalid.conf");
-        assert!(load(file_path.as_path()).is_ok(), "Invalid file was parsed");
+        assert!(load(file_path.as_path(), None).is_ok(), "Invalid file was parsed");
         Ok(())
     }
 
@@ -213,7 +235,7 @@ mod tests {
         ini.set("renderd", "socketname", Some(String::from("/var/run/renderd/renderd.sock")));
         ini.set("MAPNIK", "font_dir", Some(String::from("/usr/share/fonts/")));
         ini.set(layer, "uri", Some(String::from("/foo/")));
-        let actual_config = parse(&ini)?;
+        let actual_config = parse(&ini, None)?;
         assert_eq!(
             layer,
             actual_config.layers.get(layer).unwrap().name,
@@ -227,7 +249,7 @@ mod tests {
         let mut ini = Ini::new();
         ini.set("renderd", "socketname", Some(String::from("/var/run/renderd/renderd.sock")));
         ini.set("RENDERD", "TILE_DIR", Some(String::from("/var/cache/renderd/")));
-        let actual_config = parse(&ini)?;
+        let actual_config = parse(&ini, None)?;
         assert_eq!("/var/run/renderd/renderd.sock", actual_config.renderd.ipc_uri, "Failed to parse socketname");
         assert_eq!("/var/cache/renderd/", actual_config.renderd.store_uri, "Failed to parse tile_dir");
         Ok(())
@@ -238,7 +260,7 @@ mod tests {
         let mut ini = Ini::new();
         let layer = "basic";
         ini.set(layer, "uri", Some(String::from("/foo/")));
-        let actual_config = parse(&ini)?;
+        let actual_config = parse(&ini, None)?;
         assert_eq!(
             "/foo",
             actual_config.layers.get(layer).unwrap().base_url,
@@ -251,7 +273,7 @@ mod tests {
         let layer1 = "basic";
         let mut ini1 = Ini::new();
         ini1.set(layer1, "parameterize_style", Some(String::from("TRUE")));
-        let actual_config1 = parse(&ini1)?;
+        let actual_config1 = parse(&ini1, None)?;
         assert!(
             actual_config1.layers.get(layer1).unwrap().parameters_allowed,
             "Failed to parse parameterize_style");
@@ -259,7 +281,7 @@ mod tests {
         let layer2 = "directory";
         let mut ini2 = Ini::new();
         ini2.set(layer2, "parameterize_style", Some(String::from("false")));
-        let actual_config2 = parse(&ini2)?;
+        let actual_config2 = parse(&ini2, None)?;
         assert!(
             !actual_config2.layers.get(layer2).unwrap().parameters_allowed,
             "Failed to parse parameterize_style");
@@ -267,10 +289,41 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_server_alias() -> Result<(), Box<dyn Error>> {
+        let layer1 = "basic";
+        let mut ini1 = Ini::new();
+        ini1.set(layer1, "server_alias", Some(String::from("webserver")));
+        let actual_config1 = parse(&ini1, None)?;
+        assert_eq!(
+            "http://webserver",
+            actual_config1.layers.get(layer1).unwrap().host_name,
+            "Failed to parse server_alias");
+
+        let layer2 = "directory";
+        let mut ini2 = Ini::new();
+        ini2.set(layer2, "uri", Some(String::from("/foo/")));
+        let actual_config2 = parse(&ini2, Some("myserver"))?;
+        assert_eq!(
+            "http://myserver",
+            actual_config2.layers.get(layer2).unwrap().host_name,
+            "Failed to use server name as hostname when server_alias is not specified");
+
+        let layer3 = "custom";
+        let mut ini3 = Ini::new();
+        ini3.set(layer3, "uri", Some(String::from("/bar/")));
+        let actual_config3 = parse(&ini3, None)?;
+        assert_eq!(
+            "http://localhost",
+            actual_config3.layers.get(layer3).unwrap().host_name,
+            "Failed to use default hostname when both server_alias and server name are not specified");
+        Ok(())
+    }
+
+    #[test]
     fn test_parse_invalid_parameterize_style() -> Result<(), Box<dyn Error>> {
         let mut ini = Ini::new();
         ini.set("basic", "parameterize_style", Some(String::from("yes")));
-        assert!(parse(&ini).is_err(), "Invalid parameterize_size value was not rejected");
+        assert!(parse(&ini, None).is_err(), "Invalid parameterize_size value was not rejected");
         Ok(())
     }
 
@@ -278,7 +331,7 @@ mod tests {
     fn test_parse_uppercase_section_and_key() -> Result<(), Box<dyn Error>> {
         let mut ini = Ini::new();
         ini.set("RENDERD", "TILE_DIR", Some(String::from("/var/cache/renderd/")));
-        let actual_config = parse(&ini)?;
+        let actual_config = parse(&ini, None)?;
         assert_eq!("/var/cache/renderd/", actual_config.renderd.store_uri, "Failed to parse upper case tile_dir");
         Ok(())
     }
