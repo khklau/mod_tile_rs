@@ -162,8 +162,8 @@ impl<'p> TileProxy<'p> {
         match parse_result {
             Ok(result) => {
                 match result {
-                    ParseOutcome::Match(request) => request,
-                    ParseOutcome::NoMatch => {
+                    ParseOutcome::Matched(request) => request,
+                    ParseOutcome::NotMatched => {
                         return Ok(DECLINED as c_int);
                     },
                 }

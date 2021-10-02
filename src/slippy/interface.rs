@@ -7,13 +7,13 @@ use std::result::Result;
 
 #[derive(Debug)]
 pub enum ParseOutcome {
-    Match(Request),
-    NoMatch,
+    Matched(Request),
+    NotMatched,
 }
 
 impl ParseOutcome {
     pub fn expect_match(self) -> Request {
-        if let ParseOutcome::Match(request) = self {
+        if let ParseOutcome::Matched(request) = self {
             request
         } else {
             panic!("Expected match ParseOutcome");
