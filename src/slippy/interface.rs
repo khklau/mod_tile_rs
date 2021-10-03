@@ -11,8 +11,9 @@ pub enum ParseOutcome {
     NotMatched,
 }
 
+#[cfg(test)]
 impl ParseOutcome {
-    pub fn expect_match(self) -> Request {
+    pub fn expect_matched(self) -> Request {
         if let ParseOutcome::Matched(request) = self {
             request
         } else {

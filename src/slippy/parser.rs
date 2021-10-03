@@ -312,7 +312,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_header = Header::new(
                 context.record,
                 context.connection.record,
@@ -335,7 +335,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -363,7 +363,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -400,7 +400,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -437,7 +437,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -473,7 +473,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -508,7 +508,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(
@@ -543,7 +543,7 @@ mod tests {
             let context = RequestContext::create_with_tile_config(record, &tile_config)?;
             let request_url = context.uri;
 
-            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_match();
+            let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
             let expected_request = Request {
                 header: Header::new_with_layer(

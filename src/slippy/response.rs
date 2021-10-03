@@ -52,6 +52,6 @@ impl Header {
 #[derive(Debug)]
 pub enum BodyVariant {
     StatisticsReport,
-    LayerDescription,
+    LayerDescription(String),
     Tile,
 }
