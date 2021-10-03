@@ -60,7 +60,7 @@ pub struct LayerConfig {
 
 impl LayerConfig {
     pub fn new() -> LayerConfig {
-        LayerConfig {
+        let mut config = LayerConfig {
             name: String::from("default"),
             base_url: String::from("/osm"),
             description: String::from("default"),
@@ -71,7 +71,16 @@ impl LayerConfig {
             mime_type: String::from("image/png"),
             host_name: String::new(),
             parameters_allowed: false,
-        }
+        };
+        config.set_host_name("localhost");
+        config
+    }
+
+    fn set_host_name(
+        &mut self,
+        host_name: &str
+    ) -> () {
+        self.host_name = format!("http://{}", host_name);
     }
 }
 
@@ -142,16 +151,11 @@ fn parse_layer(
     if let Some(parameters_allowed) = ini.getbool(section_name.as_str(), "parameterize_style")? {
         config.parameters_allowed = parameters_allowed;
     }
-    let chosen_hostname = {
-        if let Some(alias) = ini.get(section_name.as_str(), "server_alias") {
-            alias
-        } else if let Some(name) = server_name {
-            name.to_string()
-        } else {
-            String::from("localhost")
-        }
-    };
-    config.host_name = format!("http://{}", chosen_hostname);
+    if let Some(alias) = ini.get(section_name.as_str(), "server_alias") {
+        config.set_host_name(alias.as_str());
+    } else if let Some(name) = server_name {
+        config.set_host_name(name);
+    }
     return Ok(config);
 }
 
