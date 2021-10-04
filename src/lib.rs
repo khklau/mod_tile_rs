@@ -196,7 +196,7 @@ pub extern "C" fn initialise(
         if let Err(why) = server.initialise(unsafe { &mut *record }) {
             error!(record, "initialise - failed to initialise TileServer: {}", why);
         } else {
-            info!(server.record, "initialise - finish");
+            info!(record, "initialise - finish");
         };
     }
 }

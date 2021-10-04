@@ -29,11 +29,11 @@ use std::time::Duration;
 
 
 pub struct TileProxy<'p> {
-    pub record: &'p mut server_rec,
-    pub config: TileConfig,
-    pub config_file_path: Option<PathBuf>,
-    pub parse_request: ParseRequestFunc,
-    pub statistics: ModuleStatistics,
+    record: &'p mut server_rec,
+    config: TileConfig,
+    config_file_path: Option<PathBuf>,
+    parse_request: ParseRequestFunc,
+    statistics: ModuleStatistics,
 }
 
 impl<'p> TileProxy<'p> {
@@ -99,7 +99,7 @@ impl<'p> TileProxy<'p> {
         new_server.config = tile_config;
         new_server.config_file_path = None;
         new_server.parse_request = SlippyRequestParser::parse;
-        new_server.statistics = ModuleStatistics {};
+        new_server.statistics = ModuleStatistics { };
         info!(new_server.record, "TileServer::create - finish");
         return Ok(new_server);
     }
