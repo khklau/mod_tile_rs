@@ -11,8 +11,8 @@ use std::cmp::PartialEq;
 use std::string::String;
 
 
-pub struct Layer { }
-impl RequestHandler for Layer {
+pub struct LayerHandler { }
+impl RequestHandler for LayerHandler {
     fn handle(
         &mut self,
         context: &RequestContext,
@@ -27,13 +27,13 @@ impl RequestHandler for Layer {
         let description = Description::from_config(context.get_config(), layer);
         let json = serde_json::to_string(&description).unwrap();
         let response = response::Response {
-            header: response::Header::new_with_layer(
+            header: response::Header::new(
                 context.record,
                 context.connection.record,
                 context.get_host().record,
-                &request.header.layer
+                "json",
             ),
-            body: response::BodyVariant::LayerDescription(json),
+            body: response::BodyVariant::Text(json),
         };
         Ok(HandleOutcome::Handled(response))
     }
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
-        let mut layer_handler = Layer { };
+        let mut layer_handler = LayerHandler { };
         let layer_name = String::from("default");
         let tile_config = TileConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_default_config_json() -> Result<(), Box<dyn Error>> {
-        let mut layer_handler = Layer { };
+        let mut layer_handler = LayerHandler { };
         let layer_name = String::from("default");
         let tile_config = TileConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
@@ -144,13 +144,13 @@ mod tests {
             };
             let expected_json = serde_json::to_string(&expected_data).unwrap();
             let expected_response = response::Response {
-                header: response::Header::new_with_layer(
+                header: response::Header::new(
                     context.record,
                     context.connection.record,
                     context.get_host().record,
-                    &layer_name,
+                    "json",
                 ),
-                body: response::BodyVariant::LayerDescription(expected_json),
+                body: response::BodyVariant::Text(expected_json),
             };
             assert_eq!(expected_response, actual_response, "Incorrect handling");
             Ok(())

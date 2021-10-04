@@ -18,7 +18,7 @@ pub struct Header {
     pub host_id: usize,
     pub request_id: usize,
     pub connection_id: i64,
-    pub layer: String,
+    pub mime_type: &'static str,
 }
 
 impl Header {
@@ -26,16 +26,7 @@ impl Header {
         request: &request_rec,
         connection: &conn_rec,
         host: &server_rec,
-    ) -> Header {
-        let layer = String::new();
-        Self::new_with_layer(request, connection, host, &layer)
-    }
-
-    pub fn new_with_layer(
-        request: &request_rec,
-        connection: &conn_rec,
-        host: &server_rec,
-        layer: &String,
+        mime_type: &'static str,
     ) -> Header {
         let host_ptr = host as *const server_rec;
         let request_ptr = request as *const request_rec;
@@ -43,15 +34,13 @@ impl Header {
             host_id: host_ptr as usize,
             request_id: request_ptr as usize,
             connection_id: connection.id,
-            layer: layer.clone(),
+            mime_type: mime_type,
         }
     }
 }
 
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum BodyVariant {
-    StatisticsReport,
-    LayerDescription(String),
+    Text(String),
     Tile,
 }
