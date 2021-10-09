@@ -30,11 +30,11 @@ impl HandleOutcome {
     }
 }
 
-pub type HandleResult = Result<HandleOutcome, HandleError>;
+pub type HandleRequestResult = Result<HandleOutcome, HandleError>;
 pub trait RequestHandler {
     fn handle(
         &mut self,
         context: &RequestContext,
         request: &Request,
-    ) -> HandleResult;
+    ) -> HandleRequestResult;
 }

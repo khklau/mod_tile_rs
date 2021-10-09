@@ -1,4 +1,4 @@
-use crate::handler::interface::{ HandleOutcome, HandleResult, RequestHandler };
+use crate::handler::interface::{ HandleOutcome, HandleRequestResult, RequestHandler };
 
 use crate::apache2::request::RequestContext;
 use crate::slippy::request;
@@ -17,7 +17,7 @@ impl RequestHandler for LayerHandler {
         &mut self,
         context: &RequestContext,
         request: &request::Request,
-    ) -> HandleResult {
+    ) -> HandleRequestResult {
         let layer = match request.body {
             request::BodyVariant::DescribeLayer => &request.header.layer,
             _ => {

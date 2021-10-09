@@ -1,6 +1,6 @@
 #![allow(unused_unsafe)]
 
-use crate::analytics::interface::ParseRequestObserver;
+use crate::analytics::interface::{ HandleRequestObserver, ParseRequestObserver, };
 use crate::analytics::statistics::ModuleStatistics;
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
@@ -10,8 +10,11 @@ use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::virtual_host::VirtualHostContext;
+use crate::handler::error::HandleError;
+use crate::handler::interface::{ HandleOutcome, RequestHandler, HandleRequestResult, };
+use crate::handler::layer::LayerHandler;
 use crate::slippy::error::ParseError;
-use crate::slippy::interface::{ ParseOutcome, ParseRequestFunc };
+use crate::slippy::interface::{ ParseOutcome, ParseRequestFunc, ParseRequestResult, };
 use crate::slippy::parser::SlippyRequestParser;
 use crate::storage::file_system;
 use crate::tile::config::{ TileConfig, load };
@@ -33,7 +36,10 @@ pub struct TileProxy<'p> {
     config: TileConfig,
     config_file_path: Option<PathBuf>,
     parse_request: ParseRequestFunc,
+    layer_handler: LayerHandler,
     statistics: ModuleStatistics,
+    parse_observers: Option<[&'p mut dyn ParseRequestObserver; 1]>,
+    handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
 }
 
 impl<'p> TileProxy<'p> {
@@ -99,7 +105,10 @@ impl<'p> TileProxy<'p> {
         new_server.config = tile_config;
         new_server.config_file_path = None;
         new_server.parse_request = SlippyRequestParser::parse;
+        new_server.layer_handler = LayerHandler { };
         new_server.statistics = ModuleStatistics { };
+        new_server.parse_observers = None;
+        new_server.handle_observers = None;
         info!(new_server.record, "TileServer::create - finish");
         return Ok(new_server);
     }
@@ -146,45 +155,62 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> Result<c_int, ParseError> {
         debug!(record.server, "TileServer::handle_request - start");
-        let context = RequestContext::find_or_create(record, &self.config).unwrap();
-        let request_url = context.uri;
-        // TODO: use the macros & traits in the moveit crate to create a move constructor for TileProxy
-        //       then move the following self referential values below into TileProxy
-        let parse = self.parse_request;
-        let mut parse_observers: [&mut dyn ParseRequestObserver; 1] = [&mut self.statistics];
-
-        let parse_result = parse(context, request_url);
-        for observer_iter in parse_observers.iter_mut() {
-            (*observer_iter).on_parse(parse, context, request_url, &parse_result);
-        }
-
-        match parse_result {
-            Ok(result) => {
-                match result {
-                    ParseOutcome::Matched(request) => request,
-                    ParseOutcome::NotMatched => {
-                        return Ok(DECLINED as c_int);
-                    },
-                }
-            },
-            Err(err) => match err {
-                ParseError::Param(err) => {
-                    error!(record.server, "Parameter {} error: {}", err.param, err.reason);
-                    return Ok(DECLINED as c_int);
-                },
-                ParseError::Io(why) => {
-                    error!(record.server, "IO error: {}", why);
-                    return Ok(HTTP_INTERNAL_SERVER_ERROR as c_int);
-                },
-                ParseError::Utf8(why) => {
-                    error!(record.server, "UTF8 error: {}", why);
-                    return Ok(HTTP_INTERNAL_SERVER_ERROR as c_int);
-                },
-            },
-        };
-
+        let (parse_result, self2) = self.parse_request(record);
+        let (handle_result, self3) = self2.call_handlers(record, parse_result);
         debug!(record.server, "TileServer::handle_request - finish");
         return Ok(OK as c_int);
+    }
+
+    fn parse_request(
+        &mut self,
+        record: &mut request_rec,
+    ) -> (ParseRequestResult, &mut Self) {
+        let mut parse_observers: [&mut dyn ParseRequestObserver; 1] = match &mut self.parse_observers {
+            // TODO: find a nicer way to copy self.parse_observers, clone method doesn't work with trait object elements
+            Some(observers) => [observers[0]],
+            None => [&mut self.statistics],
+        };
+        let parse = self.parse_request;
+        let context = RequestContext::find_or_create(record, &self.config).unwrap();
+        let request_url = context.uri;
+        let parse_result = parse(context, request_url);
+        for observer_iter in parse_observers.iter_mut() {
+            debug!(context.get_host().record, "TileServer::parse_request - calling observer {:p}", *observer_iter);
+            (*observer_iter).on_parse(parse, context, request_url, &parse_result);
+        }
+        return (parse_result, self);
+    }
+
+    fn call_handlers(
+        &mut self,
+        record: &mut request_rec,
+        parse_result: ParseRequestResult,
+    ) -> (HandleRequestResult, &mut Self) {
+        // TODO: combine the handlers using combinators
+        let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
+            // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
+            Some(observers) => [observers[0]],
+            None => [&mut self.statistics],
+        };
+        let handler: &mut dyn RequestHandler = &mut self.layer_handler;
+        let context = RequestContext::find_or_create(record, &self.config).unwrap();
+        let handle_result = match parse_result {
+            Ok(outcome) => match outcome {
+                ParseOutcome::NotMatched => Ok(HandleOutcome::NotHandled),
+                ParseOutcome::Matched(request) => {
+                    let result = handler.handle(context, &request);
+                    for observer_iter in handle_observers.iter_mut() {
+                        debug!(context.get_host().record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                        (*observer_iter).on_handle(handler, context, &request, &result);
+                    }
+                    result
+                },
+            },
+            Err(err) => {
+                Err(HandleError::RequestNotParsed(err))
+            },
+        };
+        return (handle_result, self);
     }
 }
 
@@ -204,7 +230,10 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
+    use crate::slippy::interface::ParseOutcome;
+    use crate::slippy::request;
 
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
@@ -225,6 +254,91 @@ mod tests {
                 assert_eq!(&expected_path, actual_path, "Failed to preserve config file path during reload");
             }
             Ok(())
+        })
+    }
+
+    struct MockParseObserver {
+        count: u32,
+    }
+
+    impl ParseRequestObserver for MockParseObserver {
+        fn on_parse(
+            &mut self,
+            _func: ParseRequestFunc,
+            _context: &RequestContext,
+            _url: &str,
+            _result: &ParseRequestResult
+        ) -> () {
+            self.count += 1;
+        }
+    }
+
+    #[test]
+    fn test_parse_request_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let mut mock = MockParseObserver {
+                    count: 0,
+                };
+                let tile_config = TileConfig::new();
+                let proxy = TileProxy::create(server, tile_config).unwrap();
+                proxy.parse_observers = Some([&mut mock]);
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let (result, _) = proxy.parse_request(request);
+                result.unwrap();
+                assert_eq!(1, mock.count, "Parse observer not called");
+                Ok(())
+            })
+        })
+    }
+
+    struct MockHandleObserver {
+        count: u32,
+    }
+
+    impl HandleRequestObserver for MockHandleObserver {
+        fn on_handle(
+            &mut self,
+            obj: &dyn RequestHandler,
+            context: &RequestContext,
+            request: &crate::slippy::request::Request,
+            result: &HandleRequestResult
+        ) -> () {
+            self.count += 1;
+        }
+    }
+
+    #[test]
+    fn test_call_handlers_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let mut mock = MockHandleObserver {
+                    count: 0,
+                };
+                let tile_config = TileConfig::new();
+                let proxy = TileProxy::create(server, tile_config).unwrap();
+                proxy.handle_observers = Some([&mut mock]);
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
+                let input = Ok(
+                    ParseOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                context.record,
+                                context.connection.record,
+                                context.get_host().record,
+                            ),
+                            body: request::BodyVariant::ReportStatistics,
+                        }
+                    )
+                );
+                let (result, _) = proxy.call_handlers(request, input);
+                result.unwrap();
+                assert_eq!(1, mock.count, "Parse observer not called");
+                Ok(())
+            })
         })
     }
 }
