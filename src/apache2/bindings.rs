@@ -18,3 +18,11 @@ unsafe impl Send for module {}
 unsafe impl Sync for module {}
 unsafe impl Send for command_rec {}
 unsafe impl Sync for command_rec {}
+
+use std::ffi::CStr;
+
+pub fn get_module_name() -> &'static str {
+    unsafe {
+        CStr::from_ptr(crate::TILE_MODULE.name).to_str().unwrap()
+    }
+}

@@ -1,7 +1,7 @@
 #![allow(unused_unsafe)]
 
 use crate::apache2::bindings::{
-    apr_status_t, process_rec, server_rec,
+    apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::error::InvalidRecordError;
@@ -12,13 +12,59 @@ use std::any::type_name;
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::error::Error;
-use std::ffi::CString;
+use std::ffi::{ CStr, CString, };
 use std::fs::{ File, OpenOptions, };
+use std::option::Option;
 use std::os::raw::c_void;
 use std::path::PathBuf;
 use std::process;
 use std::ptr;
 use thread_id;
+
+
+pub trait ServerRecord {
+    fn get_host_name<'s>(&'s self) -> Option<&'s str>;
+
+    fn get_process_record<'s>(process: *mut process_rec) -> Result<&'s process_rec, InvalidRecordError>;
+}
+
+impl ServerRecord for server_rec {
+    fn get_host_name<'s>(&'s self) -> Option<&'s str> {
+        if self.server_hostname == ptr::null_mut() {
+            None
+        } else {
+            Some(unsafe { CStr::from_ptr(self.server_hostname).to_str().unwrap() })
+        }
+    }
+
+    fn get_process_record<'s>(process: *mut process_rec) -> Result<&'s process_rec, InvalidRecordError> {
+        if process == ptr::null_mut() {
+            return Err(InvalidRecordError::new(
+                process,
+                "server_rec.process field is a null pointer",
+            ));
+        }
+        let proc_record = unsafe { &mut *(process) };
+        if proc_record.pool == ptr::null_mut() {
+            return Err(InvalidRecordError::new(
+                proc_record as *const process_rec,
+                "server_rec.process.pool field is a null pointer",
+            ));
+        }
+        Ok(proc_record)
+    }
+}
+
+pub trait ProcessRecord {
+    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t;
+}
+
+impl ProcessRecord for process_rec {
+    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t {
+        unsafe { &mut *(self.pool) }
+    }
+}
+
 
 pub struct VirtualHostContext<'h> {
     pub record: &'h mut server_rec,

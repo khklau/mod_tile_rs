@@ -1,15 +1,12 @@
-#![allow(unused_unsafe)]
-
 use crate::analytics::interface::{ HandleRequestObserver, ParseRequestObserver, };
 use crate::analytics::statistics::ModuleStatistics;
 use crate::apache2::bindings::{
-    APR_BADARG, APR_SUCCESS, DECLINED, HTTP_INTERNAL_SERVER_ERROR, OK,
-    apr_status_t, process_rec, request_rec, server_rec,
+    APR_BADARG, APR_SUCCESS, OK,
+    apr_status_t, request_rec, server_rec,
 };
-use crate::apache2::error::InvalidRecordError;
-use crate::apache2::memory::{ alloc, retrieve };
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
-use crate::apache2::virtual_host::VirtualHostContext;
+use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
 use crate::handler::error::HandleError;
 use crate::handler::interface::{ HandleOutcome, RequestHandler, HandleRequestResult, };
 use crate::handler::layer::LayerHandler;
@@ -22,11 +19,10 @@ use crate::tile::config::{ TileConfig, load };
 use std::any::type_name;
 use std::boxed::Box;
 use std::error::Error;
-use std::ffi::{ CStr, CString };
+use std::ffi::CString;
 use std::option::Option;
 use std::os::raw::{ c_int, c_void, };
 use std::path::PathBuf;
-use std::ptr;
 use std::result::Result;
 use std::time::Duration;
 
@@ -54,9 +50,9 @@ impl<'p> TileProxy<'p> {
 
     pub fn find_or_create(record: &'p mut server_rec) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::find_or_create - start");
-        let proc_record = Self::access_proc_record(record.process)?;
+        let proc_record = server_rec::get_process_record(record.process)?;
         let context = match retrieve(
-            unsafe { &mut *(proc_record.pool) },
+            proc_record.get_pool(),
             &(Self::get_id(record))
         ) {
             Some(existing_context) => {
@@ -73,31 +69,14 @@ impl<'p> TileProxy<'p> {
         return Ok(context);
     }
 
-    fn access_proc_record(process: *mut process_rec) -> Result<&'p mut process_rec, Box<dyn Error>> {
-        if process == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                process,
-                "null pointer",
-            )));
-        }
-        let proc_record = unsafe { &mut *process };
-        if proc_record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                proc_record as *const process_rec,
-                "pool field is null pointer",
-            )));
-        }
-        Ok(proc_record)
-    }
-
     pub fn create(
         record: &'p mut server_rec,
         tile_config: TileConfig,
     ) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::create - start");
-        let proc_record = Self::access_proc_record(record.process)?;
+        let proc_record = server_rec::get_process_record(record.process)?;
         let new_server = alloc::<TileProxy<'p>>(
-            unsafe { &mut *(proc_record.pool) },
+            proc_record.get_pool(),
             &(Self::get_id(record)),
             Some(drop_tile_server),
         )?.0;
@@ -118,11 +97,7 @@ impl<'p> TileProxy<'p> {
         file_path: PathBuf,
     ) -> Result<(), Box<dyn Error>> {
         let original_request_timeout = self.config.renderd.render_timeout.clone();
-        let server_name = if self.record.server_hostname == ptr::null_mut() {
-            None
-        } else {
-            Some(unsafe { CStr::from_ptr(self.record.server_hostname).to_str()? })
-        };
+        let server_name = self.record.get_host_name();
         let tile_config = load(file_path.as_path(), server_name)?;
         self.config = tile_config;
         self.config.renderd.render_timeout = original_request_timeout;
@@ -216,14 +191,14 @@ impl<'p> TileProxy<'p> {
 
 #[no_mangle]
 extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
-    if server_void == ptr::null_mut() {
-        return APR_BADARG as apr_status_t;
-    }
-    let server_ptr = server_void as *mut TileProxy;
-    info!((&mut *server_ptr).record, "drop_tile_server - start");
-    let server_ref = unsafe { &mut *server_ptr };
+    let server_ref = match access_pool_object::<TileProxy>(server_void) {
+        None => {
+            return APR_BADARG as apr_status_t;
+        },
+        Some(server) => server,
+    };
+    info!(server_ref.record, "drop_tile_server - dropping");
     drop(server_ref);
-    info!((&mut *server_ptr).record, "drop_tile_server - finish");
     return APR_SUCCESS as apr_status_t;
 }
 
@@ -300,10 +275,10 @@ mod tests {
     impl HandleRequestObserver for MockHandleObserver {
         fn on_handle(
             &mut self,
-            obj: &dyn RequestHandler,
-            context: &RequestContext,
-            request: &crate::slippy::request::Request,
-            result: &HandleRequestResult
+            _obj: &dyn RequestHandler,
+            _context: &RequestContext,
+            _request: &crate::slippy::request::Request,
+            _result: &HandleRequestResult
         ) -> () {
             self.count += 1;
         }

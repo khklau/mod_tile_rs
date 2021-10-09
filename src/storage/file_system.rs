@@ -1,5 +1,3 @@
-#![allow(unused_unsafe)]
-
 use crate::apache2::virtual_host::VirtualHostContext;
 
 use std::io::Write;

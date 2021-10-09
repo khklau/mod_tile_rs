@@ -74,6 +74,15 @@ pub fn retrieve<'p, T>(
     }
 }
 
+pub fn access_pool_object<'t, T>(object_void: *mut c_void) -> Option<&'t mut T> {
+    if object_void == ptr::null_mut() {
+        return None;
+    }
+    let object_ptr = object_void as *mut T;
+    let object_ref = unsafe { &mut *object_ptr };
+    return Some(object_ref);
+}
+
 #[cfg(test)]
 pub mod test_utils {
     use crate::apache2::bindings::{

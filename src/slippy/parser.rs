@@ -1,5 +1,4 @@
-#![allow(unused_unsafe)]
-
+use crate::apache2::bindings::get_module_name;
 use crate::apache2::request::RequestContext;
 use crate::slippy::error::{
     InvalidParameterError, ParseError
@@ -13,7 +12,6 @@ use crate::tile::config::LayerConfig;
 
 use scan_fmt::scan_fmt;
 
-use std::ffi::CStr;
 use std::result::Result;
 use std::string::String;
 
@@ -84,9 +82,7 @@ impl StatisticsRequestParser {
         context: &RequestContext,
         request_url: &str,
     ) -> Result<ParseOutcome, ParseError> {
-        let module_name = unsafe {
-            CStr::from_ptr(crate::TILE_MODULE.name).to_str()?
-        };
+        let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
         if request_url.eq(&stats_uri) {
             info!(context.get_host().record, "StatisticsRequestParser::parse - matched ReportStatistics");
