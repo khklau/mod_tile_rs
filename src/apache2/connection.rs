@@ -1,11 +1,9 @@
-#![allow(unused_unsafe)]
-
 use crate::apache2::bindings::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::error::InvalidRecordError;
-use crate::apache2::memory::{ alloc, retrieve, };
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::tile::config::TileConfig;
 
@@ -15,6 +13,7 @@ use std::error::Error;
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::ptr;
+
 
 pub struct ConnectionContext<'c> {
     pub record: &'c mut conn_rec,
@@ -87,15 +86,15 @@ impl<'c> ConnectionContext<'c> {
 }
 
 #[no_mangle]
-pub unsafe extern fn drop_connection_context(connection_void: *mut c_void) -> apr_status_t {
-    if connection_void == ptr::null_mut() {
-        return APR_BADARG as apr_status_t;
-    }
-    let context_ptr = connection_void as *mut ConnectionContext;
-    info!((&mut *context_ptr).record.base_server, "drop_connection_context - start");
-    let context_ref = &mut *context_ptr;
+extern "C" fn drop_connection_context(context_void: *mut c_void) -> apr_status_t {
+    let context_ref = match access_pool_object::<ConnectionContext>(context_void) {
+        None => {
+            return APR_BADARG as apr_status_t;
+        },
+        Some(host) => host,
+    };
+    info!(context_ref.record.base_server, "drop_connection_context - dropping");
     drop(context_ref);
-    info!((&mut *context_ptr).record.base_server, "drop_connection_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
 

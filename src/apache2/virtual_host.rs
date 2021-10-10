@@ -1,11 +1,9 @@
-#![allow(unused_unsafe)]
-
 use crate::apache2::bindings::{
     apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::apache2::error::InvalidRecordError;
-use crate::apache2::memory::{ alloc, retrieve };
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::tile::config::TileConfig;
 
 use std::any::type_name;
@@ -89,9 +87,9 @@ impl<'h> VirtualHostContext<'h> {
         config: &'h TileConfig,
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::find_or_create - start");
-        let proc_record = Self::access_proc_record(record.process)?;
+        let proc_record = server_rec::get_process_record(record.process)?;
         let context = match retrieve(
-            unsafe { &mut *(proc_record.pool) },
+            proc_record.get_pool(),
             &(Self::get_id(record))
         ) {
             Some(existing_context) => {
@@ -107,31 +105,14 @@ impl<'h> VirtualHostContext<'h> {
         return Ok(context);
     }
 
-    fn access_proc_record(process: *mut process_rec) -> Result<&'h mut process_rec, Box<dyn Error>> {
-        if process == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                process,
-                "null pointer",
-            )));
-        }
-        let proc_record = unsafe { &mut *process };
-        if proc_record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                proc_record as *const process_rec,
-                "pool field is null pointer",
-            )));
-        }
-        Ok(proc_record)
-    }
-
     pub fn create(
         record: &'h mut server_rec,
         config: &'h TileConfig,
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::create - start");
-        let proc_record = Self::access_proc_record(record.process)?;
+        let proc_record = server_rec::get_process_record(record.process)?;
         let new_context = alloc::<VirtualHostContext<'h>>(
-            unsafe { &mut *(proc_record.pool) },
+            proc_record.get_pool(),
             &(Self::get_id(record)),
             Some(drop_virtual_host_context),
         )?.0;
@@ -155,15 +136,15 @@ impl<'h> VirtualHostContext<'h> {
 }
 
 #[no_mangle]
-pub unsafe extern fn drop_virtual_host_context(host_void: *mut c_void) -> apr_status_t {
-    if host_void == ptr::null_mut() {
-        return APR_BADARG as apr_status_t;
-    }
-    let context_ptr = host_void as *mut VirtualHostContext;
-    info!((&mut *context_ptr).record, "drop_virtual_host_context - start");
-    let context_ref = &mut *context_ptr;
+extern "C" fn drop_virtual_host_context(context_void: *mut c_void) -> apr_status_t {
+    let context_ref = match access_pool_object::<VirtualHostContext>(context_void) {
+        None => {
+            return APR_BADARG as apr_status_t;
+        },
+        Some(host) => host,
+    };
+    info!(context_ref.record, "drop_virtual_host_context - dropping");
     drop(context_ref);
-    info!((&mut *context_ptr).record, "drop_virtual_host_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
 

@@ -1,12 +1,10 @@
-#![allow(unused_unsafe)]
-
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS,
     apr_status_t, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
 use crate::apache2::error::InvalidRecordError;
-use crate::apache2::memory::{ alloc, retrieve, };
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 use crate::tile::config::TileConfig;
 
@@ -108,15 +106,15 @@ impl<'r> RequestContext<'r> {
 }
 
 #[no_mangle]
-pub unsafe extern fn drop_request_context(context_void: *mut c_void) -> apr_status_t {
-    if context_void == ptr::null_mut() {
-        return APR_BADARG as apr_status_t;
-    }
-    let context_ptr = context_void as *mut RequestContext;
-    info!((&mut *context_ptr).record.server, "drop_request_context - start");
-    let context_ref = &mut *context_ptr;
+extern "C" fn drop_request_context(context_void: *mut c_void) -> apr_status_t {
+    let context_ref = match access_pool_object::<RequestContext>(context_void) {
+        None => {
+            return APR_BADARG as apr_status_t;
+        },
+        Some(host) => host,
+    };
+    info!(context_ref.record.server, "drop_connection_context - dropping");
     drop(context_ref);
-    info!((&mut *context_ptr).record.server, "drop_request_context - finish");
     return APR_SUCCESS as apr_status_t;
 }
 
