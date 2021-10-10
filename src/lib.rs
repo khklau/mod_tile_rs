@@ -16,7 +16,7 @@ mod tile {
 mod slippy {
     pub mod error;
     pub mod interface;
-    pub mod parser;
+    pub mod reader;
     pub mod request;
     pub mod response;
 }
