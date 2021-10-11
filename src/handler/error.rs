@@ -1,4 +1,4 @@
-use crate::slippy::error::ParseError;
+use crate::slippy::error::ReadError;
 
 use std::convert::From;
 use std::error::Error;
@@ -7,7 +7,7 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum HandleError {
-    RequestNotParsed(ParseError),
+    RequestNotRead(ReadError),
     Timeout(TimeoutError),
     Io(std::io::Error),
 }
@@ -15,7 +15,7 @@ pub enum HandleError {
 impl Error for HandleError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            HandleError::RequestNotParsed(err) => return Some(err),
+            HandleError::RequestNotRead(err) => return Some(err),
             HandleError::Timeout(err) => return Some(err),
             HandleError::Io(err) => return Some(err),
         }
@@ -25,7 +25,7 @@ impl Error for HandleError {
 impl fmt::Display for HandleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HandleError::RequestNotParsed(err) => return write!(f, "{}", err),
+            HandleError::RequestNotRead(err) => return write!(f, "{}", err),
             HandleError::Timeout(err) => return write!(f, "{}", err),
             HandleError::Io(err) => return write!(f, "{}", err),
         }

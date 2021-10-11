@@ -1,20 +1,19 @@
-use crate::analytics::interface::{ HandleRequestObserver, ParseRequestObserver, };
+use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, };
 
 use crate::apache2::request::RequestContext;
 use crate::handler::interface::{ HandleRequestResult, RequestHandler, };
-use crate::slippy::interface::{ ParseRequestFunc, ParseRequestResult };
+use crate::slippy::interface::{ ReadRequestFunc, ReadRequestResult };
 use crate::slippy::request::Request;
 
 
 pub struct ModuleStatistics {}
 
-impl ParseRequestObserver for ModuleStatistics {
-    fn on_parse(
+impl ReadRequestObserver for ModuleStatistics {
+    fn on_read(
         &mut self,
-        _func: ParseRequestFunc,
+        _func: ReadRequestFunc,
         _context: &RequestContext,
-        _url: &str,
-        _result: &ParseRequestResult
+        _result: &ReadRequestResult
     ) -> () {
     }
 }

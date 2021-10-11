@@ -1,16 +1,15 @@
 use crate::apache2::request::RequestContext;
 use crate::handler::interface::{ HandleRequestResult, RequestHandler, };
-use crate::slippy::interface::{ ParseRequestFunc, ParseRequestResult, };
+use crate::slippy::interface::{ ReadRequestFunc, ReadRequestResult, };
 use crate::slippy::request::Request;
 
 
-pub trait ParseRequestObserver {
-    fn on_parse(
+pub trait ReadRequestObserver {
+    fn on_read(
         &mut self,
-        func: ParseRequestFunc,
+        func: ReadRequestFunc,
         context: &RequestContext,
-        url: &str,
-        result: &ParseRequestResult,
+        result: &ReadRequestResult,
     ) -> ();
 }
 

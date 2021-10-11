@@ -1,26 +1,26 @@
 use crate::apache2::request::RequestContext;
-use crate::slippy::error::ParseError;
+use crate::slippy::error::ReadError;
 use crate::slippy::request::Request;
 
 use std::result::Result;
 
 
 #[derive(Debug)]
-pub enum ParseOutcome {
+pub enum ReadOutcome {
     Matched(Request),
     NotMatched,
 }
 
 #[cfg(test)]
-impl ParseOutcome {
+impl ReadOutcome {
     pub fn expect_matched(self) -> Request {
-        if let ParseOutcome::Matched(request) = self {
+        if let ReadOutcome::Matched(request) = self {
             request
         } else {
-            panic!("Expected match ParseOutcome");
+            panic!("Expected match ReadOutcome");
         }
     }
 }
 
-pub type ParseRequestResult = Result<ParseOutcome, ParseError>;
-pub type ParseRequestFunc = fn(&RequestContext, &str) -> ParseRequestResult;
+pub type ReadRequestResult = Result<ReadOutcome, ReadError>;
+pub type ReadRequestFunc = fn(&RequestContext) -> ReadRequestResult;

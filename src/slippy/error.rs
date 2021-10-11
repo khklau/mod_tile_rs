@@ -6,41 +6,41 @@ use std::str::Utf8Error;
 
 
 #[derive(Debug)]
-pub enum ParseError {
+pub enum ReadError {
     Param(InvalidParameterError),
     Io(std::io::Error),
     Utf8(Utf8Error),
 }
 
-impl Error for ParseError {
+impl Error for ReadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ParseError::Param(err) => return Some(err),
-            ParseError::Io(err) => return Some(err),
-            ParseError::Utf8(err) => return Some(err),
+            ReadError::Param(err) => return Some(err),
+            ReadError::Io(err) => return Some(err),
+            ReadError::Utf8(err) => return Some(err),
         }
     }
 }
 
-impl fmt::Display for ParseError {
+impl fmt::Display for ReadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::Param(err) => return write!(f, "{}", err),
-            ParseError::Io(err) => return write!(f, "{}", err),
-            ParseError::Utf8(err) => return write!(f, "{}", err),
+            ReadError::Param(err) => return write!(f, "{}", err),
+            ReadError::Io(err) => return write!(f, "{}", err),
+            ReadError::Utf8(err) => return write!(f, "{}", err),
         }
     }
 }
 
-impl From<std::io::Error> for ParseError {
+impl From<std::io::Error> for ReadError {
     fn from(error: std::io::Error) -> Self {
-        return ParseError::Io(error);
+        return ReadError::Io(error);
     }
 }
 
-impl From<Utf8Error> for ParseError {
+impl From<Utf8Error> for ReadError {
     fn from(error: Utf8Error) -> Self {
-        return ParseError::Utf8(error);
+        return ReadError::Utf8(error);
     }
 }
 
