@@ -23,7 +23,7 @@ mod slippy {
 mod handler {
     pub mod error;
     pub mod interface;
-    pub mod layer;
+    pub mod description;
 }
 mod storage {
     pub mod file_system;

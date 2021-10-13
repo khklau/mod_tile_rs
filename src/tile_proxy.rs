@@ -9,7 +9,7 @@ use crate::apache2::request::RequestContext;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
 use crate::handler::error::HandleError;
 use crate::handler::interface::{ HandleOutcome, RequestHandler, HandleRequestResult, };
-use crate::handler::layer::LayerHandler;
+use crate::handler::description::LayerHandler;
 use crate::slippy::error::ReadError;
 use crate::slippy::interface::{ ReadOutcome, ReadRequestFunc, ReadRequestResult, };
 use crate::slippy::reader::SlippyRequestReader;
