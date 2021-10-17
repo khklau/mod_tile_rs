@@ -12,6 +12,13 @@ pub enum ReadError {
     Utf8(Utf8Error),
 }
 
+#[derive(Debug)]
+pub enum WriteError {
+    RequestNotHandled, // FIXME: define the error type properly
+    Io(std::io::Error),
+    Utf8(Utf8Error),
+}
+
 impl Error for ReadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -41,6 +48,38 @@ impl From<std::io::Error> for ReadError {
 impl From<Utf8Error> for ReadError {
     fn from(error: Utf8Error) -> Self {
         return ReadError::Utf8(error);
+    }
+}
+
+impl Error for WriteError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            WriteError::RequestNotHandled => return None, // FIXME
+            WriteError::Io(err) => return Some(err),
+            WriteError::Utf8(err) => return Some(err),
+        }
+    }
+}
+
+impl fmt::Display for WriteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WriteError::RequestNotHandled => return write!(f, "FIXME"),
+            WriteError::Io(err) => return write!(f, "{}", err),
+            WriteError::Utf8(err) => return write!(f, "{}", err),
+        }
+    }
+}
+
+impl From<std::io::Error> for WriteError {
+    fn from(error: std::io::Error) -> Self {
+        return WriteError::Io(error);
+    }
+}
+
+impl From<Utf8Error> for WriteError {
+    fn from(error: Utf8Error) -> Self {
+        return WriteError::Utf8(error);
     }
 }
 

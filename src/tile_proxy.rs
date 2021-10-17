@@ -6,13 +6,18 @@ use crate::apache2::bindings::{
 };
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
+use crate::apache2::response::ResponseContext;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
 use crate::handler::error::HandleError;
 use crate::handler::interface::{ HandleOutcome, RequestHandler, HandleRequestResult, };
-use crate::handler::description::LayerHandler;
-use crate::slippy::error::ReadError;
-use crate::slippy::interface::{ ReadOutcome, ReadRequestFunc, ReadRequestResult, };
+use crate::handler::description::DescriptionHandler;
+use crate::slippy::error::{ ReadError, WriteError };
+use crate::slippy::interface::{
+    ReadOutcome, ReadRequestFunc, ReadRequestResult,
+    WriteOutcome, WriteResponseFunc, WriteResponseResult,
+};
 use crate::slippy::reader::SlippyRequestReader;
+use crate::slippy::writer::SlippyResponseWriter;
 use crate::storage::file_system;
 use crate::tile::config::{ TileConfig, load };
 
@@ -27,12 +32,19 @@ use std::result::Result;
 use std::time::Duration;
 
 
+pub enum HandleRequestError {
+    Read(ReadError),
+    Handle(HandleError),
+    Write(WriteError),
+}
+
 pub struct TileProxy<'p> {
     record: &'p mut server_rec,
     config: TileConfig,
     config_file_path: Option<PathBuf>,
     read_request: ReadRequestFunc,
-    layer_handler: LayerHandler,
+    layer_handler: DescriptionHandler,
+    write_response: WriteResponseFunc,
     statistics: ModuleStatistics,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
@@ -84,7 +96,8 @@ impl<'p> TileProxy<'p> {
         new_server.config = tile_config;
         new_server.config_file_path = None;
         new_server.read_request = SlippyRequestReader::read;
-        new_server.layer_handler = LayerHandler { };
+        new_server.layer_handler = DescriptionHandler { };
+        new_server.write_response = SlippyResponseWriter::write;
         new_server.statistics = ModuleStatistics { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
@@ -132,6 +145,7 @@ impl<'p> TileProxy<'p> {
         debug!(record.server, "TileServer::handle_request - start");
         let (read_result, self2) = self.read_request(record);
         let (handle_result, self3) = self2.call_handlers(record, read_result);
+        let (write_result, _) = self3.write_response(record, handle_result);
         debug!(record.server, "TileServer::handle_request - finish");
         return Ok(OK as c_int);
     }
@@ -185,6 +199,29 @@ impl<'p> TileProxy<'p> {
             },
         };
         return (handle_result, self);
+    }
+
+    fn write_response(
+        &mut self,
+        record: &mut request_rec,
+        handle_result: HandleRequestResult,
+    ) -> (WriteResponseResult, &mut Self) {
+        let write = self.write_response;
+        let request_context = RequestContext::find_or_create(record, &self.config).unwrap();
+        let mut response_context = ResponseContext::from(request_context);
+        let write_result = match handle_result {
+            Ok(outcome) => match outcome {
+                HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
+                HandleOutcome::Handled(response) => {
+                    let result = write(&mut response_context, &response);
+                    result
+                },
+            },
+            Err(_) => {
+                Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
+            },
+        };
+        return (write_result, self);
     }
 }
 

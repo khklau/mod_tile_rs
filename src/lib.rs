@@ -8,6 +8,7 @@ mod apache2 {
     pub mod error;
     pub mod memory;
     pub mod request;
+    pub mod response;
     pub mod virtual_host;
 }
 mod tile {
@@ -19,6 +20,7 @@ mod slippy {
     pub mod reader;
     pub mod request;
     pub mod response;
+    pub mod writer;
 }
 mod handler {
     pub mod error;
@@ -224,6 +226,22 @@ pub extern "C" fn handle_request(
         Err(why) => {
             error!(record.server, "tile_server::handle_request - failed: {}", why);
             return HTTP_INTERNAL_SERVER_ERROR as c_int;
+            /*
+            match err {
+                ReadError::Param(err) => {
+                    error!(record.server, "Parameter {} error: {}", err.param, err.reason);
+                    return Ok(DECLINED as c_int);
+                },
+                ReadError::Io(why) => {
+                    error!(record.server, "IO error: {}", why);
+                    return Ok(HTTP_INTERNAL_SERVER_ERROR as c_int);
+                },
+                ReadError::Utf8(why) => {
+                    error!(record.server, "UTF8 error: {}", why);
+                    return Ok(HTTP_INTERNAL_SERVER_ERROR as c_int);
+                },
+            }
+            */
         },
     };
 }

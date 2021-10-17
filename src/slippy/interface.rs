@@ -1,6 +1,8 @@
 use crate::apache2::request::RequestContext;
-use crate::slippy::error::ReadError;
+use crate::apache2::response::{ HttpResponse, ResponseContext };
+use crate::slippy::error::{ ReadError, WriteError };
 use crate::slippy::request::Request;
+use crate::slippy::response::Response;
 
 use std::result::Result;
 
@@ -24,3 +26,12 @@ impl ReadOutcome {
 
 pub type ReadRequestResult = Result<ReadOutcome, ReadError>;
 pub type ReadRequestFunc = fn(&RequestContext) -> ReadRequestResult;
+
+#[derive(Debug)]
+pub enum WriteOutcome {
+    Written(HttpResponse),
+    NotWritten,
+}
+
+pub type WriteResponseResult = Result<WriteOutcome, WriteError>;
+pub type WriteResponseFunc = fn(&mut ResponseContext, &Response) -> WriteResponseResult;

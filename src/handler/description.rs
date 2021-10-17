@@ -5,14 +5,13 @@ use crate::slippy::request;
 use crate::slippy::response;
 use crate::tile::config::TileConfig;
 
-use serde::Serialize;
+use mime;
 
-use std::cmp::PartialEq;
 use std::string::String;
 
 
-pub struct LayerHandler { }
-impl RequestHandler for LayerHandler {
+pub struct DescriptionHandler { }
+impl RequestHandler for DescriptionHandler {
     fn handle(
         &mut self,
         context: &RequestContext,
@@ -24,56 +23,41 @@ impl RequestHandler for LayerHandler {
                 return Ok(HandleOutcome::NotHandled);
             },
         };
-        let description = Description::from_config(context.get_config(), layer);
-        let json = serde_json::to_string(&description).unwrap();
+        let description = describe(context.get_config(), layer);
         let response = response::Response {
             header: response::Header::new(
                 context.record,
                 context.connection.record,
                 context.get_host().record,
-                "json",
+                &mime::APPLICATION_JSON,
             ),
-            body: response::BodyVariant::Text(json),
+            body: response::BodyVariant::Description(description),
         };
         Ok(HandleOutcome::Handled(response))
     }
 }
 
-#[derive(Serialize, Debug, PartialEq)]
-struct Description {
-    tilejson: &'static str,
-    schema: &'static str,
-    name: String,
-    description: String,
-    attribution: String,
-    minzoom: u64,
-    maxzoom: u64,
-    tiles: Vec<String>,
-}
-
-impl Description {
-    fn from_config(config: &TileConfig, layer: &String) -> Description {
-        let layer_config = &config.layers[layer];
-        let mut value = Description {
-            tilejson: "2.0.0",
-            schema: "xyz",
-            name: layer_config.name.clone(),
-            description: layer_config.description.clone(),
-            attribution: layer_config.attribution.clone(),
-            minzoom: layer_config.min_zoom,
-            maxzoom: layer_config.max_zoom,
-            tiles: Vec::new(),
-        };
-        value.tiles.push(
-            format!(
-                "{}{}/{{z}}/{{x}}/{{y}}.{}",
-                layer_config.host_name,
-                layer_config.base_url,
-                layer_config.file_extension,
-            )
-        );
-        value
-    }
+fn describe(config: &TileConfig, layer: &String) -> response::Description {
+    let layer_config = &config.layers[layer];
+    let mut value = response::Description {
+        tilejson: "2.0.0",
+        schema: "xyz",
+        name: layer_config.name.clone(),
+        description: layer_config.description.clone(),
+        attribution: layer_config.attribution.clone(),
+        minzoom: layer_config.min_zoom,
+        maxzoom: layer_config.max_zoom,
+        tiles: Vec::new(),
+    };
+    value.tiles.push(
+        format!(
+            "{}{}/{{z}}/{{x}}/{{y}}.{}",
+            layer_config.host_name,
+            layer_config.base_url,
+            layer_config.file_extension,
+        )
+    );
+    value
 }
 
 
@@ -88,7 +72,7 @@ mod tests {
 
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
-        let mut layer_handler = LayerHandler { };
+        let mut layer_handler = DescriptionHandler { };
         let layer_name = String::from("default");
         let tile_config = TileConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
@@ -113,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_default_config_json() -> Result<(), Box<dyn Error>> {
-        let mut layer_handler = LayerHandler { };
+        let mut layer_handler = DescriptionHandler { };
         let layer_name = String::from("default");
         let tile_config = TileConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
@@ -132,7 +116,7 @@ mod tests {
             };
 
             let actual_response = layer_handler.handle(context, &request)?.expect_handled();
-            let expected_data = Description {
+            let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",
                 name: layer_name.clone(),
@@ -142,15 +126,14 @@ mod tests {
                 maxzoom: layer_config.max_zoom,
                 tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
             };
-            let expected_json = serde_json::to_string(&expected_data).unwrap();
             let expected_response = response::Response {
                 header: response::Header::new(
                     context.record,
                     context.connection.record,
                     context.get_host().record,
-                    "json",
+                    &mime::APPLICATION_JSON,
                 ),
-                body: response::BodyVariant::Text(expected_json),
+                body: response::BodyVariant::Description(expected_data),
             };
             assert_eq!(expected_response, actual_response, "Incorrect handling");
             Ok(())
