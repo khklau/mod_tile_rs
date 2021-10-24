@@ -1,5 +1,9 @@
+#include <apr-1.0/apr_pools.h>
+#include <apr-1.0/apr_strings.h>
+#include <apr-1.0/apr_time.h>
 #include <apache2/ap_config.h>
 #include <apache2/httpd.h>
 #include <apache2/http_config.h>
 #include <apache2/http_log.h>
+#include <apache2/http_protocol.h>
 #include <apache2/http_request.h>
