@@ -10,7 +10,9 @@ use http::status::StatusCode;
 use mime::Mime;
 
 use std::ffi::{ CString, c_void };
-use std::os::raw::c_char;
+use std::mem::size_of;
+use std::option::Option;
+use std::os::raw::{ c_char, c_int, c_void as raw_void };
 
 
 #[derive(Debug)]
@@ -22,14 +24,16 @@ pub struct HttpResponse {
 
 pub struct ResponseContext<'r> {
     pub request_record: &'r mut request_rec,
-    //pub request_context: &'r RequestContext<'r>,
+    apache2_writer: Apache2Writer,
+    writer: Option<&'r mut dyn Writer<ElementType = u8>>,
 }
 
 impl<'r> ResponseContext<'r> {
     pub fn from(request: &'r mut RequestContext<'r>) -> ResponseContext<'r> {
         ResponseContext {
             request_record: request.record,
-            //request_context: request,
+            apache2_writer: Apache2Writer { },
+            writer: None,
         }
     }
 
@@ -143,27 +147,24 @@ impl<'r> ResponseContext<'r> {
         &mut self,
         payload: T,
     ) -> Result<usize, ResponseWriteError> {
+        let writer: &mut dyn Writer<ElementType = u8> = match &mut self.writer {
+            Some(obj) => &mut *(*obj),
+            None => &mut self.apache2_writer,
+        };
         let mut payload_slice = payload.as_ref();
-        let mut written_length = 0;
-        let target_length = payload.as_ref().len();
-
-        // WARNING: The code below is almost C style pointer arithmetic, it needs thorough reviews
-        while written_length < target_length {
-            let result = unsafe {
-                ap_rwrite(
-                    payload_slice.as_ptr() as *const c_void,
-                    (target_length - written_length) as i32,
-                    self.request_record
-                )
-            };
+        while payload_slice.len() > 0 {
+            let result = writer.write(
+                payload_slice,
+                self.request_record
+            );
             if result >= 0 {
-                written_length += result as usize;
-                payload_slice = payload_slice.split_at(result as usize).1;
+                let elements_written = (result as usize) / size_of::<u8>();
+                payload_slice = payload_slice.split_at(elements_written).1;
             } else {
                 return Err(ResponseWriteError { error_code: result });
             }
         }
-        Ok(written_length)
+        Ok(payload.as_ref().len())
     }
 
     #[cfg(test)]
@@ -172,5 +173,67 @@ impl<'r> ResponseContext<'r> {
         payload: T,
     ) -> Result<usize, ResponseWriteError> {
         Ok(0)
+    }
+}
+
+trait Writer {
+    type ElementType;
+
+    fn write(
+        &mut self,
+        buffer: &[Self::ElementType],
+        record: &mut request_rec,
+    ) -> i32;
+}
+
+struct Apache2Writer { }
+
+impl Writer for Apache2Writer {
+    type ElementType = u8;
+
+    #[cfg(not(test))]
+    fn write(
+        &mut self,
+        buffer: &[u8],
+        record: &mut request_rec,
+    ) -> i32 {
+        unsafe {
+            ap_rwrite(
+                buffer.as_ptr() as *const c_void,
+                buffer.len() as i32,
+                record
+            )
+        }
+    }
+
+    #[cfg(test)]
+    fn write(
+        &mut self,
+        buffer: &[u8],
+        record: &mut request_rec,
+    ) -> i32 {
+        0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    struct TestWriter {
+        write_len: usize,
+        written_payload: Vec<u8>,
+    }
+
+    impl<'w> Writer for TestWriter {
+        type ElementType = u8;
+
+        fn write(
+            &mut self,
+            payload_slice: &[u8],
+            _record: &mut request_rec,
+        ) -> i32 {
+            self.written_payload.extend_from_slice(payload_slice);
+            payload_slice.len() as i32
+        }
     }
 }
