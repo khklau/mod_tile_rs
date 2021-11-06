@@ -1,6 +1,8 @@
+use crate::apache2::bindings::request_rec;
+#[cfg(not(test))]
 use crate::apache2::bindings::{
     ap_rwrite, ap_set_content_type, ap_set_content_length,
-    apr_psprintf, apr_table_setn, apr_table_mergen, request_rec
+    apr_psprintf, apr_table_setn, apr_table_mergen,
 };
 use crate::apache2::error::ResponseWriteError;
 use crate::apache2::request::RequestContext;
@@ -9,10 +11,12 @@ use http::header::{ HeaderMap, HeaderName, HeaderValue, ToStrError, };
 use http::status::StatusCode;
 use mime::Mime;
 
+#[cfg(not(test))]
 use std::ffi::{ CString, c_void };
 use std::mem::size_of;
 use std::option::Option;
-use std::os::raw::{ c_char, c_int, c_void as raw_void };
+#[cfg(not(test))]
+use std::os::raw::c_char;
 
 
 #[derive(Debug)]
@@ -62,8 +66,8 @@ impl<'r> ResponseContext<'r> {
     #[cfg(test)]
     pub fn append_http_header(
         &mut self,
-        key: &HeaderName,
-        value: &HeaderValue,
+        _key: &HeaderName,
+        _value: &HeaderValue,
     ) -> Result<(), ToStrError> {
         Ok(())
     }
@@ -93,8 +97,8 @@ impl<'r> ResponseContext<'r> {
     #[cfg(test)]
     pub fn set_http_header(
         &mut self,
-        key: &HeaderName,
-        value: &HeaderValue,
+        _key: &HeaderName,
+        _value: &HeaderValue,
     ) -> Result<(), ToStrError> {
         Ok(())
     }
@@ -116,7 +120,7 @@ impl<'r> ResponseContext<'r> {
     #[cfg(test)]
     pub fn set_content_type(
         &mut self,
-        mime: &Mime,
+        _mime: &Mime,
     ) -> () {
         ()
     }
@@ -137,12 +141,11 @@ impl<'r> ResponseContext<'r> {
     #[cfg(test)]
     pub fn set_content_length(
         &mut self,
-        length: usize,
+        _length: usize,
     ) -> () {
         ()
     }
 
-    #[cfg(not(test))]
     pub fn write_content<T: AsRef<[u8]>>(
         &mut self,
         payload: T,
@@ -154,7 +157,8 @@ impl<'r> ResponseContext<'r> {
         let mut payload_slice = payload.as_ref();
         while payload_slice.len() > 0 {
             let result = writer.write(
-                payload_slice,
+                payload_slice.as_ptr(),
+                payload_slice.len(),
                 self.request_record
             );
             if result >= 0 {
@@ -166,14 +170,6 @@ impl<'r> ResponseContext<'r> {
         }
         Ok(payload.as_ref().len())
     }
-
-    #[cfg(test)]
-    pub fn write_content<T: AsRef<[u8]>>(
-        &mut self,
-        payload: T,
-    ) -> Result<usize, ResponseWriteError> {
-        Ok(0)
-    }
 }
 
 trait Writer {
@@ -181,7 +177,8 @@ trait Writer {
 
     fn write(
         &mut self,
-        buffer: &[Self::ElementType],
+        buffer: *const Self::ElementType,
+        length: usize,
         record: &mut request_rec,
     ) -> i32;
 }
@@ -194,13 +191,14 @@ impl Writer for Apache2Writer {
     #[cfg(not(test))]
     fn write(
         &mut self,
-        buffer: &[u8],
+        buffer: *const u8,
+        length: usize,
         record: &mut request_rec,
     ) -> i32 {
         unsafe {
             ap_rwrite(
-                buffer.as_ptr() as *const c_void,
-                buffer.len() as i32,
+                buffer as *const c_void,
+                length as i32,
                 record
             )
         }
@@ -209,8 +207,9 @@ impl Writer for Apache2Writer {
     #[cfg(test)]
     fn write(
         &mut self,
-        buffer: &[u8],
-        record: &mut request_rec,
+        _buffer: *const u8,
+        _length: usize,
+        _record: &mut request_rec,
     ) -> i32 {
         0
     }
@@ -219,9 +218,19 @@ impl Writer for Apache2Writer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::apache2::request::test_utils::with_request_rec;
+    use crate::tile::config::TileConfig;
+
+    use std::cmp::min;
+    use std::collections::VecDeque;
+    use std::error::Error;
+    use std::ffi::CString;
+    use std::slice;
     struct TestWriter {
-        write_len: usize,
+        default_length: usize,
+        allowed_lengths: VecDeque<usize>,
         written_payload: Vec<u8>,
+        written_lengths: Vec<usize>,
     }
 
     impl<'w> Writer for TestWriter {
@@ -229,11 +238,114 @@ mod tests {
 
         fn write(
             &mut self,
-            payload_slice: &[u8],
+            payload: *const u8,
+            length: usize,
             _record: &mut request_rec,
         ) -> i32 {
+            let allowed_length = if self.allowed_lengths.is_empty() {
+                self.default_length
+            } else {
+                let length = self.allowed_lengths.front().unwrap().clone();
+                self.allowed_lengths.pop_front();
+                length
+            };
+            let write_length = min(length, allowed_length);
+            let payload_slice = unsafe { slice::from_raw_parts(payload, write_length) };
             self.written_payload.extend_from_slice(payload_slice);
-            payload_slice.len() as i32
+            self.written_lengths.push(write_length);
+            write_length as i32
         }
+    }
+
+    #[test]
+    fn test_write_content_small_lengths() -> Result<(), Box<dyn Error>> {
+        let mut writer = TestWriter {
+            default_length: 1,
+            allowed_lengths: vec![2, 2, 2, 2].into_iter().collect(),
+            written_payload: Vec::new(),
+            written_lengths: Vec::new(),
+        };
+        let expected_payload = String::from("1234567");
+        with_request_rec(|request| {
+            let uri = CString::new("/mod_tile_rs")?;
+            request.uri = uri.into_raw();
+            let config = TileConfig::new();
+            let request_context = RequestContext::create_with_tile_config(request, &config)?;
+            let mut context = ResponseContext::from(request_context);
+            context.writer = Some(&mut writer);
+            context.write_content(&expected_payload)?;
+            assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
+            assert_eq!(vec![2, 2, 2, 1], writer.written_lengths, "Unexpected written lengths");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_write_content_large_lengths() -> Result<(), Box<dyn Error>> {
+        let mut writer = TestWriter {
+            default_length: 1,
+            allowed_lengths: vec![128].into_iter().collect(),
+            written_payload: Vec::new(),
+            written_lengths: Vec::new(),
+        };
+        let expected_payload = String::from("1234567");
+        with_request_rec(|request| {
+            let uri = CString::new("/mod_tile_rs")?;
+            request.uri = uri.into_raw();
+            let config = TileConfig::new();
+            let request_context = RequestContext::create_with_tile_config(request, &config)?;
+            let mut context = ResponseContext::from(request_context);
+            context.writer = Some(&mut writer);
+            context.write_content(&expected_payload)?;
+            assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
+            assert_eq!(vec![expected_payload.len()], writer.written_lengths, "Unexpected written lengths");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_write_content_paused_writes() -> Result<(), Box<dyn Error>> {
+        let mut writer = TestWriter {
+            default_length: 1,
+            allowed_lengths: vec![2, 0, 4, 0, 2].into_iter().collect(),
+            written_payload: Vec::new(),
+            written_lengths: Vec::new(),
+        };
+        let expected_payload = String::from("1234567");
+        with_request_rec(|request| {
+            let uri = CString::new("/mod_tile_rs")?;
+            request.uri = uri.into_raw();
+            let config = TileConfig::new();
+            let request_context = RequestContext::create_with_tile_config(request, &config)?;
+            let mut context = ResponseContext::from(request_context);
+            context.writer = Some(&mut writer);
+            context.write_content(&expected_payload)?;
+            assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
+            assert_eq!(vec![2, 0, 4, 0, 1], writer.written_lengths, "Unexpected written lengths");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_write_content_delayed_writes() -> Result<(), Box<dyn Error>> {
+        let mut writer = TestWriter {
+            default_length: 1,
+            allowed_lengths: vec![0, 0, 4, 4].into_iter().collect(),
+            written_payload: Vec::new(),
+            written_lengths: Vec::new(),
+        };
+        let expected_payload = String::from("1234567");
+        with_request_rec(|request| {
+            let uri = CString::new("/mod_tile_rs")?;
+            request.uri = uri.into_raw();
+            let config = TileConfig::new();
+            let request_context = RequestContext::create_with_tile_config(request, &config)?;
+            let mut context = ResponseContext::from(request_context);
+            context.writer = Some(&mut writer);
+            context.write_content(&expected_payload)?;
+            assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
+            assert_eq!(vec![0, 0, 4, 3], writer.written_lengths, "Unexpected written lengths");
+            Ok(())
+        })
     }
 }

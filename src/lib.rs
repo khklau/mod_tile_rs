@@ -38,12 +38,14 @@ mod tile_proxy;
 
 
 use crate::apache2::bindings::{
-    APR_HOOK_MIDDLE, HTTP_INTERNAL_SERVER_ERROR,
+    HTTP_INTERNAL_SERVER_ERROR,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR, OR_OPTIONS,
-    ap_hook_child_init, ap_hook_handler,
     apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, cmd_parms, command_rec,
     module, request_rec, server_rec,
 };
+#[cfg(not(test))]
+use crate::apache2::bindings::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
+
 use crate::tile_proxy::TileProxy;
 
 use scan_fmt::scan_fmt;
