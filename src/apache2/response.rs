@@ -6,6 +6,7 @@ use crate::apache2::bindings::{
 };
 use crate::apache2::error::ResponseWriteError;
 use crate::apache2::request::RequestContext;
+use crate::apache2::virtual_host::VirtualHostContext;
 
 use http::header::{ HeaderMap, HeaderName, HeaderValue, ToStrError, };
 use http::status::StatusCode;
@@ -27,7 +28,7 @@ pub struct HttpResponse {
 }
 
 pub struct ResponseContext<'r> {
-    pub request_record: &'r mut request_rec,
+    pub request: &'r mut RequestContext<'r>,
     apache2_writer: Apache2Writer,
     writer: Option<&'r mut dyn Writer<ElementType = u8>>,
 }
@@ -35,10 +36,14 @@ pub struct ResponseContext<'r> {
 impl<'r> ResponseContext<'r> {
     pub fn from(request: &'r mut RequestContext<'r>) -> ResponseContext<'r> {
         ResponseContext {
-            request_record: request.record,
+            request: request,
             apache2_writer: Apache2Writer { },
             writer: None,
         }
+    }
+
+    pub fn get_host(&self) -> &VirtualHostContext {
+        self.request.get_host()
     }
 
     #[cfg(not(test))]
@@ -51,10 +56,10 @@ impl<'r> ResponseContext<'r> {
         let c_value = CString::new(value.to_str()?).unwrap();
         unsafe {
             apr_table_mergen(
-                self.request_record.headers_out,
+                self.request.record.headers_out,
                 c_key.as_c_str().as_ptr(),
                 apr_psprintf(
-                    self.request_record.pool,
+                    self.request.record.pool,
                     "%s".as_ptr() as *const c_char,
                     c_value.as_c_str().as_ptr()
                 )
@@ -82,10 +87,10 @@ impl<'r> ResponseContext<'r> {
         let c_value = CString::new(value.to_str()?).unwrap();
         unsafe {
             apr_table_setn(
-                self.request_record.headers_out,
+                self.request.record.headers_out,
                 c_key.as_c_str().as_ptr(),
                 apr_psprintf(
-                    self.request_record.pool,
+                    self.request.record.pool,
                     "%s".as_ptr() as *const c_char,
                     c_value.as_c_str().as_ptr()
                 )
@@ -111,7 +116,7 @@ impl<'r> ResponseContext<'r> {
         let mime_str = CString::new(mime.essence_str()).unwrap();
         unsafe {
             ap_set_content_type(
-                self.request_record,
+                self.request.record,
                 mime_str.as_c_str().as_ptr(),
             );
         }
@@ -132,7 +137,7 @@ impl<'r> ResponseContext<'r> {
     ) -> () {
         unsafe {
             ap_set_content_length(
-                self.request_record,
+                self.request.record,
                 length as i64,
             );
         }
@@ -159,7 +164,7 @@ impl<'r> ResponseContext<'r> {
             let result = writer.write(
                 payload_slice.as_ptr(),
                 payload_slice.len(),
-                self.request_record
+                self.request.record
             );
             if result >= 0 {
                 let elements_written = (result as usize) / size_of::<u8>();
@@ -208,10 +213,10 @@ impl Writer for Apache2Writer {
     fn write(
         &mut self,
         _buffer: *const u8,
-        _length: usize,
+        length: usize,
         _record: &mut request_rec,
     ) -> i32 {
-        0
+        length as i32
     }
 }
 

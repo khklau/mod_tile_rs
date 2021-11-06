@@ -1,9 +1,13 @@
-use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, };
+use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, WriteResponseObserver, };
 
 use crate::apache2::request::RequestContext;
+use crate::apache2::response::ResponseContext;
 use crate::handler::interface::{ HandleRequestResult, RequestHandler, };
-use crate::slippy::interface::{ ReadRequestFunc, ReadRequestResult };
+use crate::slippy::interface::{
+    ReadRequestFunc, ReadRequestResult, WriteResponseFunc, WriteResponseResult,
+};
 use crate::slippy::request::Request;
+use crate::slippy::response::Response;
 
 
 pub struct ModuleStatistics {}
@@ -28,4 +32,15 @@ impl HandleRequestObserver for ModuleStatistics {
     ) -> () {
     }
 
+}
+
+impl WriteResponseObserver for ModuleStatistics {
+    fn on_write(
+        &mut self,
+        _func: WriteResponseFunc,
+        _context: &ResponseContext,
+        _response: &Response,
+        _result: &WriteResponseResult,
+    ) -> () {
+    }
 }

@@ -1,4 +1,4 @@
-use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, };
+use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, WriteResponseObserver, };
 use crate::analytics::statistics::ModuleStatistics;
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS, OK,
@@ -48,6 +48,7 @@ pub struct TileProxy<'p> {
     statistics: ModuleStatistics,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
+    write_observers: Option<[&'p mut dyn WriteResponseObserver; 1]>,
 }
 
 impl<'p> TileProxy<'p> {
@@ -101,6 +102,7 @@ impl<'p> TileProxy<'p> {
         new_server.statistics = ModuleStatistics { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
+        new_server.write_observers = None;
         info!(new_server.record, "TileServer::create - finish");
         return Ok(new_server);
     }
@@ -154,6 +156,7 @@ impl<'p> TileProxy<'p> {
         &mut self,
         record: &mut request_rec,
     ) -> (ReadRequestResult, &mut Self) {
+        debug!(record.server, "TileServer::read_request - start");
         let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
             Some(observers) => [observers[0]],
@@ -166,6 +169,7 @@ impl<'p> TileProxy<'p> {
             debug!(context.get_host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(read, context, &read_result);
         }
+        debug!(record.server, "TileServer::read_request - finish");
         return (read_result, self);
     }
 
@@ -174,6 +178,7 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
         read_result: ReadRequestResult,
     ) -> (HandleRequestResult, &mut Self) {
+        debug!(record.server, "TileServer::call_handlers - start");
         // TODO: combine the handlers using combinators
         let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
             // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
@@ -198,6 +203,7 @@ impl<'p> TileProxy<'p> {
                 Err(HandleError::RequestNotRead(err))
             },
         };
+        debug!(record.server, "TileServer::call_handlers - finish");
         return (handle_result, self);
     }
 
@@ -206,6 +212,12 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
         handle_result: HandleRequestResult,
     ) -> (WriteResponseResult, &mut Self) {
+        debug!(record.server, "TileServer::write_response - start");
+        let mut write_observers: [&mut dyn WriteResponseObserver; 1] = match &mut self.write_observers {
+            // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
+            Some(observers) => [observers[0]],
+            None => [&mut self.statistics],
+        };
         let write = self.write_response;
         let request_context = RequestContext::find_or_create(record, &self.config).unwrap();
         let mut response_context = ResponseContext::from(request_context);
@@ -214,6 +226,13 @@ impl<'p> TileProxy<'p> {
                 HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
                 HandleOutcome::Handled(response) => {
                     let result = write(&mut response_context, &response);
+                    for observer_iter in write_observers.iter_mut() {
+                        debug!(
+                            response_context.get_host().record,
+                            "TileServer::write_response - calling observer {:p}", *observer_iter
+                        );
+                        (*observer_iter).on_write(write, &response_context, &response, &result);
+                    }
                     result
                 },
             },
@@ -221,6 +240,7 @@ impl<'p> TileProxy<'p> {
                 Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
             },
         };
+        debug!(record.server, "TileServer::write_response - finish");
         return (write_result, self);
     }
 }
@@ -245,6 +265,7 @@ mod tests {
     use crate::apache2::virtual_host::test_utils::with_server_rec;
     use crate::slippy::interface::ReadOutcome;
     use crate::slippy::request;
+    use crate::slippy::response;
 
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
@@ -312,7 +333,7 @@ mod tests {
             &mut self,
             _obj: &dyn RequestHandler,
             _context: &RequestContext,
-            _request: &crate::slippy::request::Request,
+            _request: &request::Request,
             _result: &HandleRequestResult
         ) -> () {
             self.count += 1;
@@ -332,7 +353,7 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
-                let input = Ok(
+                let input: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::Request {
                             header: request::Header::new(
@@ -347,6 +368,67 @@ mod tests {
                 let (result, _) = proxy.call_handlers(request, input);
                 result.unwrap();
                 assert_eq!(1, mock.count, "Handle observer not called");
+                Ok(())
+            })
+        })
+    }
+
+    struct MockWriteObserver {
+        count: u32,
+    }
+
+    impl WriteResponseObserver for MockWriteObserver {
+        fn on_write(
+            &mut self,
+            _func: WriteResponseFunc,
+            _context: &ResponseContext,
+            _response: &response::Response,
+            _result: &WriteResponseResult,
+        ) -> () {
+            self.count += 1;
+        }
+    }
+
+    #[test]
+    fn test_write_response_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let mut mock = MockWriteObserver {
+                    count: 0,
+                };
+                let tile_config = TileConfig::new();
+                let proxy = TileProxy::create(server, tile_config).unwrap();
+                proxy.write_observers = Some([&mut mock]);
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
+                let input: HandleRequestResult = Ok(
+                    HandleOutcome::Handled(
+                        response::Response {
+                            header: response::Header::new(
+                                context.record,
+                                context.connection.record,
+                                context.get_host().record,
+                                &mime::APPLICATION_JSON,
+                            ),
+                            body: response::BodyVariant::Description(
+                                response::Description {
+                                    tilejson: "2.0.0",
+                                    schema: "xyz",
+                                    name: String::new(),
+                                    description: String::new(),
+                                    attribution: String::new(),
+                                    minzoom: 0,
+                                    maxzoom: 1,
+                                    tiles: Vec::new(),
+                                }
+                            ),
+                        }
+                    )
+                );
+                let (result, _) = proxy.write_response(request, input);
+                result.unwrap();
+                assert_eq!(1, mock.count, "Write observer not called");
                 Ok(())
             })
         })
