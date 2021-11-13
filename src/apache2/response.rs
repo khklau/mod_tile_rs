@@ -1,7 +1,7 @@
 use crate::apache2::bindings::request_rec;
 #[cfg(not(test))]
 use crate::apache2::bindings::{
-    ap_rwrite, ap_set_content_type, ap_set_content_length,
+    ap_rwrite, ap_rflush, ap_set_content_type, ap_set_content_length,
     apr_psprintf, apr_table_setn, apr_table_mergen,
 };
 use crate::apache2::error::ResponseWriteError;
@@ -16,8 +16,6 @@ use mime::Mime;
 use std::ffi::{ CString, c_void };
 use std::mem::size_of;
 use std::option::Option;
-#[cfg(not(test))]
-use std::os::raw::c_char;
 
 
 #[derive(Debug)]
@@ -54,13 +52,23 @@ impl<'r> ResponseContext<'r> {
     ) -> Result<(), ToStrError> {
         let c_key = CString::new(key.as_str()).unwrap();
         let c_value = CString::new(value.to_str()?).unwrap();
+        debug!(
+            self.request.get_host().record,
+            "ResponseContext::append_http_header - appending {} - {}",
+            c_key.to_str().unwrap(),
+            c_value.to_str().unwrap()
+        );
         unsafe {
             apr_table_mergen(
                 self.request.record.headers_out,
-                c_key.as_c_str().as_ptr(),
                 apr_psprintf(
                     self.request.record.pool,
-                    "%s".as_ptr() as *const c_char,
+                    cstr!("%s"),
+                    c_key.as_c_str().as_ptr(),
+                ),
+                apr_psprintf(
+                    self.request.record.pool,
+                    cstr!("%s"),
                     c_value.as_c_str().as_ptr()
                 )
             );
@@ -85,14 +93,24 @@ impl<'r> ResponseContext<'r> {
     ) -> Result<(), ToStrError> {
         let c_key = CString::new(key.as_str()).unwrap();
         let c_value = CString::new(value.to_str()?).unwrap();
+        debug!(
+            self.request.get_host().record,
+            "ResponseContext::set_http_header - setting {} - {}",
+            c_key.to_str().unwrap(),
+            c_value.to_str().unwrap()
+        );
         unsafe {
             apr_table_setn(
                 self.request.record.headers_out,
-                c_key.as_c_str().as_ptr(),
                 apr_psprintf(
                     self.request.record.pool,
-                    "%s".as_ptr() as *const c_char,
-                    c_value.as_c_str().as_ptr()
+                    cstr!("%s"),
+                    c_key.as_c_str().as_ptr(),
+                ),
+                apr_psprintf(
+                    self.request.record.pool,
+                    cstr!("%s"),
+                    c_value.as_c_str().as_ptr(),
                 )
             );
         }
@@ -161,11 +179,13 @@ impl<'r> ResponseContext<'r> {
         };
         let mut payload_slice = payload.as_ref();
         while payload_slice.len() > 0 {
+            debug!(self.request.get_host().record, "ResponseContext::write_content - writing slice {}", String::from_utf8_lossy(payload_slice));
             let result = writer.write(
                 payload_slice.as_ptr(),
                 payload_slice.len(),
                 self.request.record
             );
+            debug!(self.request.get_host().record, "ResponseContext::write_content - write result {}", result);
             if result >= 0 {
                 let elements_written = (result as usize) / size_of::<u8>();
                 payload_slice = payload_slice.split_at(elements_written).1;
@@ -174,6 +194,21 @@ impl<'r> ResponseContext<'r> {
             }
         }
         Ok(payload.as_ref().len())
+    }
+
+    #[cfg(not(test))]
+    pub fn flush_response(&mut self) -> Result<(), ResponseWriteError> {
+        let result = unsafe { ap_rflush(self.request.record) };
+        if result < 0 {
+            return Err(ResponseWriteError { error_code: result });
+        } else {
+            return Ok(())
+        }
+    }
+
+    #[cfg(test)]
+    pub fn flush_response(&mut self) -> Result<(), ResponseWriteError> {
+        Ok(())
     }
 }
 

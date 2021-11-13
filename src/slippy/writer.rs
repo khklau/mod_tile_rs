@@ -40,7 +40,8 @@ impl DescriptionWriter {
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
             (mime::APPLICATION, mime::JSON) => {
                 context.set_content_type(&mime::APPLICATION_JSON);
-                serde_json::to_string(&description).unwrap()
+                debug!(context.get_host().record, "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
+                serde_json::to_string_pretty(&description).unwrap()
             },
             _ => String::from(""),
         };
@@ -59,7 +60,9 @@ impl DescriptionWriter {
         context.append_http_header(&cache_key, &cache_value).unwrap();
         http_headers.insert(cache_key, cache_value);
 
-        let expiry_timestamp = Utc.timestamp(max_age + context.request.record.request_time, 0);
+        let request_time_in_epoch_secs = context.request.record.request_time / 1000000;
+        let expiry_in_epoch_secs = max_age + request_time_in_epoch_secs;
+        let expiry_timestamp = Utc.timestamp(expiry_in_epoch_secs, 0);
         let expiry_string = expiry_timestamp.to_rfc2822();
         let expiry_key = EXPIRES.clone();
         let expiry_value = HeaderValue::from_str(expiry_string.as_str()).unwrap();
@@ -68,6 +71,7 @@ impl DescriptionWriter {
 
         let written_length = context.write_content(&text)?;
         context.set_content_length(written_length);
+        context.flush_response()?;
         debug!(context.get_host().record, "DescriptionWriter::write - finish");
 
         Ok(
