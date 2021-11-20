@@ -11,7 +11,7 @@ use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostCont
 use crate::handler::error::HandleError;
 use crate::handler::interface::{ HandleOutcome, RequestHandler, HandleRequestResult, };
 use crate::handler::description::DescriptionHandler;
-use crate::slippy::error::{ ReadError, WriteError };
+use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::slippy::interface::{
     ReadOutcome, ReadRequestFunc, ReadRequestResult,
     WriteOutcome, WriteResponseFunc, WriteResponseResult,

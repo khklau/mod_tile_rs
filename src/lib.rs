@@ -16,12 +16,12 @@ mod tile {
 }
 mod schema {
     pub mod slippy {
+        pub mod error;
         pub mod request;
         pub mod response;
     }
 }
 mod slippy {
-    pub mod error;
     pub mod interface;
     pub mod reader;
     pub mod writer;

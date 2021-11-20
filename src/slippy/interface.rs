@@ -1,6 +1,6 @@
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::{ HttpResponse, ResponseContext };
-use crate::slippy::error::{ ReadError, WriteError };
+use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::request::Request;
 use crate::schema::slippy::response::Response;
 

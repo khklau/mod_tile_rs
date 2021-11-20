@@ -1,6 +1,6 @@
 use crate::apache2::bindings::get_module_name;
 use crate::apache2::request::RequestContext;
-use crate::slippy::error::{
+use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
 use crate::slippy::interface::ReadOutcome;

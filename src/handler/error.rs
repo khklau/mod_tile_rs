@@ -1,4 +1,4 @@
-use crate::slippy::error::ReadError;
+use crate::schema::slippy::error::ReadError;
 
 use std::convert::From;
 use std::error::Error;
