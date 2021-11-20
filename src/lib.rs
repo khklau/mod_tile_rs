@@ -39,9 +39,8 @@ mod tile_proxy;
 
 use crate::apache2::bindings::{
     HTTP_INTERNAL_SERVER_ERROR,
-    MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR, OR_OPTIONS,
-    apr_pool_t, cmd_func, cmd_how, cmd_how_TAKE1, cmd_parms, command_rec,
-    module, request_rec, server_rec,
+    MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
+    apr_pool_t, cmd_parms, module, request_rec, server_rec,
 };
 #[cfg(not(test))]
 use crate::apache2::bindings::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
@@ -75,34 +74,10 @@ pub static mut TILE_MODULE: module = module {
     merge_dir_config: None,
     create_server_config: None,
     merge_server_config: None,
-    cmds: tile_cmds.as_ptr(),
+    cmds: ptr::null_mut(),
     register_hooks: Some(register_hooks),
     flags: 0,
 };
-
-#[no_mangle]
-static tile_cmds: [command_rec; 2] = [
-    command_rec {
-        name: cstr!("LoadTileConfigFile"),
-        func: cmd_func {
-            take1: Some(load_tile_config),
-        },
-        cmd_data: ptr::null_mut(),
-        req_override: OR_OPTIONS as i32,
-        args_how: cmd_how_TAKE1 as cmd_how,
-        errmsg: cstr!("load the mod_tile/renderd/mapnik shared config file"),
-    },
-    command_rec {
-        name: cstr!("ModTileRequestTimeout"),
-        func: cmd_func {
-            take1: Some(load_request_timeout),
-        },
-        cmd_data: ptr::null_mut(),
-        req_override: OR_OPTIONS as i32,
-        args_how: cmd_how_TAKE1 as cmd_how,
-        errmsg: cstr!("tile rendering request timeout threshold in seconds"),
-    },
-];
 
 
 #[no_mangle]
