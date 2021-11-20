@@ -1,0 +1,12 @@
+{
+	"tilejson": "2.0.0",
+	"schema": "xyz",
+	"name": "default",
+	"description": "This is the standard osm mapnik style",
+	"attribution": "&copy;<a href="http://www.openstreetmap.org/">OpenStreetMap</a> and <a href="http://wiki.openstreetmap.org/wiki/Contributors">contributors</a>, <a href="http://opendatacommons.org/licenses/odbl/">(ODbL)</a>",
+	"minzoom": 0,
+	"maxzoom": 20,
+	"tiles": [
+		"http://localhost/osm/{z}/{x}/{y}.png"
+	]
+}
