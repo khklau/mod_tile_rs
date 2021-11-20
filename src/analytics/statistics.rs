@@ -2,10 +2,11 @@ use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, W
 
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
-use crate::handler::interface::{ HandleRequestResult, RequestHandler, };
+use crate::handler::interface::RequestHandler;
 use crate::slippy::interface::{
     ReadRequestFunc, ReadRequestResult, WriteResponseFunc, WriteResponseResult,
 };
+use crate::schema::handler::outcome::HandleRequestResult;
 use crate::schema::slippy::request::Request;
 use crate::schema::slippy::response::Response;
 

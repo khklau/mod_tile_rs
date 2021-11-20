@@ -1,6 +1,7 @@
-use crate::handler::interface::{ HandleOutcome, HandleRequestResult, RequestHandler };
+use crate::handler::interface::RequestHandler;
 
 use crate::apache2::request::RequestContext;
+use crate::schema::handler::outcome::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::tile::config::TileConfig;

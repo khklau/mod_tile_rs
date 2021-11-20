@@ -20,6 +20,10 @@ mod schema {
         pub mod request;
         pub mod response;
     }
+    pub mod handler {
+        pub mod error;
+        pub mod outcome;
+    }
 }
 mod slippy {
     pub mod interface;
@@ -34,7 +38,6 @@ mod analytics {
     pub mod statistics;
 }
 mod handler {
-    pub mod error;
     pub mod interface;
     pub mod description;
 }

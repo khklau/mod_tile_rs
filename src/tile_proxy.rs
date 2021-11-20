@@ -8,14 +8,15 @@ use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
-use crate::handler::error::HandleError;
-use crate::handler::interface::{ HandleOutcome, RequestHandler, HandleRequestResult, };
+use crate::handler::interface::RequestHandler;
 use crate::handler::description::DescriptionHandler;
+use crate::schema::handler::error::HandleError;
 use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::slippy::interface::{
     ReadOutcome, ReadRequestFunc, ReadRequestResult,
     WriteOutcome, WriteResponseFunc, WriteResponseResult,
 };
+use crate::schema::handler::outcome::{ HandleOutcome, HandleRequestResult, };
 use crate::slippy::reader::SlippyRequestReader;
 use crate::slippy::writer::SlippyResponseWriter;
 use crate::storage::file_system;
