@@ -5,7 +5,9 @@ use crate::apache2::bindings::{
 use mime::Mime;
 use serde::Serialize;
 
+use std::collections::HashMap;
 use std::string::String;
+use std::vec::Vec;
 
 
 #[derive(Debug, PartialEq)]
@@ -56,4 +58,27 @@ pub struct Description {
     pub minzoom: u64,
     pub maxzoom: u64,
     pub tiles: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Statistics {
+    pub number_response_200: u64,
+    pub number_response_304: u64,
+    pub number_response_404: u64,
+    pub number_response_503: u64,
+    pub number_response_5xx: u64,
+    pub number_response_other: u64,
+    pub number_fresh_cache: u64,
+    pub number_old_cache: u64,
+    pub number_very_old_cache: u64,
+    pub number_fresh_render: u64,
+    pub number_old_render: u64,
+    pub number_very_old_render: u64,
+    pub number_response_zoom: Vec<u64>,
+    pub number_tile_buffer_reads: u64,
+    pub duration_tile_buffer_reads: u64,
+    pub number_tile_buffer_read_zoom: Vec<u64>,
+    pub duration_tile_buffer_read_zoom: Vec<u64>,
+    pub number_response_200_by_layer: HashMap<String, u64>,
+    pub number_response_400_by_layer: HashMap<String, u64>,
 }
