@@ -22,17 +22,21 @@ mod slippy {
     pub mod response;
     pub mod writer;
 }
+mod analytics {
+    pub mod interface;
+    pub mod statistics;
+}
+mod storage {
+    pub mod file_system;
+}
 mod handler {
     pub mod error;
     pub mod interface;
     pub mod description;
 }
-mod storage {
-    pub mod file_system;
-}
-mod analytics {
+mod observer {
     pub mod interface;
-    pub mod statistics;
+    pub mod transaction;
 }
 mod tile_proxy;
 
