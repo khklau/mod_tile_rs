@@ -6,8 +6,8 @@ use crate::handler::interface::{ HandleRequestResult, RequestHandler, };
 use crate::slippy::interface::{
     ReadRequestFunc, ReadRequestResult, WriteResponseFunc, WriteResponseResult,
 };
-use crate::slippy::request::Request;
-use crate::slippy::response::Response;
+use crate::schema::slippy::request::Request;
+use crate::schema::slippy::response::Response;
 
 
 pub struct ModuleStatistics {}

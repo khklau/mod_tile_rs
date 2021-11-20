@@ -1,8 +1,8 @@
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::{ HttpResponse, ResponseContext };
 use crate::slippy::error::{ ReadError, WriteError };
-use crate::slippy::request::Request;
-use crate::slippy::response::Response;
+use crate::schema::slippy::request::Request;
+use crate::schema::slippy::response::Response;
 
 use std::result::Result;
 

@@ -264,8 +264,8 @@ mod tests {
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
     use crate::slippy::interface::ReadOutcome;
-    use crate::slippy::request;
-    use crate::slippy::response;
+    use crate::schema::slippy::request;
+    use crate::schema::slippy::response;
 
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {

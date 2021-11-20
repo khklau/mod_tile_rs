@@ -4,7 +4,7 @@ use crate::slippy::error::{
     InvalidParameterError, ReadError
 };
 use crate::slippy::interface::ReadOutcome;
-use crate::slippy::request::{
+use crate::schema::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
 

@@ -1,8 +1,8 @@
 use crate::handler::error::HandleError;
 
 use crate::apache2::request::RequestContext;
-use crate::slippy::request::Request;
-use crate::slippy::response::Response;
+use crate::schema::slippy::request::Request;
+use crate::schema::slippy::response::Response;
 
 
 #[derive(Debug)]

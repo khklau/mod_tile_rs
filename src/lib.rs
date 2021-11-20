@@ -14,20 +14,24 @@ mod apache2 {
 mod tile {
     pub mod config;
 }
+mod schema {
+    pub mod slippy {
+        pub mod request;
+        pub mod response;
+    }
+}
 mod slippy {
     pub mod error;
     pub mod interface;
     pub mod reader;
-    pub mod request;
-    pub mod response;
     pub mod writer;
+}
+mod storage {
+    pub mod file_system;
 }
 mod analytics {
     pub mod interface;
     pub mod statistics;
-}
-mod storage {
-    pub mod file_system;
 }
 mod handler {
     pub mod error;

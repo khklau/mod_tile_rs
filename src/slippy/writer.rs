@@ -1,5 +1,5 @@
 use crate::slippy::interface::{ WriteOutcome, WriteResponseResult };
-use crate::slippy::response::{ BodyVariant, Header, Description, Response };
+use crate::schema::slippy::response::{ BodyVariant, Header, Description, Response };
 
 use crate::apache2::response::{ HttpResponse, ResponseContext, };
 
