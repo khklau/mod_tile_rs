@@ -42,10 +42,6 @@ mod handler {
     pub mod interface;
     pub mod description;
 }
-mod observer {
-    pub mod interface;
-    pub mod transaction;
-}
 mod tile_proxy;
 
 
