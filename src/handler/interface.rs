@@ -10,3 +10,13 @@ pub trait RequestHandler {
         request: &Request,
     ) -> HandleRequestResult;
 }
+
+pub trait HandleRequestObserver {
+    fn on_handle(
+        &mut self,
+        obj: &dyn RequestHandler,
+        context: &RequestContext,
+        request: &Request,
+        result: &HandleRequestResult,
+    ) -> ();
+}

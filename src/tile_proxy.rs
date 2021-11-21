@@ -1,4 +1,3 @@
-use crate::analytics::interface::{ HandleRequestObserver, ReadRequestObserver, WriteResponseObserver, };
 use crate::analytics::statistics::ModuleStatistics;
 use crate::apache2::bindings::{
     APR_BADARG, APR_SUCCESS, OK,
@@ -8,7 +7,7 @@ use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
-use crate::handler::interface::RequestHandler;
+use crate::handler::interface::{ HandleRequestObserver, RequestHandler, };
 use crate::handler::description::DescriptionHandler;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
@@ -17,7 +16,9 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
-use crate::slippy::interface::{ ReadRequestFunc, WriteResponseFunc, };
+use crate::slippy::interface::{
+    ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
+};
 use crate::slippy::reader::SlippyRequestReader;
 use crate::slippy::writer::SlippyResponseWriter;
 use crate::storage::file_system;

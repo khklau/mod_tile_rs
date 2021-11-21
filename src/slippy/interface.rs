@@ -7,3 +7,22 @@ use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult };
 pub type ReadRequestFunc = fn(&RequestContext) -> ReadRequestResult;
 
 pub type WriteResponseFunc = fn(&mut ResponseContext, &Response) -> WriteResponseResult;
+
+pub trait ReadRequestObserver {
+    fn on_read(
+        &mut self,
+        func: ReadRequestFunc,
+        context: &RequestContext,
+        result: &ReadRequestResult,
+    ) -> ();
+}
+
+pub trait WriteResponseObserver {
+    fn on_write(
+        &mut self,
+        func: WriteResponseFunc,
+        context: &ResponseContext,
+        response: &Response,
+        result: &WriteResponseResult,
+    ) -> ();
+}
