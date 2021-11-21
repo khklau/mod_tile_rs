@@ -17,12 +17,13 @@ mod tile {
 mod schema {
     pub mod slippy {
         pub mod error;
+        pub mod result;
         pub mod request;
         pub mod response;
     }
     pub mod handler {
         pub mod error;
-        pub mod outcome;
+        pub mod result;
     }
 }
 mod slippy {

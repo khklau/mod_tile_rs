@@ -1,7 +1,6 @@
-use crate::slippy::interface::{ WriteOutcome, WriteResponseResult };
-use crate::schema::slippy::response::{ BodyVariant, Header, Description, Response };
-
 use crate::apache2::response::{ HttpResponse, ResponseContext, };
+use crate::schema::slippy::response::{ BodyVariant, Header, Description, Response };
+use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult };
 
 use chrono::{ TimeZone, Utc, };
 use http::header::{ CACHE_CONTROL, EXPIRES, ETAG, HeaderMap, HeaderValue };

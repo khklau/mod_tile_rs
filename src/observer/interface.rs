@@ -1,12 +1,11 @@
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
 use crate::handler::interface::RequestHandler;
-use crate::slippy::interface::{
-    ReadRequestFunc, ReadRequestResult, WriteResponseFunc, WriteResponseResult,
-};
-use crate::schema::handler::outcome::HandleRequestResult;
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request::Request;
 use crate::schema::slippy::response::Response;
+use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, };
+use crate::slippy::interface::{ ReadRequestFunc, WriteResponseFunc, };
 
 
 pub trait ReadRequestObserver {

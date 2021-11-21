@@ -3,10 +3,10 @@ use crate::apache2::request::RequestContext;
 use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
-use crate::slippy::interface::ReadOutcome;
 use crate::schema::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
+use crate::schema::slippy::result::ReadOutcome;
 
 use crate::tile::config::LayerConfig;
 

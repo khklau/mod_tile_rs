@@ -11,12 +11,13 @@ use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostCont
 use crate::handler::interface::RequestHandler;
 use crate::handler::description::DescriptionHandler;
 use crate::schema::handler::error::HandleError;
+use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::error::{ ReadError, WriteError };
-use crate::slippy::interface::{
-    ReadOutcome, ReadRequestFunc, ReadRequestResult,
-    WriteOutcome, WriteResponseFunc, WriteResponseResult,
+use crate::schema::slippy::result::{
+    ReadOutcome, ReadRequestResult,
+    WriteOutcome, WriteResponseResult,
 };
-use crate::schema::handler::outcome::{ HandleOutcome, HandleRequestResult, };
+use crate::slippy::interface::{ ReadRequestFunc, WriteResponseFunc, };
 use crate::slippy::reader::SlippyRequestReader;
 use crate::slippy::writer::SlippyResponseWriter;
 use crate::storage::file_system;
@@ -264,7 +265,7 @@ mod tests {
     use super::*;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
-    use crate::slippy::interface::ReadOutcome;
+    use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
 
