@@ -26,8 +26,11 @@ mod schema {
         pub mod result;
     }
 }
+mod interface {
+    pub mod handler;
+    pub mod slippy;
+}
 mod slippy {
-    pub mod interface;
     pub mod reader;
     pub mod writer;
 }
@@ -35,11 +38,9 @@ mod storage {
     pub mod file_system;
 }
 mod analytics {
-    pub mod interface;
     pub mod statistics;
 }
 mod handler {
-    pub mod interface;
     pub mod description;
 }
 mod tile_proxy;
