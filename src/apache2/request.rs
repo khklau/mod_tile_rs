@@ -6,7 +6,7 @@ use crate::apache2::connection::ConnectionContext;
 use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
-use crate::tile::config::TileConfig;
+use crate::schema::tile::config::TileConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -130,7 +130,7 @@ pub mod test_utils {
     use crate::apache2::memory::test_utils::with_pool;
     use crate::apache2::connection::ConnectionContext;
     use crate::apache2::connection::test_utils::with_conn_rec;
-    use crate::tile::config::TileConfig;
+    use crate::schema::tile::config::TileConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;

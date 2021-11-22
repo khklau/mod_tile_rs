@@ -19,10 +19,10 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
+use crate::schema::tile::config::{ TileConfig, load };
 use crate::slippy::reader::SlippyRequestReader;
 use crate::slippy::writer::SlippyResponseWriter;
 use crate::storage::file_system;
-use crate::tile::config::{ TileConfig, load };
 
 use std::any::type_name;
 use std::boxed::Box;

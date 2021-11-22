@@ -4,7 +4,7 @@ use crate::apache2::bindings::{
 };
 use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::tile::config::TileConfig;
+use crate::schema::tile::config::TileConfig;
 
 use std::any::type_name;
 use std::boxed::Box;

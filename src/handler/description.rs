@@ -3,7 +3,7 @@ use crate::interface::handler::RequestHandler;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::tile::config::TileConfig;
+use crate::schema::tile::config::TileConfig;
 
 use mime;
 
@@ -65,7 +65,7 @@ fn describe(config: &TileConfig, layer: &String) -> response::Description {
 mod tests {
     use super::*;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::tile::config::TileConfig;
+    use crate::schema::tile::config::TileConfig;
 
     use std::error::Error;
     use std::ffi::CString;

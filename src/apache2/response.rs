@@ -259,7 +259,7 @@ impl Writer for Apache2Writer {
 mod tests {
     use super::*;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::tile::config::TileConfig;
+    use crate::schema::tile::config::TileConfig;
 
     use std::cmp::min;
     use std::collections::VecDeque;

@@ -11,9 +11,6 @@ mod apache2 {
     pub mod response;
     pub mod virtual_host;
 }
-mod tile {
-    pub mod config;
-}
 mod schema {
     pub mod slippy {
         pub mod error;
@@ -24,6 +21,9 @@ mod schema {
     pub mod handler {
         pub mod error;
         pub mod result;
+    }
+    pub mod tile {
+        pub mod config;
     }
 }
 mod interface {
