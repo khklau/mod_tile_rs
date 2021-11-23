@@ -1,8 +1,9 @@
-use crate::apache2::bindings::{
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+
+use crate::schema::apache2::bindings::{
     apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::schema::apache2::error::InvalidRecordError;
 use crate::schema::tile::config::TileConfig;
 
@@ -150,7 +151,7 @@ extern "C" fn drop_virtual_host_context(context_void: *mut c_void) -> apr_status
 
 #[cfg(test)]
 pub mod test_utils {
-    use crate::apache2::bindings::{
+    use crate::schema::apache2::bindings::{
         __BindgenBitfieldUnit, ap_logconf,
         apr_interval_time_t, apr_pool_t, apr_port_t,
         process_rec, server_rec,

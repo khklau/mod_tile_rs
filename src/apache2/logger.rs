@@ -2,7 +2,7 @@
 #[macro_export(local_inner_macros_)]
 macro_rules! error {
     ($server_expr:expr, $($arg:tt)+) => (
-        _log!(crate::apache2::bindings::APLOG_ERR, $server_expr, $($arg)+)
+        _log!(crate::schema::apache2::bindings::APLOG_ERR, $server_expr, $($arg)+)
     );
 }
 
@@ -10,7 +10,7 @@ macro_rules! error {
 #[macro_export(local_inner_macros_)]
 macro_rules! warn {
     ($server_expr:expr, $($arg:tt)+) => (
-        _log!(crate::apache2::bindings::APLOG_WARNING, $server_expr, $($arg)+)
+        _log!(crate::schema::apache2::bindings::APLOG_WARNING, $server_expr, $($arg)+)
     );
 }
 
@@ -18,7 +18,7 @@ macro_rules! warn {
 #[macro_export(local_inner_macros_)]
 macro_rules! info {
     ($server_expr:expr, $($arg:tt)+) => (
-        _log!(crate::apache2::bindings::APLOG_INFO, $server_expr, $($arg)+)
+        _log!(crate::schema::apache2::bindings::APLOG_INFO, $server_expr, $($arg)+)
     );
 }
 
@@ -26,7 +26,7 @@ macro_rules! info {
 #[macro_export(local_inner_macros_)]
 macro_rules! debug {
     ($server_expr:expr, $($arg:tt)+) => (
-        _log!(crate::apache2::bindings::APLOG_DEBUG, $server_expr, $($arg)+)
+        _log!(crate::schema::apache2::bindings::APLOG_DEBUG, $server_expr, $($arg)+)
     );
 }
 
@@ -34,7 +34,7 @@ macro_rules! debug {
 #[macro_export(local_inner_macros_)]
 macro_rules! trace {
     ($server_expr:expr, $($arg:tt)+) => (
-        _log!(crate::apache2::bindings::APLOG_TRACE1, $server_expr, $($arg)+)
+        _log!(crate::schema::apache2::bindings::APLOG_TRACE1, $server_expr, $($arg)+)
     );
 }
 
@@ -45,10 +45,10 @@ macro_rules! _log { (
     $($arg:tt)+) => {
         let msg = std::ffi::CString::new(format!($($arg)+)).unwrap();
         unsafe {
-            crate::apache2::bindings::ap_log_error_(
+            crate::schema::apache2::bindings::ap_log_error_(
                 cstr!(file!()),
                 line!() as std::os::raw::c_int,
-                crate::apache2::bindings::APLOG_NO_MODULE as std::os::raw::c_int,
+                crate::schema::apache2::bindings::APLOG_NO_MODULE as std::os::raw::c_int,
                 $level as std::os::raw::c_int,
                 -1,
                 $server_expr,
@@ -59,7 +59,7 @@ macro_rules! _log { (
 }
 
 #[cfg(test)]
-use crate::apache2::bindings::{ apr_initialize, apr_terminate, };
+use crate::schema::apache2::bindings::{ apr_initialize, apr_terminate, };
 
 #[cfg(test)]
 #[ctor::ctor]

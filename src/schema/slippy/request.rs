@@ -1,4 +1,4 @@
-use crate::apache2::bindings::{
+use crate::schema::apache2::bindings::{
     conn_rec, request_rec, server_rec,
 };
 

@@ -1,17 +1,9 @@
 #[macro_use]
-mod apache2 {
-    #[macro_use]
-    pub mod bindings;
-    #[macro_use]
-    pub mod logger;
-    pub mod connection;
-    pub mod memory;
-    pub mod request;
-    pub mod response;
-    pub mod virtual_host;
-}
 mod schema {
+    #[macro_use]
     pub mod apache2 {
+        #[macro_use]
+        pub mod bindings;
         pub mod error;
     }
     pub mod slippy {
@@ -27,6 +19,16 @@ mod schema {
     pub mod tile {
         pub mod config;
     }
+}
+#[macro_use]
+mod apache2 {
+    #[macro_use]
+    pub mod logger;
+    pub mod connection;
+    pub mod memory;
+    pub mod request;
+    pub mod response;
+    pub mod virtual_host;
 }
 mod interface {
     pub mod handler;
@@ -48,13 +50,13 @@ mod handler {
 mod tile_proxy;
 
 
-use crate::apache2::bindings::{
+use crate::schema::apache2::bindings::{
     HTTP_INTERNAL_SERVER_ERROR,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
     apr_pool_t, cmd_parms, module, request_rec, server_rec,
 };
 #[cfg(not(test))]
-use crate::apache2::bindings::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
+use crate::schema::apache2::bindings::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
 
 use crate::tile_proxy::TileProxy;
 

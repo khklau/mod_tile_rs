@@ -1,8 +1,4 @@
 use crate::analytics::statistics::ModuleStatistics;
-use crate::apache2::bindings::{
-    APR_BADARG, APR_SUCCESS, OK,
-    apr_status_t, request_rec, server_rec,
-};
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
@@ -11,6 +7,10 @@ use crate::handler::description::DescriptionHandler;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
+};
+use crate::schema::apache2::bindings::{
+    APR_BADARG, APR_SUCCESS, OK,
+    apr_status_t, request_rec, server_rec,
 };
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };

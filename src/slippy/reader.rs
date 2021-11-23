@@ -1,4 +1,4 @@
-use crate::apache2::bindings::get_module_name;
+use crate::schema::apache2::bindings::get_module_name;
 use crate::apache2::request::RequestContext;
 use crate::schema::slippy::error::{
     InvalidParameterError, ReadError

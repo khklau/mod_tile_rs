@@ -1,4 +1,4 @@
-use crate::apache2::bindings::{
+use crate::schema::apache2::bindings::{
     APR_SUCCESS,
     apr_palloc, apr_pool_userdata_get, apr_pool_userdata_set,
     apr_pool_t, apr_size_t, apr_status_t, memset,
@@ -85,7 +85,7 @@ pub fn access_pool_object<'t, T>(object_void: *mut c_void) -> Option<&'t mut T> 
 
 #[cfg(test)]
 pub mod test_utils {
-    use crate::apache2::bindings::{
+    use crate::schema::apache2::bindings::{
         APR_SUCCESS, apr_pool_create_ex, apr_pool_t, apr_pool_destroy,
     };
     use std::boxed::Box;
@@ -115,7 +115,7 @@ pub mod test_utils {
 #[cfg(test)]
 mod tests {
     use super::test_utils::with_pool;
-    use crate::apache2::bindings::APR_BADARG;
+    use crate::schema::apache2::bindings::APR_BADARG;
     use super::*;
 
     struct Counter {
