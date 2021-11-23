@@ -2,8 +2,8 @@ use crate::apache2::bindings::{
     apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::schema::apache2::error::InvalidRecordError;
 use crate::schema::tile::config::TileConfig;
 
 use std::any::type_name;

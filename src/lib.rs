@@ -5,13 +5,15 @@ mod apache2 {
     #[macro_use]
     pub mod logger;
     pub mod connection;
-    pub mod error;
     pub mod memory;
     pub mod request;
     pub mod response;
     pub mod virtual_host;
 }
 mod schema {
+    pub mod apache2 {
+        pub mod error;
+    }
     pub mod slippy {
         pub mod error;
         pub mod result;

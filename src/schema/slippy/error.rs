@@ -1,4 +1,4 @@
-use crate::apache2::error::ResponseWriteError;
+use crate::schema::apache2::error::ResponseWriteError;
 
 use std::convert::From;
 use std::error::Error;

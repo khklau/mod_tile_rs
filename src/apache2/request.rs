@@ -3,9 +3,9 @@ use crate::apache2::bindings::{
     apr_status_t, request_rec,
 };
 use crate::apache2::connection::ConnectionContext;
-use crate::apache2::error::InvalidRecordError;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
+use crate::schema::apache2::error::InvalidRecordError;
 use crate::schema::tile::config::TileConfig;
 
 use std::any::type_name;
