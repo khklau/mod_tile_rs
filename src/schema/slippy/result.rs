@@ -1,4 +1,4 @@
-use crate::apache2::response::HttpResponse;
+use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::request::Request;
 

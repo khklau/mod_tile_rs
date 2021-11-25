@@ -9,8 +9,7 @@ use crate::schema::apache2::bindings::{
 };
 use crate::schema::apache2::error::ResponseWriteError;
 
-use http::header::{ HeaderMap, HeaderName, HeaderValue, ToStrError, };
-use http::status::StatusCode;
+use http::header::{ HeaderName, HeaderValue, ToStrError, };
 use mime::Mime;
 
 #[cfg(not(test))]
@@ -18,13 +17,6 @@ use std::ffi::{ CString, c_void };
 use std::mem::size_of;
 use std::option::Option;
 
-
-#[derive(Debug)]
-pub struct HttpResponse {
-    pub status_code: StatusCode,
-    pub bytes_written: usize,
-    pub http_headers: HeaderMap,
-}
 
 pub struct ResponseContext<'r> {
     pub request: &'r mut RequestContext<'r>,

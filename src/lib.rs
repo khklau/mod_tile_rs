@@ -1,5 +1,11 @@
 #[macro_use]
 mod schema {
+    pub mod http {
+        pub mod response;
+    }
+    pub mod tile {
+        pub mod config;
+    }
     #[macro_use]
     pub mod apache2 {
         #[macro_use]
@@ -15,9 +21,6 @@ mod schema {
     pub mod handler {
         pub mod error;
         pub mod result;
-    }
-    pub mod tile {
-        pub mod config;
     }
 }
 #[macro_use]
