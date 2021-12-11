@@ -1,4 +1,3 @@
-use crate::analytics::statistics::ModuleStatistics;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
@@ -23,6 +22,7 @@ use crate::schema::tile::config::{ TileConfig, load };
 use crate::slippy::reader::SlippyRequestReader;
 use crate::slippy::writer::SlippyResponseWriter;
 use crate::storage::file_system;
+use crate::telemetry::metrics::response::ModuleStatistics;
 
 use std::any::type_name;
 use std::boxed::Box;

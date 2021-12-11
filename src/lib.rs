@@ -4,6 +4,7 @@ mod schema {
         pub mod response;
     }
     pub mod tile {
+        pub mod age;
         pub mod config;
     }
     #[macro_use]
@@ -34,6 +35,9 @@ mod apache2 {
     pub mod virtual_host;
 }
 mod interface {
+    pub mod telemetry {
+        pub mod metrics;
+    }
     pub mod handler;
     pub mod slippy;
 }
@@ -44,8 +48,10 @@ mod slippy {
 mod storage {
     pub mod file_system;
 }
-mod analytics {
-    pub mod statistics;
+mod telemetry{
+    pub mod metrics {
+        pub mod response;
+    }
 }
 mod handler {
     pub mod description;
