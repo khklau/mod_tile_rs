@@ -50,6 +50,8 @@ mod storage {
 }
 mod telemetry{
     pub mod metrics {
+        pub mod cache;
+        pub mod render;
         pub mod response;
     }
 }

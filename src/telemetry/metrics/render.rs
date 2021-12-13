@@ -10,9 +10,9 @@ use crate::schema::slippy::response::Response;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, };
 
 
-pub struct ResponseAnalysis {}
+pub struct RenderAnalysis {}
 
-impl ReadRequestObserver for ResponseAnalysis {
+impl ReadRequestObserver for RenderAnalysis {
     fn on_read(
         &mut self,
         _func: ReadRequestFunc,
@@ -22,7 +22,7 @@ impl ReadRequestObserver for ResponseAnalysis {
     }
 }
 
-impl HandleRequestObserver for ResponseAnalysis {
+impl HandleRequestObserver for RenderAnalysis {
     fn on_handle(
         &mut self,
         _obj: &dyn RequestHandler,
@@ -34,7 +34,7 @@ impl HandleRequestObserver for ResponseAnalysis {
 
 }
 
-impl WriteResponseObserver for ResponseAnalysis {
+impl WriteResponseObserver for RenderAnalysis {
     fn on_write(
         &mut self,
         _func: WriteResponseFunc,
