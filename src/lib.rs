@@ -54,6 +54,9 @@ mod telemetry{
         pub mod render;
         pub mod response;
     }
+    pub mod tracing {
+        pub mod transaction;
+    }
 }
 mod handler {
     pub mod description;

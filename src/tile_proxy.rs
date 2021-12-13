@@ -25,6 +25,7 @@ use crate::storage::file_system;
 use crate::telemetry::metrics::cache::CacheAnalysis;
 use crate::telemetry::metrics::render::RenderAnalysis;
 use crate::telemetry::metrics::response::ResponseAnalysis;
+use crate::telemetry::tracing::transaction::TransactionTrace;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -53,9 +54,10 @@ pub struct TileProxy<'p> {
     cache_analysis: CacheAnalysis,
     render_analysis: RenderAnalysis,
     response_analysis: ResponseAnalysis,
-    read_observers: Option<[&'p mut dyn ReadRequestObserver; 3]>,
+    trans_trace: TransactionTrace,
+    read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 3]>,
-    write_observers: Option<[&'p mut dyn WriteResponseObserver; 3]>,
+    write_observers: Option<[&'p mut dyn WriteResponseObserver; 2]>,
 }
 
 impl<'p> TileProxy<'p> {
@@ -109,6 +111,7 @@ impl<'p> TileProxy<'p> {
         new_server.cache_analysis = CacheAnalysis { };
         new_server.render_analysis = RenderAnalysis { };
         new_server.response_analysis = ResponseAnalysis { };
+        new_server.trans_trace = TransactionTrace { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
         new_server.write_observers = None;
@@ -166,10 +169,10 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> (ReadRequestResult, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
-        let mut read_observers: [&mut dyn ReadRequestObserver; 3] = match &mut self.read_observers {
+        let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
-            Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-            None => [&mut self.cache_analysis, &mut self.render_analysis, &mut self.response_analysis],
+            Some([observer_0]) => [*observer_0],
+            None => [&mut self.trans_trace],
         };
         let read = self.read_request;
         let context = RequestContext::find_or_create(record, &self.config).unwrap();
@@ -192,7 +195,7 @@ impl<'p> TileProxy<'p> {
         let mut handle_observers: [&mut dyn HandleRequestObserver; 3] = match &mut self.handle_observers {
             // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
             Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-            None => [&mut self.cache_analysis, &mut self.render_analysis, &mut self.response_analysis],
+            None => [&mut self.trans_trace, &mut self.cache_analysis, &mut self.render_analysis],
         };
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = RequestContext::find_or_create(record, &self.config).unwrap();
@@ -222,10 +225,10 @@ impl<'p> TileProxy<'p> {
         handle_result: HandleRequestResult,
     ) -> (WriteResponseResult, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
-        let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
+        let mut write_observers: [&mut dyn WriteResponseObserver; 2] = match &mut self.write_observers {
             // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
-            Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-            None => [&mut self.cache_analysis, &mut self.render_analysis, &mut self.response_analysis],
+            Some([observer_0, observer_1]) => [*observer_0, *observer_1],
+            None => [&mut self.trans_trace, &mut self.response_analysis],
         };
         let write = self.write_response;
         let request_context = RequestContext::find_or_create(record, &self.config).unwrap();
@@ -320,15 +323,9 @@ mod tests {
                 let mut mock1 = MockReadObserver {
                     count: 0,
                 };
-                let mut mock2 = MockReadObserver {
-                    count: 0,
-                };
-                let mut mock3 = MockReadObserver {
-                    count: 0,
-                };
                 let tile_config = TileConfig::new();
                 let proxy = TileProxy::create(server, tile_config).unwrap();
-                proxy.read_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
+                proxy.read_observers = Some([&mut mock1]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let (result, _) = proxy.read_request(request);
@@ -420,12 +417,9 @@ mod tests {
                 let mut mock2 = MockWriteObserver {
                     count: 0,
                 };
-                let mut mock3 = MockWriteObserver {
-                    count: 0,
-                };
                 let tile_config = TileConfig::new();
                 let proxy = TileProxy::create(server, tile_config).unwrap();
-                proxy.write_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
+                proxy.write_observers = Some([&mut mock1, &mut mock2]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
