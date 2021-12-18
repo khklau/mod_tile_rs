@@ -2,7 +2,7 @@ use std::any::type_name;
 use std::error::Error;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InvalidRecordError {
     pub record: String,
     pub address: usize,
@@ -30,7 +30,7 @@ impl fmt::Display for InvalidRecordError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResponseWriteError {
     pub error_code: i32,
 }

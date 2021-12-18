@@ -4,21 +4,22 @@ use std::convert::From;
 use std::error::Error;
 use std::fmt;
 use std::option::Option;
+use std::rc::Rc;
 use std::str::Utf8Error;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ReadError {
     Param(InvalidParameterError),
-    Io(std::io::Error),
+    Io(Rc<std::io::Error>),
     Utf8(Utf8Error),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum WriteError {
     RequestNotHandled, // FIXME: define the error type properly
     ResponseWrite(ResponseWriteError),
-    Io(std::io::Error),
+    Io(Rc<std::io::Error>),
     Utf8(Utf8Error),
 }
 
@@ -26,7 +27,7 @@ impl Error for ReadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             ReadError::Param(err) => return Some(err),
-            ReadError::Io(err) => return Some(err),
+            ReadError::Io(err) => return Some(&(**err)),
             ReadError::Utf8(err) => return Some(err),
         }
     }
@@ -44,7 +45,7 @@ impl fmt::Display for ReadError {
 
 impl From<std::io::Error> for ReadError {
     fn from(error: std::io::Error) -> Self {
-        return ReadError::Io(error);
+        return ReadError::Io(Rc::new(error));
     }
 }
 
@@ -59,7 +60,7 @@ impl Error for WriteError {
         match self {
             WriteError::RequestNotHandled => return None, // FIXME
             WriteError::ResponseWrite(err) => return Some(err),
-            WriteError::Io(err) => return Some(err),
+            WriteError::Io(err) => return Some(&(**err)),
             WriteError::Utf8(err) => return Some(err),
         }
     }
@@ -84,7 +85,7 @@ impl From<ResponseWriteError> for WriteError {
 
 impl From<std::io::Error> for WriteError {
     fn from(error: std::io::Error) -> Self {
-        return WriteError::Io(error);
+        return WriteError::Io(Rc::new(error));
     }
 }
 
@@ -94,7 +95,7 @@ impl From<Utf8Error> for WriteError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InvalidParameterError {
     pub param: String,
     pub value: String,
