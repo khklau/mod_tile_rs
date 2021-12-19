@@ -44,6 +44,8 @@ impl RenderdConfig {
     }
 }
 
+pub const MAX_ZOOM_SERVER: usize = 32;
+
 #[derive(Debug)]
 pub struct LayerConfig {
     pub name: String,

@@ -1,5 +1,6 @@
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::response::Response;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult };
 
@@ -22,7 +23,8 @@ pub trait WriteResponseObserver {
         &mut self,
         func: WriteResponseFunc,
         context: &ResponseContext,
-        response: &Response,
-        result: &WriteResponseResult,
+        read_result: &ReadRequestResult,
+        handle_result: &HandleRequestResult,
+        write_result: &WriteResponseResult,
     ) -> ();
 }

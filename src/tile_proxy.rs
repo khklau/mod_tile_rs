@@ -110,7 +110,7 @@ impl<'p> TileProxy<'p> {
         new_server.write_response = SlippyResponseWriter::write;
         new_server.cache_analysis = CacheAnalysis { };
         new_server.render_analysis = RenderAnalysis { };
-        new_server.response_analysis = ResponseAnalysis { };
+        new_server.response_analysis = ResponseAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
@@ -158,8 +158,8 @@ impl<'p> TileProxy<'p> {
     ) -> Result<c_int, ReadError> {
         debug!(record.server, "TileServer::handle_request - start");
         let (read_result, self2) = self.read_request(record);
-        let (handle_result, self3) = self2.call_handlers(record, read_result);
-        let (write_result, _) = self3.write_response(record, handle_result);
+        let (handle_result, self3) = self2.call_handlers(record, &read_result);
+        let (write_result, _) = self3.write_response(record, &read_result, &handle_result);
         debug!(record.server, "TileServer::handle_request - finish");
         return Ok(OK as c_int);
     }
@@ -188,7 +188,7 @@ impl<'p> TileProxy<'p> {
     fn call_handlers(
         &mut self,
         record: &mut request_rec,
-        read_result: ReadRequestResult,
+        read_result: &ReadRequestResult,
     ) -> (HandleRequestResult, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
         // TODO: combine the handlers using combinators
@@ -202,19 +202,16 @@ impl<'p> TileProxy<'p> {
         let handle_result = match read_result {
             Ok(outcome) => match outcome {
                 ReadOutcome::NotMatched => Ok(HandleOutcome::NotHandled),
-                ReadOutcome::Matched(request) => {
-                    let result = handler.handle(context, &request);
-                    for observer_iter in handle_observers.iter_mut() {
-                        debug!(context.get_host().record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                        (*observer_iter).on_handle(handler, context, &request, &result);
-                    }
-                    result
-                },
+                ReadOutcome::Matched(request) => handler.handle(context, &request),
             },
             Err(err) => {
-                Err(HandleError::RequestNotRead(err))
+                Err(HandleError::RequestNotRead((*err).clone()))
             },
         };
+        for observer_iter in handle_observers.iter_mut() {
+            debug!(context.get_host().record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+            (*observer_iter).on_handle(handler, context, &read_result, &handle_result);
+        }
         debug!(record.server, "TileServer::call_handlers - finish");
         return (handle_result, self);
     }
@@ -222,7 +219,8 @@ impl<'p> TileProxy<'p> {
     fn write_response(
         &mut self,
         record: &mut request_rec,
-        handle_result: HandleRequestResult,
+        read_result: &ReadRequestResult,
+        handle_result: &HandleRequestResult,
     ) -> (WriteResponseResult, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
         let mut write_observers: [&mut dyn WriteResponseObserver; 2] = match &mut self.write_observers {
@@ -236,22 +234,19 @@ impl<'p> TileProxy<'p> {
         let write_result = match handle_result {
             Ok(outcome) => match outcome {
                 HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
-                HandleOutcome::Handled(response) => {
-                    let result = write(&mut response_context, &response);
-                    for observer_iter in write_observers.iter_mut() {
-                        debug!(
-                            response_context.get_host().record,
-                            "TileServer::write_response - calling observer {:p}", *observer_iter
-                        );
-                        (*observer_iter).on_write(write, &response_context, &response, &result);
-                    }
-                    result
-                },
+                HandleOutcome::Handled(response) => write(&mut response_context, &response),
             },
             Err(_) => {
                 Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
             },
         };
+        for observer_iter in write_observers.iter_mut() {
+            debug!(
+                response_context.get_host().record,
+                "TileServer::write_response - calling observer {:p}", *observer_iter
+            );
+            (*observer_iter).on_write(write, &response_context, &read_result, &handle_result, &write_result);
+        }
         debug!(record.server, "TileServer::write_response - finish");
         return (write_result, self);
     }
@@ -345,8 +340,8 @@ mod tests {
             &mut self,
             _obj: &dyn RequestHandler,
             _context: &RequestContext,
-            _request: &request::Request,
-            _result: &HandleRequestResult
+            _read_result: &ReadRequestResult,
+            _handle_result: &HandleRequestResult
         ) -> () {
             self.count += 1;
         }
@@ -371,7 +366,7 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
-                let input: ReadRequestResult = Ok(
+                let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::Request {
                             header: request::Header::new(
@@ -383,7 +378,7 @@ mod tests {
                         }
                     )
                 );
-                let (result, _) = proxy.call_handlers(request, input);
+                let (result, _) = proxy.call_handlers(request, &read_result);
                 result.unwrap();
                 assert_eq!(1, mock1.count, "Handle observer not called");
                 Ok(())
@@ -400,8 +395,9 @@ mod tests {
             &mut self,
             _func: WriteResponseFunc,
             _context: &ResponseContext,
-            _response: &response::Response,
-            _result: &WriteResponseResult,
+            _read_result: &ReadRequestResult,
+            _handle_result: &HandleRequestResult,
+            _write_result: &WriteResponseResult,
         ) -> () {
             self.count += 1;
         }
@@ -423,7 +419,19 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
-                let input: HandleRequestResult = Ok(
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                context.record,
+                                context.connection.record,
+                                context.get_host().record,
+                            ),
+                            body: request::BodyVariant::ReportStatistics,
+                        }
+                    )
+                );
+                let handle_result: HandleRequestResult = Ok(
                     HandleOutcome::Handled(
                         response::Response {
                             header: response::Header::new(
@@ -447,7 +455,7 @@ mod tests {
                         }
                     )
                 );
-                let (result, _) = proxy.write_response(request, input);
+                let (result, _) = proxy.write_response(request, &read_result, &handle_result);
                 result.unwrap();
                 assert_eq!(1, mock1.count, "Write observer not called");
                 Ok(())

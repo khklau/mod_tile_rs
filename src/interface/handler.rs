@@ -1,6 +1,7 @@
 use crate::apache2::request::RequestContext;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request::Request;
+use crate::schema::slippy::result::ReadRequestResult;
 
 
 pub trait RequestHandler {
@@ -16,7 +17,7 @@ pub trait HandleRequestObserver {
         &mut self,
         obj: &dyn RequestHandler,
         context: &RequestContext,
-        request: &Request,
-        result: &HandleRequestResult,
+        read_result: &ReadRequestResult,
+        handle_result: &HandleRequestResult,
     ) -> ();
 }
