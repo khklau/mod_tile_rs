@@ -44,7 +44,7 @@ impl RenderdConfig {
     }
 }
 
-pub const MAX_ZOOM_SERVER: usize = 32;
+pub const MAX_ZOOM_SERVER: usize = 31;
 
 #[derive(Debug)]
 pub struct LayerConfig {
