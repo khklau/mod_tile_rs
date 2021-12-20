@@ -7,7 +7,7 @@ use crate::schema::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
-use crate::schema::tile::config::LayerConfig;
+use crate::schema::tile::config::{ LayerConfig, MAX_ZOOM_SERVER };
 
 use scan_fmt::scan_fmt;
 
@@ -171,24 +171,34 @@ impl ServeTileV3RequestParser {
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
                 info!(context.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
-                return Ok(ReadOutcome::Matched(Request {
-                    header: Header::new_with_layer(
-                        context.record,
-                        context.connection.record,
-                        context.get_host().record,
-                        &(layer_config.name),
-                    ),
-                    body: BodyVariant::ServeTileV3(
-                        ServeTileRequestV3 {
-                            parameter,
-                            x,
-                            y,
-                            z,
-                            extension,
-                            option: Some(option)
+                if z <= MAX_ZOOM_SERVER as u32 {
+                    return Ok(ReadOutcome::Matched(Request {
+                        header: Header::new_with_layer(
+                            context.record,
+                            context.connection.record,
+                            context.get_host().record,
+                            &(layer_config.name),
+                        ),
+                        body: BodyVariant::ServeTileV3(
+                            ServeTileRequestV3 {
+                                parameter,
+                                x,
+                                y,
+                                z,
+                                extension,
+                                option: Some(option)
+                            }
+                        ),
+                    }));
+                } else {
+                    return Err(ReadError::Param(
+                        InvalidParameterError {
+                            param: String::from("z"),
+                            value: request_url.to_string(),
+                            reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                         }
-                    ),
-                }));
+                    ));
+                }
             },
             Err(_) => ()
         }
@@ -201,24 +211,34 @@ impl ServeTileV3RequestParser {
         ) {
             Ok((parameter, x, y, z, extension)) => {
                 info!(context.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
-                return Ok(ReadOutcome::Matched(Request {
-                    header: Header::new_with_layer(
-                        context.record,
-                        context.connection.record,
-                        context.get_host().record,
-                        &(layer_config.name),
-                    ),
-                    body: BodyVariant::ServeTileV3(
-                        ServeTileRequestV3 {
-                            parameter,
-                            x,
-                            y,
-                            z,
-                            extension,
-                            option: None,
+                if z <= MAX_ZOOM_SERVER as u32 {
+                    return Ok(ReadOutcome::Matched(Request {
+                        header: Header::new_with_layer(
+                            context.record,
+                            context.connection.record,
+                            context.get_host().record,
+                            &(layer_config.name),
+                        ),
+                        body: BodyVariant::ServeTileV3(
+                            ServeTileRequestV3 {
+                                parameter,
+                                x,
+                                y,
+                                z,
+                                extension,
+                                option: None,
+                            }
+                        ),
+                    }));
+                } else {
+                    return Err(ReadError::Param(
+                        InvalidParameterError {
+                            param: String::from("z"),
+                            value: request_url.to_string(),
+                            reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                         }
-                    ),
-                }));
+                    ));
+                }
             },
             Err(_) => ()
         }
@@ -243,24 +263,34 @@ impl ServeTileV2RequestParser {
         i32, i32, u32, String, String
     ) {
         Ok((x, y, z, extension, option)) => {
-            info!(context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
-            return Ok(ReadOutcome::Matched(Request {
-                header: Header::new_with_layer(
-                    context.record,
-                    context.connection.record,
-                    context.get_host().record,
-                    &(layer_config.name),
-                ),
-                body: BodyVariant::ServeTileV2(
-                    ServeTileRequestV2 {
-                        x,
-                        y,
-                        z,
-                        extension,
-                        option: Some(option),
+            if z <= MAX_ZOOM_SERVER as u32 {
+                info!(context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
+                return Ok(ReadOutcome::Matched(Request {
+                    header: Header::new_with_layer(
+                        context.record,
+                        context.connection.record,
+                        context.get_host().record,
+                        &(layer_config.name),
+                    ),
+                    body: BodyVariant::ServeTileV2(
+                        ServeTileRequestV2 {
+                            x,
+                            y,
+                            z,
+                            extension,
+                            option: Some(option),
+                        }
+                    ),
+                }));
+            } else {
+                return Err(ReadError::Param(
+                    InvalidParameterError {
+                        param: String::from("z"),
+                        value: request_url.to_string(),
+                        reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                     }
-                ),
-            }));
+                ));
+            }
         },
         Err(_) => ()
     }
@@ -272,24 +302,34 @@ impl ServeTileV2RequestParser {
         i32, i32, u32, String
     ) {
         Ok((x, y, z, extension)) => {
-            info!(context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
-            return Ok(ReadOutcome::Matched(Request {
-                header: Header::new_with_layer(
-                    context.record,
-                    context.connection.record,
-                    context.get_host().record,
-                    &(layer_config.name),
-                ),
-                body: BodyVariant::ServeTileV2(
-                    ServeTileRequestV2 {
-                        x,
-                        y,
-                        z,
-                        extension,
-                        option: None,
+            if z <= MAX_ZOOM_SERVER as u32 {
+                info!(context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
+                return Ok(ReadOutcome::Matched(Request {
+                    header: Header::new_with_layer(
+                        context.record,
+                        context.connection.record,
+                        context.get_host().record,
+                        &(layer_config.name),
+                    ),
+                    body: BodyVariant::ServeTileV2(
+                        ServeTileRequestV2 {
+                            x,
+                            y,
+                            z,
+                            extension,
+                            option: None,
+                        }
+                    )
+                }));
+            } else {
+                return Err(ReadError::Param(
+                    InvalidParameterError {
+                        param: String::from("z"),
+                        value: request_url.to_string(),
+                        reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                     }
-                )
-            }));
+                ));
+            }
         },
         Err(_) => ()
     }
@@ -389,6 +429,30 @@ mod tests {
                 ),
             };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v3_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let layer_name = "default";
+            let mut tile_config = TileConfig::new();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            layer_config.parameters_allowed = true;
+            let uri = CString::new(format!("{}/foo/7/8/999.png/bar", layer_config.base_url))?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let request_url = context.uri;
+
+            match SlippyRequestParser::parse(context, request_url).unwrap_err() {
+                ReadError::Param(err) => {
+                    assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
+                },
+                _ => {
+                    panic!("Expected InvalidParameterError in result");
+                }
+            }
             Ok(())
         })
     }
@@ -498,6 +562,29 @@ mod tests {
                 ),
             };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parse_serve_tile_v2_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|record| {
+            let layer_name = "default";
+            let mut tile_config = TileConfig::new();
+            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let uri = CString::new(format!("{}/1/2/999.jpg/blah", layer_config.base_url))?;
+            record.uri = uri.into_raw();
+            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let request_url = context.uri;
+
+            match SlippyRequestParser::parse(context, request_url).unwrap_err() {
+                ReadError::Param(err) => {
+                    assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
+                },
+                _ => {
+                    panic!("Expected InvalidParameterError in result");
+                }
+            }
             Ok(())
         })
     }

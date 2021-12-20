@@ -2,7 +2,10 @@ use crate::apache2::response::ResponseContext;
 use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request;
-use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, WriteOutcome, ReadOutcome };
+use crate::schema::slippy::result::{
+    ReadRequestResult, ReadOutcome,
+    WriteResponseResult, WriteOutcome,
+};
 use crate::schema::tile::config::MAX_ZOOM_SERVER;
 
 use http::status::StatusCode;
