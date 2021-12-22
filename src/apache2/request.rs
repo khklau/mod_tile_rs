@@ -9,6 +9,8 @@ use crate::schema::apache2::bindings::{
 use crate::schema::apache2::error::InvalidRecordError;
 use crate::schema::tile::config::TileConfig;
 
+use snowflake::SnowflakeIdGenerator;
+
 use std::any::type_name;
 use std::boxed::Box;
 use std::error::Error;
@@ -21,12 +23,13 @@ use std::result::Result;
 pub struct RequestContext<'r> {
     pub record: &'r mut request_rec,
     pub connection: &'r mut ConnectionContext<'r>,
+    pub request_id: i64,
     pub uri: &'r str,
 }
 
 impl<'r> RequestContext<'r> {
 
-    pub fn get_id(record: &request_rec) -> CString {
+    pub fn get_context_id(record: &request_rec) -> CString {
         let id = CString::new(format!(
             "{}@{:p}",
             type_name::<Self>(),
@@ -61,7 +64,7 @@ impl<'r> RequestContext<'r> {
         }
         let context = match retrieve(
             unsafe { &mut *(record.pool) },
-            &(Self::get_id(record))
+            &(Self::get_context_id(record))
         ) {
             Some(existing_context) => existing_context,
             None => {
@@ -95,11 +98,13 @@ impl<'r> RequestContext<'r> {
         info!(conn_context.host.record, "RequestContext::create - start");
         let new_context = alloc::<RequestContext<'r>>(
             record_pool,
-            &(Self::get_id(record)),
+            &(Self::get_context_id(record)),
             Some(drop_request_context),
         )?.0;
         new_context.record = record;
         new_context.connection = conn_context;
+        let mut generator = SnowflakeIdGenerator::new(1, 1);
+        new_context.request_id = generator.real_time_generate();
         new_context.uri = uri;
         info!(new_context.connection.host.record, "RequestContext::create - finish");
         return Ok(new_context);
