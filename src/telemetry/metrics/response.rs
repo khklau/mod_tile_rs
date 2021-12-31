@@ -86,7 +86,7 @@ impl WriteResponseObserver for ResponseAnalysis {
         handle_result: &HandleRequestResult,
         write_result: &WriteResponseResult,
     ) -> () {
-        match (read_result, handle_result) {
+        match (read_result, &handle_result.result) {
             (Ok(read_outcome), Ok(handle_outcome)) => match (read_outcome, handle_outcome) {
                 (ReadOutcome::Matched(request), HandleOutcome::Handled(response)) => match response.body {
                     response::BodyVariant::Tile => self.on_handled_tile(context, request, response),
@@ -119,6 +119,7 @@ mod tests {
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
     use crate::schema::tile::config::TileConfig;
+    use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
     use std::error::Error;
@@ -159,19 +160,23 @@ mod tests {
                     }
                 )
             );
-            let handle_result: HandleRequestResult = Ok(
-                HandleOutcome::Handled(
-                    response::Response {
-                        header: response::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                            &mime::APPLICATION_JSON,
-                        ),
-                        body: response::BodyVariant::Tile,
-                    }
-                )
-            );
+            let handle_result = HandleRequestResult {
+                before_timestamp: Utc::now(),
+                after_timestamp: Utc::now(),
+                result: Ok(
+                    HandleOutcome::Handled(
+                        response::Response {
+                            header: response::Header::new(
+                                request_context.record,
+                                request_context.connection.record,
+                                request_context.get_host().record,
+                                &mime::APPLICATION_JSON,
+                            ),
+                            body: response::BodyVariant::Tile,
+                        }
+                    )
+                ),
+            };
             let write_result: WriteResponseResult = Ok(
                 WriteOutcome::Written(
                     HttpResponse {
@@ -235,19 +240,23 @@ mod tests {
                     }
                 )
             );
-            let handle_result: HandleRequestResult = Ok(
-                HandleOutcome::Handled(
-                    response::Response {
-                        header: response::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                            &mime::APPLICATION_JSON,
-                        ),
-                        body: response::BodyVariant::Tile,
-                    }
+            let handle_result = HandleRequestResult {
+                before_timestamp: Utc::now(),
+                after_timestamp: Utc::now(),
+                result: Ok(
+                    HandleOutcome::Handled(
+                        response::Response {
+                            header: response::Header::new(
+                                request_context.record,
+                                request_context.connection.record,
+                                request_context.get_host().record,
+                                &mime::APPLICATION_JSON,
+                            ),
+                            body: response::BodyVariant::Tile,
+                        }
+                    )
                 )
-            );
+            };
             let write_result: WriteResponseResult = Ok(
                 WriteOutcome::Written(
                     HttpResponse {
@@ -303,30 +312,34 @@ mod tests {
                     }
                 )
             );
-            let handle_result: HandleRequestResult = Ok(
-                HandleOutcome::Handled(
-                    response::Response {
-                        header: response::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                            &mime::APPLICATION_JSON,
-                        ),
-                        body: response::BodyVariant::Description(
-                            response::Description {
-                                tilejson: "2.0.0",
-                                schema: "xyz",
-                                name: String::new(),
-                                description: String::new(),
-                                attribution: String::new(),
-                                minzoom: 0,
-                                maxzoom: 1,
-                                tiles: Vec::new(),
-                            }
-                        ),
-                    }
-                )
-            );
+            let handle_result = HandleRequestResult {
+                before_timestamp: Utc::now(),
+                after_timestamp: Utc::now(),
+                result: Ok(
+                    HandleOutcome::Handled(
+                        response::Response {
+                            header: response::Header::new(
+                                request_context.record,
+                                request_context.connection.record,
+                                request_context.get_host().record,
+                                &mime::APPLICATION_JSON,
+                            ),
+                            body: response::BodyVariant::Description(
+                                response::Description {
+                                    tilejson: "2.0.0",
+                                    schema: "xyz",
+                                    name: String::new(),
+                                    description: String::new(),
+                                    attribution: String::new(),
+                                    minzoom: 0,
+                                    maxzoom: 1,
+                                    tiles: Vec::new(),
+                                }
+                            ),
+                        }
+                    )
+                ),
+            };
             let write_result: WriteResponseResult = Ok(
                 WriteOutcome::Written(
                     HttpResponse {
@@ -380,19 +393,23 @@ mod tests {
                     }
                 )
             );
-            let handle_result: HandleRequestResult = Ok(
-                HandleOutcome::Handled(
-                    response::Response {
-                        header: response::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                            &mime::APPLICATION_JSON,
-                        ),
-                        body: response::BodyVariant::Tile,
-                    }
-                )
-            );
+            let handle_result = HandleRequestResult {
+                before_timestamp: Utc::now(),
+                after_timestamp: Utc::now(),
+                result: Ok(
+                    HandleOutcome::Handled(
+                        response::Response {
+                            header: response::Header::new(
+                                request_context.record,
+                                request_context.connection.record,
+                                request_context.get_host().record,
+                                &mime::APPLICATION_JSON,
+                            ),
+                            body: response::BodyVariant::Tile,
+                        }
+                    )
+                ),
+            };
             let write_result: WriteResponseResult = Ok(
                 WriteOutcome::Written(
                     HttpResponse {

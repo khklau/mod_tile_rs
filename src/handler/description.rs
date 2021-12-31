@@ -5,6 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::config::TileConfig;
 
+use chrono::Utc;
 use mime;
 
 use std::string::String;
@@ -17,10 +18,15 @@ impl RequestHandler for DescriptionHandler {
         context: &RequestContext,
         request: &request::Request,
     ) -> HandleRequestResult {
+        let before_timestamp = Utc::now();
         let layer = match request.body {
             request::BodyVariant::DescribeLayer => &request.header.layer,
             _ => {
-                return Ok(HandleOutcome::NotHandled);
+                return HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp: Utc::now(),
+                    result: Ok(HandleOutcome::NotHandled),
+                }
             },
         };
         let description = describe(context.get_config(), layer);
@@ -33,7 +39,12 @@ impl RequestHandler for DescriptionHandler {
             ),
             body: response::BodyVariant::Description(description),
         };
-        Ok(HandleOutcome::Handled(response))
+        let after_timestamp = Utc::now();
+        return HandleRequestResult {
+            before_timestamp,
+            after_timestamp,
+            result: Ok(HandleOutcome::Handled(response)),
+        };
     }
 }
 
@@ -90,7 +101,7 @@ mod tests {
                 body: request::BodyVariant::ReportStatistics,
             };
 
-            assert!(layer_handler.handle(context, &request)?.is_not_handled(), "Expected to not handle");
+            assert!(layer_handler.handle(context, &request).result?.is_not_handled(), "Expected to not handle");
             Ok(())
         })
     }
@@ -115,7 +126,7 @@ mod tests {
                 body: request::BodyVariant::DescribeLayer,
             };
 
-            let actual_response = layer_handler.handle(context, &request)?.expect_handled();
+            let actual_response = layer_handler.handle(context, &request).result?.expect_handled();
             let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",

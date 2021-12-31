@@ -1,6 +1,8 @@
 use crate::schema::handler::error::HandleError;
 use crate::schema::slippy::response::Response;
 
+use chrono::{ DateTime, Utc, };
+
 
 #[derive(Debug)]
 pub enum HandleOutcome {
@@ -27,4 +29,8 @@ impl HandleOutcome {
     }
 }
 
-pub type HandleRequestResult = Result<HandleOutcome, HandleError>;
+pub struct HandleRequestResult {
+    pub before_timestamp: DateTime<Utc>,
+    pub after_timestamp: DateTime<Utc>,
+    pub result: Result<HandleOutcome, HandleError>,
+}

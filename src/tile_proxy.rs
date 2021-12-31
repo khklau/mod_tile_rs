@@ -27,6 +27,8 @@ use crate::telemetry::metrics::render::RenderAnalysis;
 use crate::telemetry::metrics::response::ResponseAnalysis;
 use crate::telemetry::tracing::transaction::TransactionTrace;
 
+use chrono::Utc;
+
 use std::any::type_name;
 use std::boxed::Box;
 use std::error::Error;
@@ -201,11 +203,17 @@ impl<'p> TileProxy<'p> {
         let context = RequestContext::find_or_create(record, &self.config).unwrap();
         let handle_result = match read_result {
             Ok(outcome) => match outcome {
-                ReadOutcome::NotMatched => Ok(HandleOutcome::NotHandled),
+                ReadOutcome::NotMatched => HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(HandleOutcome::NotHandled),
+                },
                 ReadOutcome::Matched(request) => handler.handle(context, &request),
             },
-            Err(err) => {
-                Err(HandleError::RequestNotRead((*err).clone()))
+            Err(err) => HandleRequestResult {
+                before_timestamp: Utc::now(),
+                after_timestamp: Utc::now(),
+                result: Err(HandleError::RequestNotRead((*err).clone())),
             },
         };
         for observer_iter in handle_observers.iter_mut() {
@@ -231,7 +239,7 @@ impl<'p> TileProxy<'p> {
         let write = self.write_response;
         let request_context = RequestContext::find_or_create(record, &self.config).unwrap();
         let mut response_context = ResponseContext::from(request_context);
-        let write_result = match handle_result {
+        let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {
                 HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
                 HandleOutcome::Handled(response) => write(&mut response_context, &response),
@@ -273,6 +281,7 @@ mod tests {
     use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
+    use chrono::Utc;
 
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
@@ -378,8 +387,8 @@ mod tests {
                         }
                     )
                 );
-                let (result, _) = proxy.call_handlers(request, &read_result);
-                result.unwrap();
+                let (handle_result, _) = proxy.call_handlers(request, &read_result);
+                handle_result.result.unwrap();
                 assert_eq!(1, mock1.count, "Handle observer not called");
                 Ok(())
             })
@@ -431,30 +440,34 @@ mod tests {
                         }
                     )
                 );
-                let handle_result: HandleRequestResult = Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                context.record,
-                                context.connection.record,
-                                context.get_host().record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Description(
-                                response::Description {
-                                    tilejson: "2.0.0",
-                                    schema: "xyz",
-                                    name: String::new(),
-                                    description: String::new(),
-                                    attribution: String::new(),
-                                    minzoom: 0,
-                                    maxzoom: 1,
-                                    tiles: Vec::new(),
-                                }
-                            ),
-                        }
-                    )
-                );
+                let handle_result = HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    context.record,
+                                    context.connection.record,
+                                    context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Description(
+                                    response::Description {
+                                        tilejson: "2.0.0",
+                                        schema: "xyz",
+                                        name: String::new(),
+                                        description: String::new(),
+                                        attribution: String::new(),
+                                        minzoom: 0,
+                                        maxzoom: 1,
+                                        tiles: Vec::new(),
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
                 let (result, _) = proxy.write_response(request, &read_result, &handle_result);
                 result.unwrap();
                 assert_eq!(1, mock1.count, "Write observer not called");
