@@ -1,6 +1,8 @@
 use crate::schema::apache2::bindings::{
     conn_rec, request_rec, server_rec,
 };
+use crate::schema::tile::age::TileAge;
+use crate::schema::tile::source::TileSource;
 
 use mime::Mime;
 use serde::Serialize;
@@ -42,10 +44,10 @@ impl Header {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum BodyVariant {
     Description(Description),
-    Tile,
+    Tile(TileResponse),
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -81,4 +83,10 @@ pub struct Statistics {
     pub duration_tile_buffer_read_zoom: Vec<u64>,
     pub number_response_200_by_layer: HashMap<String, u64>,
     pub number_response_400_by_layer: HashMap<String, u64>,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct TileResponse {
+    pub source: TileSource,
+    pub age: TileAge,
 }

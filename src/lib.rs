@@ -6,6 +6,7 @@ mod schema {
     pub mod tile {
         pub mod age;
         pub mod config;
+        pub mod source;
     }
     #[macro_use]
     pub mod apache2 {

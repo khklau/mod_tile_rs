@@ -1,4 +1,4 @@
-use crate::schema::tile::age::Age;
+use crate::schema::tile::age::TileAge;
 
 use http::status::StatusCode;
 
@@ -19,10 +19,10 @@ pub trait ResponseMetrics {
 }
 
 pub trait CacheMetrics {
-    fn count_tile_cache_hit_by_age(self, age: &Age) -> u64;
+    fn count_tile_cache_hit_by_age(self, age: &TileAge) -> u64;
 }
 
 pub trait RenderMetrics {
-    fn count_tile_renders_by_age(self, age: &Age) -> u64;
+    fn count_tile_renders_by_age(self, age: &TileAge) -> u64;
 }
 

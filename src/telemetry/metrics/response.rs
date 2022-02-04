@@ -117,7 +117,7 @@ impl WriteResponseObserver for ResponseAnalysis {
         match (read_result, &handle_result.result) {
             (Ok(read_outcome), Ok(handle_outcome)) => match (read_outcome, handle_outcome) {
                 (ReadOutcome::Matched(request), HandleOutcome::Handled(response)) => match response.body {
-                    response::BodyVariant::Tile => self.on_tile_write(context, request, response),
+                    response::BodyVariant::Tile(_) => self.on_tile_write(context, request, response),
                     _ => (),
                 },
                 _ => (),
@@ -146,7 +146,7 @@ impl HandleRequestObserver for ResponseAnalysis {
         match (read_result, &handle_result.result) {
             (Ok(read_outcome), Ok(handle_outcome)) => match (read_outcome, handle_outcome) {
                 (ReadOutcome::Matched(request), HandleOutcome::Handled(response)) => match response.body {
-                    response::BodyVariant::Tile => self.on_handled_tile(context, request, response, &handle_duration),
+                    response::BodyVariant::Tile(_) => self.on_handled_tile(context, request, response, &handle_duration),
                     _ => (),
                 },
                 _ => (),
@@ -168,7 +168,9 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
+    use crate::schema::tile::age::TileAge;
     use crate::schema::tile::config::TileConfig;
+    use crate::schema::tile::source::TileSource;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -240,7 +242,12 @@ mod tests {
                                 request_context.get_host().record,
                                 &mime::APPLICATION_JSON,
                             ),
-                            body: response::BodyVariant::Tile,
+                            body: response::BodyVariant::Tile(
+                                response::TileResponse {
+                                    source: TileSource::Render,
+                                    age: TileAge::Fresh,
+                                }
+                            ),
                         }
                     )
                 ),
@@ -360,7 +367,12 @@ mod tests {
                                 request_context.get_host().record,
                                 &mime::APPLICATION_JSON,
                             ),
-                            body: response::BodyVariant::Tile,
+                            body: response::BodyVariant::Tile(
+                                response::TileResponse {
+                                    source: TileSource::Render,
+                                    age: TileAge::Fresh,
+                                }
+                            ),
                         }
                     )
                 ),
@@ -416,7 +428,12 @@ mod tests {
                                 request_context.get_host().record,
                                 &mime::APPLICATION_JSON,
                             ),
-                            body: response::BodyVariant::Tile,
+                            body: response::BodyVariant::Tile(
+                                response::TileResponse {
+                                    source: TileSource::Render,
+                                    age: TileAge::Fresh,
+                                }
+                            ),
                         }
                     )
                 ),
@@ -496,7 +513,12 @@ mod tests {
                                 request_context.get_host().record,
                                 &mime::APPLICATION_JSON,
                             ),
-                            body: response::BodyVariant::Tile,
+                            body: response::BodyVariant::Tile(
+                                response::TileResponse {
+                                    source: TileSource::Render,
+                                    age: TileAge::Fresh,
+                                }
+                            ),
                         }
                     )
                 )
@@ -649,7 +671,12 @@ mod tests {
                                 request_context.get_host().record,
                                 &mime::APPLICATION_JSON,
                             ),
-                            body: response::BodyVariant::Tile,
+                            body: response::BodyVariant::Tile(
+                                response::TileResponse {
+                                    source: TileSource::Render,
+                                    age: TileAge::Fresh,
+                                }
+                            ),
                         }
                     )
                 ),

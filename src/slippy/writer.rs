@@ -19,7 +19,7 @@ impl SlippyResponseWriter {
             BodyVariant::Description(descr) => {
                 return DescriptionWriter::write(context, &response.header, descr);
             },
-            BodyVariant::Tile => {
+            BodyVariant::Tile(_) => {
                 return Ok(
                     WriteOutcome::NotWritten
                 )
