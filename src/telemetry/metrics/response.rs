@@ -2,6 +2,9 @@ use crate::apache2::response::ResponseContext;
 use crate::apache2::request::RequestContext;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
 use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
+use crate::interface::telemetry::metrics::{
+    CacheMetrics, RenderMetrics, ResponseMetrics
+};
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
@@ -18,15 +21,16 @@ use chrono::Duration;
 use http::status::StatusCode;
 
 use std::collections::hash_map::HashMap;
+use std::slice::Iter;
 use std::vec::Vec;
 use core::default::Default;
 
 
 pub struct ResponseAnalysis {
-    response_count_by_status_and_zoom: HashMap<StatusCode, Vec<u32>>,
-    tile_reponse_count_by_zoom: Vec<u32>,
+    response_count_by_status_and_zoom: HashMap<StatusCode, Vec<u64>>,
+    tile_reponse_count_by_zoom: Vec<u64>,
     tile_handle_duration_by_zoom: Vec<Duration>,
-    tile_handle_count_by_source_and_age: TileMetricTable<u32>,
+    tile_handle_count_by_source_and_age: TileMetricTable<u64>,
 }
 
 impl ResponseAnalysis {
@@ -188,6 +192,76 @@ impl HandleRequestObserver for ResponseAnalysis {
     }
 }
 
+impl ResponseMetrics for ResponseAnalysis {
+    fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64 {
+        if self.response_count_by_status_and_zoom.contains_key(status_code) {
+            self.response_count_by_status_and_zoom[status_code].iter().sum()
+        } else {
+            0
+        }
+    }
+
+    fn count_response_by_zoom_level(&self, zoom: u32) -> u64 {
+        let mut total = 0;
+        for counts_by_zoom in self.response_count_by_status_and_zoom.values() {
+            if counts_by_zoom.len() > (zoom as usize) {
+                total += counts_by_zoom[zoom as usize];
+            }
+        }
+        return total;
+    }
+
+    fn count_response_by_status_code_and_zoom_level(&self, status_code: &StatusCode, zoom: u32) -> u64 {
+        if self.response_count_by_status_and_zoom.contains_key(status_code) {
+            let counts_by_zoom = &(self.response_count_by_status_and_zoom[status_code]);
+            if counts_by_zoom.len() > (zoom as usize) {
+                return counts_by_zoom[zoom as usize];
+            }
+        }
+        return 0;
+    }
+
+    fn count_total_tile_response(&self) -> u64 {
+        self.tile_handle_count_by_source_and_age.iter().sum()
+    }
+
+    fn tally_total_tile_response_duration(&self) -> u64 {
+        let total_duration = self.tile_handle_duration_by_zoom.iter().fold(
+            Duration::zero(),
+            |acc, duration| acc + *duration
+        );
+        return total_duration.num_seconds() as u64
+    }
+
+    fn count_tile_response_by_zoom_level(&self, zoom: u32) -> u64 {
+        if self.tile_reponse_count_by_zoom.len() > (zoom as usize) {
+            self.tile_reponse_count_by_zoom[zoom as usize]
+        } else {
+            0
+        }
+    }
+
+    fn tally_tile_response_duration_by_zoom_level(&self, zoom: u32) -> u64 {
+        if self.tile_handle_duration_by_zoom.len() > (zoom as usize) {
+            self.tile_handle_duration_by_zoom[zoom as usize].num_seconds() as u64
+        } else {
+            0
+        }
+    }
+}
+
+impl CacheMetrics for ResponseAnalysis {
+    fn count_tile_cache_hit_by_age(&self, age: &TileAge) -> u64 {
+        *(self.tile_handle_count_by_source_and_age.read(&TileSource::Cache, age))
+    }
+}
+
+impl RenderMetrics for ResponseAnalysis {
+    fn count_tile_renders_by_age(&self, age: &TileAge) -> u64 {
+        *(self.tile_handle_count_by_source_and_age.read(&TileSource::Render, age))
+    }
+}
+
 struct TileMetricTable<T>
 where T: Default,
 {
@@ -207,6 +281,10 @@ impl<T: Default> TileMetricTable<T> {
 
     fn read(&self, source: &TileSource, age: &TileAge) -> &T {
         &(self.table[Self::index(source, age)])
+    }
+
+    fn iter(&self) -> Iter<'_, T> {
+        self.table.iter()
     }
 
     fn update(&mut self, source: &TileSource, age: &TileAge) -> &mut T {
@@ -312,13 +390,13 @@ mod tests {
             let mut analysis = ResponseAnalysis::new();
             analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
             assert_eq!(
-                Duration::seconds(2),
-                analysis.tile_handle_duration_by_zoom[3],
+                Duration::seconds(2).num_seconds() as u64,
+                analysis.tally_tile_response_duration_by_zoom_level(3),
                 "Handle duration not accrued"
             );
             assert_eq!(
-                Duration::zero(),
-                analysis.tile_handle_duration_by_zoom[2],
+                Duration::zero().num_seconds() as u64,
+                analysis.tally_tile_response_duration_by_zoom_level(2),
                 "Handle duration does not default to 0"
             );
             Ok(())
@@ -344,9 +422,11 @@ mod tests {
                     }
                 )
             );
+            let before_timestamp = Utc::now();
+            let after_timestamp = before_timestamp + Duration::seconds(3);
             let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
+                before_timestamp,
+                after_timestamp,
                 result: Ok(
                     HandleOutcome::Handled(
                         response::Response {
@@ -375,11 +455,11 @@ mod tests {
             let mock_handler = MockHandler { };
             let mut analysis = ResponseAnalysis::new();
             analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            let total_duration = analysis.tile_handle_duration_by_zoom.iter().fold(
-                Duration::zero(),
-                |acc, duration| acc + *duration
+            assert_eq!(
+                0,
+                analysis.tally_total_tile_response_duration(),
+                "Tile handle duration accrued on layer description handle"
             );
-            assert_eq!(Duration::zero(), total_duration, "Tile handle duration accrued on layer description handle");
             Ok(())
         })
     }
@@ -436,8 +516,9 @@ mod tests {
             let mock_handler = MockHandler { };
             let mut analysis = ResponseAnalysis::new();
             analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            assert!(
-                analysis.tile_handle_duration_by_zoom.get(MAX_ZOOM_SERVER + 1).is_none(),
+            assert_eq!(
+                0,
+                analysis.tally_total_tile_response_duration(),
                 "An accrued duration exists for invalid zoom level"
             );
             Ok(())
@@ -508,22 +589,22 @@ mod tests {
             analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
             assert_eq!(
                 1,
-                analysis.response_count_by_status_and_zoom[&StatusCode::OK][3],
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
                 "Response count not updated"
             );
             assert_eq!(
                 0,
-                analysis.response_count_by_status_and_zoom[&StatusCode::OK][2],
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 2),
                 "Response count does not default to 0"
             );
             assert_eq!(
                 1,
-                analysis.tile_reponse_count_by_zoom[3],
+                analysis.count_tile_response_by_zoom_level(3),
                 "Tile count not updated"
             );
             assert_eq!(
                 0,
-                analysis.tile_reponse_count_by_zoom[2],
+                analysis.count_tile_response_by_zoom_level(2),
                 "Tile count does not default to 0"
             );
             Ok(())
@@ -587,12 +668,12 @@ mod tests {
             analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
             assert_eq!(
                 0,
-                *(analysis.tile_handle_count_by_source_and_age.read(&TileSource::Cache, &TileAge::Old)),
+                analysis.count_tile_cache_hit_by_age(&TileAge::Old),
                 "Tile handle count does not default to 0"
             );
             assert_eq!(
                 1,
-                *(analysis.tile_handle_count_by_source_and_age.read(&TileSource::Render, &TileAge::Fresh)),
+                analysis.count_tile_renders_by_age(&TileAge::Fresh),
                 "Tile handle count not incremented"
             );
             Ok(())
@@ -656,12 +737,12 @@ mod tests {
             analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
             assert_eq!(
                 0,
-                *(analysis.tile_handle_count_by_source_and_age.read(&TileSource::Render, &TileAge::Old)),
+                analysis.count_tile_renders_by_age(&TileAge::Old),
                 "Tile handle count does not default to 0"
             );
             assert_eq!(
                 1,
-                *(analysis.tile_handle_count_by_source_and_age.read(&TileSource::Cache, &TileAge::VeryOld)),
+                analysis.count_tile_cache_hit_by_age(&TileAge::VeryOld),
                 "Tile handle count not incremented"
             );
             Ok(())
@@ -730,14 +811,17 @@ mod tests {
                     analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
                 }
             }
-            for source in &all_sources {
-                for age in &all_ages {
-                    assert_eq!(
-                        2,
-                        *(analysis.tile_handle_count_by_source_and_age.read(source, age)),
-                        "Tile handle count not incremented"
-                    );
-                }
+            for age in &all_ages {
+                assert_eq!(
+                    2,
+                    analysis.count_tile_cache_hit_by_age(age),
+                    "Tile handle count not incremented"
+                );
+                assert_eq!(
+                    2,
+                    analysis.count_tile_renders_by_age(age),
+                    "Tile handle count not incremented"
+                );
             }
             Ok(())
         })
@@ -806,22 +890,22 @@ mod tests {
             analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
             assert_eq!(
                 1,
-                analysis.response_count_by_status_and_zoom[&StatusCode::OK][3],
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
                 "Response count not updated"
             );
             assert_eq!(
                 0,
-                analysis.response_count_by_status_and_zoom[&StatusCode::OK][2],
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 2),
                 "Response count does not default to 0"
             );
             assert_eq!(
                 1,
-                analysis.tile_reponse_count_by_zoom[3],
+                analysis.count_tile_response_by_zoom_level(3),
                 "Tile count not updated"
             );
             assert_eq!(
                 0,
-                analysis.tile_reponse_count_by_zoom[2],
+                analysis.count_tile_response_by_zoom_level(2),
                 "Tile count does not default to 0"
             );
             Ok(())
@@ -887,16 +971,16 @@ mod tests {
             let mut analysis = ResponseAnalysis::new();
             let response_context = ResponseContext::from(request_context);
             analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
-            let total_response_count = analysis.response_count_by_status_and_zoom[&StatusCode::OK].iter().fold(
+            assert_eq!(
                 0,
-                |acc, count| acc + count
+                analysis.count_response_by_status_code(&StatusCode::OK),
+                "Response count incremented on layer description response"
             );
-            let total_tile_count = analysis.tile_reponse_count_by_zoom.iter().fold(
+            assert_eq!(
                 0,
-                |acc, count| acc + count
+                analysis.count_total_tile_response(),
+                "Tile response count incremented on layer description response"
             );
-            assert_eq!(0, total_response_count, "Response count incremented on layer description response");
-            assert_eq!(0, total_tile_count, "Tile response count incremented on layer description response");
             Ok(())
         })
     }
@@ -962,9 +1046,10 @@ mod tests {
             let mut analysis = ResponseAnalysis::new();
             let response_context = ResponseContext::from(request_context);
             analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
-            assert!(
-                analysis.response_count_by_status_and_zoom[&StatusCode::OK].get(MAX_ZOOM_SERVER + 1).is_none(),
-                "A counter exists for invalid zoom level"
+            assert_eq!(
+                0,
+                analysis.count_total_tile_response(),
+                "A tile response with an invalid zoom level was counted"
             );
             Ok(())
         })
