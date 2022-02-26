@@ -2,7 +2,7 @@ use crate::apache2::connection::ConnectionContext;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::apache2::virtual_host::VirtualHostContext;
 
-use crate::schema::apache2::bindings::{
+use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
     apr_status_t, request_rec,
 };
@@ -127,7 +127,7 @@ extern "C" fn drop_request_context(context_void: *mut c_void) -> apr_status_t {
 #[cfg(test)]
 pub mod test_utils {
     use super::RequestContext;
-    use crate::schema::apache2::bindings::{
+    use crate::binding::apache2::{
         __BindgenBitfieldUnit, apr_dev_t, apr_fileperms_t, apr_filetype_e, apr_finfo_t, apr_gid_t,
         apr_ino_t, apr_int32_t, apr_int64_t,
         apr_off_t, apr_pool_t, apr_port_t, apr_time_t, apr_uid_t, apr_uri_t,

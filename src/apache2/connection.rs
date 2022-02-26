@@ -1,6 +1,6 @@
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::virtual_host::VirtualHostContext;
-use crate::schema::apache2::bindings::{
+use crate::binding::apache2::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
 };
@@ -101,7 +101,7 @@ extern "C" fn drop_connection_context(context_void: *mut c_void) -> apr_status_t
 #[cfg(test)]
 pub mod test_utils {
     use super::ConnectionContext;
-    use crate::schema::apache2::bindings::{
+    use crate::binding::apache2::{
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
     use crate::apache2::memory::test_utils::with_pool;

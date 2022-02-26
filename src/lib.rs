@@ -1,4 +1,8 @@
 #[macro_use]
+mod binding {
+    #[macro_use]
+    pub mod apache2;
+}
 mod schema {
     pub mod http {
         pub mod response;
@@ -10,8 +14,6 @@ mod schema {
     }
     #[macro_use]
     pub mod apache2 {
-        #[macro_use]
-        pub mod bindings;
         pub mod error;
     }
     pub mod slippy {
@@ -66,13 +68,13 @@ mod handler {
 mod tile_proxy;
 
 
-use crate::schema::apache2::bindings::{
+use crate::binding::apache2::{
     HTTP_INTERNAL_SERVER_ERROR,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
     apr_pool_t, cmd_parms, module, request_rec, server_rec,
 };
 #[cfg(not(test))]
-use crate::schema::apache2::bindings::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
+use crate::binding::apache2::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
 
 use crate::tile_proxy::TileProxy;
 

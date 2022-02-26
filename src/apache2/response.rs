@@ -1,9 +1,9 @@
 use crate::apache2::request::RequestContext;
 use crate::apache2::virtual_host::VirtualHostContext;
 
-use crate::schema::apache2::bindings::request_rec;
+use crate::binding::apache2::request_rec;
 #[cfg(not(test))]
-use crate::schema::apache2::bindings::{
+use crate::binding::apache2::{
     ap_rwrite, ap_rflush, ap_set_content_type, ap_set_content_length,
     apr_psprintf, apr_table_setn, apr_table_mergen,
 };
