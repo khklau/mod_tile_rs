@@ -1,4 +1,4 @@
-use crate::apache2::request::RequestContext;
+use crate::schema::handler::context::HandleContext;
 use crate::interface::handler::RequestHandler;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
@@ -15,7 +15,7 @@ pub struct DescriptionHandler { }
 impl RequestHandler for DescriptionHandler {
     fn handle(
         &mut self,
-        context: &RequestContext,
+        context: &HandleContext,
         request: &request::Request,
     ) -> HandleRequestResult {
         let before_timestamp = Utc::now();
@@ -29,12 +29,12 @@ impl RequestHandler for DescriptionHandler {
                 }
             },
         };
-        let description = describe(context.get_config(), layer);
+        let description = describe(context.request_context.get_config(), layer);
         let response = response::Response {
             header: response::Header::new(
-                context.record,
-                context.connection.record,
-                context.get_host().record,
+                context.request_context.record,
+                context.request_context.connection.record,
+                context.request_context.get_host().record,
                 &mime::APPLICATION_JSON,
             ),
             body: response::BodyVariant::Description(description),
@@ -76,6 +76,8 @@ fn describe(config: &TileConfig, layer: &String) -> response::Description {
 mod tests {
     use super::*;
     use crate::apache2::request::test_utils::with_request_rec;
+    use crate::apache2::request::RequestContext;
+    use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::schema::tile::config::TileConfig;
 
     use std::error::Error;
@@ -87,22 +89,29 @@ mod tests {
         let layer_name = String::from("default");
         let tile_config = TileConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
-        with_request_rec(|record| {
-            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let request = request::Request {
-                header: request::Header::new_with_layer(
-                    context.record,
-                    context.connection.record,
-                    context.get_host().record,
-                    &layer_name,
-                ),
-                body: request::BodyVariant::ReportStatistics,
-            };
+        with_request_rec(|request| {
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+                request.uri = uri.into_raw();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let request = request::Request {
+                    header: request::Header::new_with_layer(
+                        handle_context.request_context.record,
+                        handle_context.request_context.connection.record,
+                        handle_context.request_context.get_host().record,
+                        &layer_name,
+                    ),
+                    body: request::BodyVariant::ReportStatistics,
+                };
 
-            assert!(layer_handler.handle(context, &request).result?.is_not_handled(), "Expected to not handle");
-            Ok(())
+                assert!(layer_handler.handle(&handle_context, &request).result?.is_not_handled(), "Expected to not handle");
+                Ok(())
+            })
         })
     }
 
@@ -112,42 +121,49 @@ mod tests {
         let layer_name = String::from("default");
         let tile_config = TileConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
-        with_request_rec(|record| {
-            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
-            let request = request::Request {
-                header: request::Header::new_with_layer(
-                    context.record,
-                    context.connection.record,
-                    context.get_host().record,
-                    &layer_name,
-                ),
-                body: request::BodyVariant::DescribeLayer,
-            };
+        with_request_rec(|request| {
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+                request.uri = uri.into_raw();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let request = request::Request {
+                    header: request::Header::new_with_layer(
+                        handle_context.request_context.record,
+                        handle_context.request_context.connection.record,
+                        handle_context.request_context.get_host().record,
+                        &layer_name,
+                    ),
+                    body: request::BodyVariant::DescribeLayer,
+                };
 
-            let actual_response = layer_handler.handle(context, &request).result?.expect_handled();
-            let expected_data = response::Description {
-                tilejson: "2.0.0",
-                schema: "xyz",
-                name: layer_name.clone(),
-                description: layer_config.description.clone(),
-                attribution: layer_config.attribution.clone(),
-                minzoom: layer_config.min_zoom,
-                maxzoom: layer_config.max_zoom,
-                tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
-            };
-            let expected_response = response::Response {
-                header: response::Header::new(
-                    context.record,
-                    context.connection.record,
-                    context.get_host().record,
-                    &mime::APPLICATION_JSON,
-                ),
-                body: response::BodyVariant::Description(expected_data),
-            };
-            assert_eq!(expected_response, actual_response, "Incorrect handling");
-            Ok(())
+                let actual_response = layer_handler.handle(&handle_context, &request).result?.expect_handled();
+                let expected_data = response::Description {
+                    tilejson: "2.0.0",
+                    schema: "xyz",
+                    name: layer_name.clone(),
+                    description: layer_config.description.clone(),
+                    attribution: layer_config.attribution.clone(),
+                    minzoom: layer_config.min_zoom,
+                    maxzoom: layer_config.max_zoom,
+                    tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
+                };
+                let expected_response = response::Response {
+                    header: response::Header::new(
+                        handle_context.request_context.record,
+                        handle_context.request_context.connection.record,
+                        handle_context.request_context.get_host().record,
+                        &mime::APPLICATION_JSON,
+                    ),
+                    body: response::BodyVariant::Description(expected_data),
+                };
+                assert_eq!(expected_response, actual_response, "Incorrect handling");
+                Ok(())
+            })
         })
     }
 }

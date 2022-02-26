@@ -11,6 +11,7 @@ use crate::schema::apache2::bindings::{
     APR_BADARG, APR_SUCCESS, OK,
     apr_status_t, request_rec, server_rec,
 };
+use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::error::{ ReadError, WriteError };
@@ -200,7 +201,12 @@ impl<'p> TileProxy<'p> {
             None => [&mut self.trans_trace, &mut self.cache_analysis, &mut self.render_analysis],
         };
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
-        let context = RequestContext::find_or_create(record, &self.config).unwrap();
+        let context = HandleContext {
+            request_context: RequestContext::find_or_create(record, &self.config).unwrap(),
+            cache_metrics: &self.response_analysis,
+            render_metrics: &self.response_analysis,
+            response_metrics: &self.response_analysis,
+        };
         let handle_result = match read_result {
             Ok(outcome) => match outcome {
                 ReadOutcome::NotMatched => HandleRequestResult {
@@ -208,7 +214,7 @@ impl<'p> TileProxy<'p> {
                     after_timestamp: Utc::now(),
                     result: Ok(HandleOutcome::NotHandled),
                 },
-                ReadOutcome::Matched(request) => handler.handle(context, &request),
+                ReadOutcome::Matched(request) => handler.handle(&context, &request),
             },
             Err(err) => HandleRequestResult {
                 before_timestamp: Utc::now(),
@@ -217,8 +223,8 @@ impl<'p> TileProxy<'p> {
             },
         };
         for observer_iter in handle_observers.iter_mut() {
-            debug!(context.get_host().record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_handle(handler, context, &read_result, &handle_result);
+            debug!(context.request_context.get_host().record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+            (*observer_iter).on_handle(handler, &context, &read_result, &handle_result);
         }
         debug!(record.server, "TileServer::call_handlers - finish");
         return (handle_result, self);
@@ -348,7 +354,7 @@ mod tests {
         fn on_handle(
             &mut self,
             _obj: &dyn RequestHandler,
-            _context: &RequestContext,
+            _context: &HandleContext,
             _read_result: &ReadRequestResult,
             _handle_result: &HandleRequestResult
         ) -> () {

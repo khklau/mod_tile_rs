@@ -4,6 +4,7 @@ use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
+use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, };
 
@@ -24,7 +25,7 @@ impl HandleRequestObserver for TransactionTrace {
     fn on_handle(
         &mut self,
         _obj: &dyn RequestHandler,
-        _context: &RequestContext,
+        _context: &HandleContext,
         _read_result: &ReadRequestResult,
         _handle_result: &HandleRequestResult,
     ) -> () {

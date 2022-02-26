@@ -1,5 +1,5 @@
 use crate::apache2::response::ResponseContext;
-use crate::apache2::request::RequestContext;
+use crate::schema::handler::context::HandleContext;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
 use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
 use crate::interface::telemetry::metrics::{
@@ -45,7 +45,7 @@ impl ResponseAnalysis {
 
     fn on_handled_tile(
         &mut self,
-        context: &RequestContext,
+        context: &HandleContext,
         request: &request::Request,
         response: &response::TileResponse,
         handle_duration: &Duration,
@@ -56,7 +56,7 @@ impl ResponseAnalysis {
 
     fn accrue_tile_handle_duration(
         &mut self,
-        context: &RequestContext,
+        context: &HandleContext,
         request: &request::Request,
         handle_duration: &Duration,
     ) -> () {
@@ -70,7 +70,7 @@ impl ResponseAnalysis {
             self.tile_handle_duration_by_zoom[zoom_level] = self.tile_handle_duration_by_zoom[zoom_level] + *handle_duration;
         } else {
             warn!(
-                context.get_host().record,
+                context.request_context.get_host().record,
                 "ResponseAnalysis::accrue_tile_handle_duration - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -78,13 +78,13 @@ impl ResponseAnalysis {
 
     fn increment_tile_handle_count(
         &mut self,
-        context: &RequestContext,
+        context: &HandleContext,
         response: &response::TileResponse,
     ) -> () {
         let counter = self.tile_handle_count_by_source_and_age.update(&response.source, &response.age);
         *counter += 1;
         debug!(
-            context.get_host().record,
+            context.request_context.get_host().record,
             "ResponseAnalysis::increment_tile_handle_count - updating count for source {:?} and age {:?} to {}",
             &response.source,
             &response.age,
@@ -174,7 +174,7 @@ impl HandleRequestObserver for ResponseAnalysis {
     fn on_handle(
         &mut self,
         _obj: &dyn RequestHandler,
-        context: &RequestContext,
+        context: &HandleContext,
         read_result: &ReadRequestResult,
         handle_result: &HandleRequestResult,
     ) -> () {
@@ -299,6 +299,8 @@ mod tests {
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::RequestContext;
     use crate::apache2::response::ResponseContext;
+    use crate::interface::handler::test_utils::MockRequestHandler;
+    use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::schema::handler::result::HandleOutcome;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
@@ -311,22 +313,6 @@ mod tests {
     use std::error::Error;
     use std::ffi::CString;
 
-    struct MockHandler { }
-
-    impl RequestHandler for MockHandler {
-        fn handle(
-            &mut self,
-            _context: &RequestContext,
-            _request: &request::Request,
-        ) -> HandleRequestResult {
-            return HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(HandleOutcome::NotHandled),
-            };
-        }
-    }
-
     fn mock_write(
         _context: &mut ResponseContext,
         _response: &response::Response
@@ -337,721 +323,791 @@ mod tests {
     #[test]
     fn test_tile_handle_duration_accural_on_serve_tile_handle() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let before_timestamp = Utc::now();
-            let after_timestamp = before_timestamp + Duration::seconds(2);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
+                            body: request::BodyVariant::ServeTileV3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                ),
-            };
-            let mock_handler = MockHandler { };
-            let mut analysis = ResponseAnalysis::new();
-            analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            assert_eq!(
-                Duration::seconds(2).num_seconds() as u64,
-                analysis.tally_tile_response_duration_by_zoom_level(3),
-                "Handle duration not accrued"
-            );
-            assert_eq!(
-                Duration::zero().num_seconds() as u64,
-                analysis.tally_tile_response_duration_by_zoom_level(2),
-                "Handle duration does not default to 0"
-            );
-            Ok(())
+                );
+                let before_timestamp = Utc::now();
+                let after_timestamp = before_timestamp + Duration::seconds(2);
+                let handle_result = HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Render,
+                                        age: TileAge::Fresh,
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let mock_handler = MockRequestHandler { };
+                let mut analysis = ResponseAnalysis::new();
+                analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                assert_eq!(
+                    Duration::seconds(2).num_seconds() as u64,
+                    analysis.tally_tile_response_duration_by_zoom_level(3),
+                    "Handle duration not accrued"
+                );
+                assert_eq!(
+                    Duration::zero().num_seconds() as u64,
+                    analysis.tally_tile_response_duration_by_zoom_level(2),
+                    "Handle duration does not default to 0"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_tile_handle_duration_accural_on_description_handle() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::DescribeLayer,
-                    }
-                )
-            );
-            let before_timestamp = Utc::now();
-            let after_timestamp = before_timestamp + Duration::seconds(3);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Description(
-                                response::Description {
-                                    tilejson: "2.0.0",
-                                    schema: "xyz",
-                                    name: String::new(),
-                                    description: String::new(),
-                                    attribution: String::new(),
-                                    minzoom: 0,
-                                    maxzoom: 1,
-                                    tiles: Vec::new(),
-                                }
-                            ),
+                            body: request::BodyVariant::DescribeLayer,
                         }
                     )
-                ),
-            };
-            let mock_handler = MockHandler { };
-            let mut analysis = ResponseAnalysis::new();
-            analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            assert_eq!(
-                0,
-                analysis.tally_total_tile_response_duration(),
-                "Tile handle duration accrued on layer description handle"
-            );
-            Ok(())
+                );
+                let before_timestamp = Utc::now();
+                let after_timestamp = before_timestamp + Duration::seconds(3);
+                let handle_result = HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Description(
+                                    response::Description {
+                                        tilejson: "2.0.0",
+                                        schema: "xyz",
+                                        name: String::new(),
+                                        description: String::new(),
+                                        attribution: String::new(),
+                                        minzoom: 0,
+                                        maxzoom: 1,
+                                        tiles: Vec::new(),
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let mock_handler = MockRequestHandler { };
+                let mut analysis = ResponseAnalysis::new();
+                analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                assert_eq!(
+                    0,
+                    analysis.tally_total_tile_response_duration(),
+                    "Tile handle duration accrued on layer description handle"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_tile_handle_duration_accural_on_invalid_zoom_level() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV2(
-                            request::ServeTileRequestV2 {
-                                x: 1,
-                                y: 2,
-                                z: (MAX_ZOOM_SERVER + 1) as u32,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
+                            body: request::BodyVariant::ServeTileV2(
+                                request::ServeTileRequestV2 {
+                                    x: 1,
+                                    y: 2,
+                                    z: (MAX_ZOOM_SERVER + 1) as u32,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                ),
-            };
-            let mock_handler = MockHandler { };
-            let mut analysis = ResponseAnalysis::new();
-            analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            assert_eq!(
-                0,
-                analysis.tally_total_tile_response_duration(),
-                "An accrued duration exists for invalid zoom level"
-            );
-            Ok(())
+                );
+                let handle_result = HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Render,
+                                        age: TileAge::Fresh,
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let mock_handler = MockRequestHandler { };
+                let mut analysis = ResponseAnalysis::new();
+                analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                assert_eq!(
+                    0,
+                    analysis.tally_total_tile_response_duration(),
+                    "An accrued duration exists for invalid zoom level"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_count_increment_on_serve_tile_v3_write() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
+                            body: request::BodyVariant::ServeTileV3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                ),
-            };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 8,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
-            );
-            let mut analysis = ResponseAnalysis::new();
-            let response_context = ResponseContext::from(request_context);
-            analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
-            assert_eq!(
-                1,
-                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
-                "Response count not updated"
-            );
-            assert_eq!(
-                0,
-                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 2),
-                "Response count does not default to 0"
-            );
-            assert_eq!(
-                1,
-                analysis.count_tile_response_by_zoom_level(3),
-                "Tile count not updated"
-            );
-            assert_eq!(
-                0,
-                analysis.count_tile_response_by_zoom_level(2),
-                "Tile count does not default to 0"
-            );
-            Ok(())
+                );
+                let handle_result = HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Render,
+                                        age: TileAge::Fresh,
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let write_result: WriteResponseResult = Ok(
+                    WriteOutcome::Written(
+                        HttpResponse {
+                            status_code: StatusCode::OK,
+                            bytes_written: 8,
+                            http_headers: HeaderMap::new(),
+                        }
+                    )
+                );
+                let mut analysis = ResponseAnalysis::new();
+                let response_context = ResponseContext::from(handle_context.request_context);
+                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                assert_eq!(
+                    1,
+                    analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
+                    "Response count not updated"
+                );
+                assert_eq!(
+                    0,
+                    analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 2),
+                    "Response count does not default to 0"
+                );
+                assert_eq!(
+                    1,
+                    analysis.count_tile_response_by_zoom_level(3),
+                    "Tile count not updated"
+                );
+                assert_eq!(
+                    0,
+                    analysis.count_tile_response_by_zoom_level(2),
+                    "Tile count does not default to 0"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let before_timestamp = Utc::now();
-            let after_timestamp = before_timestamp + Duration::seconds(2);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
+                            body: request::BodyVariant::ServeTileV3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                ),
-            };
-            let mock_handler = MockHandler { };
-            let mut analysis = ResponseAnalysis::new();
-            analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            assert_eq!(
-                0,
-                analysis.count_tile_cache_hit_by_age(&TileAge::Old),
-                "Tile handle count does not default to 0"
-            );
-            assert_eq!(
-                1,
-                analysis.count_tile_renders_by_age(&TileAge::Fresh),
-                "Tile handle count not incremented"
-            );
-            Ok(())
+                );
+                let before_timestamp = Utc::now();
+                let after_timestamp = before_timestamp + Duration::seconds(2);
+                let handle_result = HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Render,
+                                        age: TileAge::Fresh,
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let mock_handler = MockRequestHandler { };
+                let mut analysis = ResponseAnalysis::new();
+                analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                assert_eq!(
+                    0,
+                    analysis.count_tile_cache_hit_by_age(&TileAge::Old),
+                    "Tile handle count does not default to 0"
+                );
+                assert_eq!(
+                    1,
+                    analysis.count_tile_renders_by_age(&TileAge::Fresh),
+                    "Tile handle count not incremented"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_count_increment_on_tile_cache() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let before_timestamp = Utc::now();
-            let after_timestamp = before_timestamp + Duration::seconds(2);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Cache,
-                                    age: TileAge::VeryOld,
+                            body: request::BodyVariant::ServeTileV3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                ),
-            };
-            let mock_handler = MockHandler { };
-            let mut analysis = ResponseAnalysis::new();
-            analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-            assert_eq!(
-                0,
-                analysis.count_tile_renders_by_age(&TileAge::Old),
-                "Tile handle count does not default to 0"
-            );
-            assert_eq!(
-                1,
-                analysis.count_tile_cache_hit_by_age(&TileAge::VeryOld),
-                "Tile handle count not incremented"
-            );
-            Ok(())
+                );
+                let before_timestamp = Utc::now();
+                let after_timestamp = before_timestamp + Duration::seconds(2);
+                let handle_result = HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Cache,
+                                        age: TileAge::VeryOld,
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let mock_handler = MockRequestHandler { };
+                let mut analysis = ResponseAnalysis::new();
+                analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                assert_eq!(
+                    0,
+                    analysis.count_tile_renders_by_age(&TileAge::Old),
+                    "Tile handle count does not default to 0"
+                );
+                assert_eq!(
+                    1,
+                    analysis.count_tile_cache_hit_by_age(&TileAge::VeryOld),
+                    "Tile handle count not incremented"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_count_increment_on_tile_response_combinations() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let mut analysis = ResponseAnalysis::new();
-            let all_sources = [TileSource::Render, TileSource::Cache];
-            let all_ages = [TileAge::Fresh, TileAge::Old, TileAge::VeryOld];
-            for source in &all_sources {
-                for age in &all_ages {
-                    let before_timestamp = Utc::now();
-                    let after_timestamp = before_timestamp + Duration::seconds(2);
-                    let handle_result = HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp,
-                        result: Ok(
-                            HandleOutcome::Handled(
-                                response::Response {
-                                    header: response::Header::new(
-                                        request_context.record,
-                                        request_context.connection.record,
-                                        request_context.get_host().record,
-                                        &mime::APPLICATION_JSON,
-                                    ),
-                                    body: response::BodyVariant::Tile(
-                                        response::TileResponse {
-                                            source: source.clone(),
-                                            age: age.clone(),
-                                        }
-                                    ),
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
+                            ),
+                            body: request::BodyVariant::ServeTileV3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
-                            )
-                        ),
-                    };
-                    let mock_handler = MockHandler { };
-                    analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
-                    analysis.on_handle(&mock_handler, &request_context, &read_result, &handle_result);
+                            ),
+                        }
+                    )
+                );
+                let mut analysis = ResponseAnalysis::new();
+                let all_sources = [TileSource::Render, TileSource::Cache];
+                let all_ages = [TileAge::Fresh, TileAge::Old, TileAge::VeryOld];
+                for source in &all_sources {
+                    for age in &all_ages {
+                        let before_timestamp = Utc::now();
+                        let after_timestamp = before_timestamp + Duration::seconds(2);
+                        let handle_result = HandleRequestResult {
+                            before_timestamp,
+                            after_timestamp,
+                            result: Ok(
+                                HandleOutcome::Handled(
+                                    response::Response {
+                                        header: response::Header::new(
+                                            handle_context.request_context.record,
+                                            handle_context.request_context.connection.record,
+                                            handle_context.request_context.get_host().record,
+                                            &mime::APPLICATION_JSON,
+                                        ),
+                                        body: response::BodyVariant::Tile(
+                                            response::TileResponse {
+                                                source: source.clone(),
+                                                age: age.clone(),
+                                            }
+                                        ),
+                                    }
+                                )
+                            ),
+                        };
+                        let mock_handler = MockRequestHandler { };
+                        analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                        analysis.on_handle(&mock_handler, &handle_context, &read_result, &handle_result);
+                    }
                 }
-            }
-            for age in &all_ages {
-                assert_eq!(
-                    2,
-                    analysis.count_tile_cache_hit_by_age(age),
-                    "Tile handle count not incremented"
-                );
-                assert_eq!(
-                    2,
-                    analysis.count_tile_renders_by_age(age),
-                    "Tile handle count not incremented"
-                );
-            }
-            Ok(())
+                for age in &all_ages {
+                    assert_eq!(
+                        2,
+                        analysis.count_tile_cache_hit_by_age(age),
+                        "Tile handle count not incremented"
+                    );
+                    assert_eq!(
+                        2,
+                        analysis.count_tile_renders_by_age(age),
+                        "Tile handle count not incremented"
+                    );
+                }
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_count_increment_on_serve_tile_v2_write() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV2(
-                            request::ServeTileRequestV2 {
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
+                            body: request::BodyVariant::ServeTileV2(
+                                request::ServeTileRequestV2 {
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                )
-            };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 8,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
-            );
-            let mut analysis = ResponseAnalysis::new();
-            let response_context = ResponseContext::from(request_context);
-            analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
-            assert_eq!(
-                1,
-                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
-                "Response count not updated"
-            );
-            assert_eq!(
-                0,
-                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 2),
-                "Response count does not default to 0"
-            );
-            assert_eq!(
-                1,
-                analysis.count_tile_response_by_zoom_level(3),
-                "Tile count not updated"
-            );
-            assert_eq!(
-                0,
-                analysis.count_tile_response_by_zoom_level(2),
-                "Tile count does not default to 0"
-            );
-            Ok(())
+                );
+                let handle_result = HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Render,
+                                        age: TileAge::Fresh,
+                                    }
+                                ),
+                            }
+                        )
+                    )
+                };
+                let write_result: WriteResponseResult = Ok(
+                    WriteOutcome::Written(
+                        HttpResponse {
+                            status_code: StatusCode::OK,
+                            bytes_written: 8,
+                            http_headers: HeaderMap::new(),
+                        }
+                    )
+                );
+                let mut analysis = ResponseAnalysis::new();
+                let response_context = ResponseContext::from(handle_context.request_context);
+                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                assert_eq!(
+                    1,
+                    analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
+                    "Response count not updated"
+                );
+                assert_eq!(
+                    0,
+                    analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 2),
+                    "Response count does not default to 0"
+                );
+                assert_eq!(
+                    1,
+                    analysis.count_tile_response_by_zoom_level(3),
+                    "Tile count not updated"
+                );
+                assert_eq!(
+                    0,
+                    analysis.count_tile_response_by_zoom_level(2),
+                    "Tile count does not default to 0"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_no_increment_on_description_write() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::DescribeLayer,
-                    }
-                )
-            );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Description(
-                                response::Description {
-                                    tilejson: "2.0.0",
-                                    schema: "xyz",
-                                    name: String::new(),
-                                    description: String::new(),
-                                    attribution: String::new(),
-                                    minzoom: 0,
-                                    maxzoom: 1,
-                                    tiles: Vec::new(),
-                                }
-                            ),
+                            body: request::BodyVariant::DescribeLayer,
                         }
                     )
-                ),
-            };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 8,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
-            );
-            let mut analysis = ResponseAnalysis::new();
-            let response_context = ResponseContext::from(request_context);
-            analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
-            assert_eq!(
-                0,
-                analysis.count_response_by_status_code(&StatusCode::OK),
-                "Response count incremented on layer description response"
-            );
-            assert_eq!(
-                0,
-                analysis.count_total_tile_response(),
-                "Tile response count incremented on layer description response"
-            );
-            Ok(())
+                );
+                let handle_result = HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Description(
+                                    response::Description {
+                                        tilejson: "2.0.0",
+                                        schema: "xyz",
+                                        name: String::new(),
+                                        description: String::new(),
+                                        attribution: String::new(),
+                                        minzoom: 0,
+                                        maxzoom: 1,
+                                        tiles: Vec::new(),
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let write_result: WriteResponseResult = Ok(
+                    WriteOutcome::Written(
+                        HttpResponse {
+                            status_code: StatusCode::OK,
+                            bytes_written: 8,
+                            http_headers: HeaderMap::new(),
+                        }
+                    )
+                );
+                let mut analysis = ResponseAnalysis::new();
+                let response_context = ResponseContext::from(handle_context.request_context);
+                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                assert_eq!(
+                    0,
+                    analysis.count_response_by_status_code(&StatusCode::OK),
+                    "Response count incremented on layer description response"
+                );
+                assert_eq!(
+                    0,
+                    analysis.count_total_tile_response(),
+                    "Tile response count incremented on layer description response"
+                );
+                Ok(())
+            })
         })
     }
 
     #[test]
     fn test_reponse_count_increment_on_invalid_zoom_level() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
-            let tile_config = TileConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &tile_config)?;
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
-                    request::Request {
-                        header: request::Header::new(
-                            request_context.record,
-                            request_context.connection.record,
-                            request_context.get_host().record,
-                        ),
-                        body: request::BodyVariant::ServeTileV2(
-                            request::ServeTileRequestV2 {
-                                x: 1,
-                                y: 2,
-                                z: (MAX_ZOOM_SERVER + 1) as u32,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
-                        ),
-                    }
-                )
-            );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
-                        response::Response {
-                            header: response::Header::new(
-                                request_context.record,
-                                request_context.connection.record,
-                                request_context.get_host().record,
-                                &mime::APPLICATION_JSON,
+            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let tile_config = TileConfig::new();
+                let handle_context = HandleContext {
+                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    cache_metrics,
+                    render_metrics,
+                    response_metrics,
+                };
+                let read_result: ReadRequestResult = Ok(
+                    ReadOutcome::Matched(
+                        request::Request {
+                            header: request::Header::new(
+                                handle_context.request_context.record,
+                                handle_context.request_context.connection.record,
+                                handle_context.request_context.get_host().record,
                             ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
+                            body: request::BodyVariant::ServeTileV2(
+                                request::ServeTileRequestV2 {
+                                    x: 1,
+                                    y: 2,
+                                    z: (MAX_ZOOM_SERVER + 1) as u32,
+                                    extension: String::from("jpg"),
+                                    option: None,
                                 }
                             ),
                         }
                     )
-                ),
-            };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 8,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
-            );
-            let mut analysis = ResponseAnalysis::new();
-            let response_context = ResponseContext::from(request_context);
-            analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
-            assert_eq!(
-                0,
-                analysis.count_total_tile_response(),
-                "A tile response with an invalid zoom level was counted"
-            );
-            Ok(())
+                );
+                let handle_result = HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
+                        HandleOutcome::Handled(
+                            response::Response {
+                                header: response::Header::new(
+                                    handle_context.request_context.record,
+                                    handle_context.request_context.connection.record,
+                                    handle_context.request_context.get_host().record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Tile(
+                                    response::TileResponse {
+                                        source: TileSource::Render,
+                                        age: TileAge::Fresh,
+                                    }
+                                ),
+                            }
+                        )
+                    ),
+                };
+                let write_result: WriteResponseResult = Ok(
+                    WriteOutcome::Written(
+                        HttpResponse {
+                            status_code: StatusCode::OK,
+                            bytes_written: 8,
+                            http_headers: HeaderMap::new(),
+                        }
+                    )
+                );
+                let mut analysis = ResponseAnalysis::new();
+                let response_context = ResponseContext::from(handle_context.request_context);
+                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                assert_eq!(
+                    0,
+                    analysis.count_total_tile_response(),
+                    "A tile response with an invalid zoom level was counted"
+                );
+                Ok(())
+            })
         })
     }
 }

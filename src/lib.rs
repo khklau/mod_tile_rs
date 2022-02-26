@@ -21,6 +21,7 @@ mod schema {
         pub mod response;
     }
     pub mod handler {
+        pub mod context;
         pub mod error;
         pub mod result;
     }
