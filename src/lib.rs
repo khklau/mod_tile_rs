@@ -45,25 +45,27 @@ mod interface {
     pub mod handler;
     pub mod slippy;
 }
-mod slippy {
-    pub mod reader;
-    pub mod writer;
-}
-mod storage {
-    pub mod file_system;
-}
-mod telemetry{
-    pub mod metrics {
-        pub mod cache;
-        pub mod render;
-        pub mod response;
+mod implement {
+    pub mod handler {
+        pub mod description;
     }
-    pub mod tracing {
-        pub mod transaction;
+    pub mod slippy {
+        pub mod reader;
+        pub mod writer;
     }
-}
-mod handler {
-    pub mod description;
+    pub mod storage {
+        pub mod file_system;
+    }
+    pub mod telemetry{
+        pub mod metrics {
+            pub mod cache;
+            pub mod render;
+            pub mod response;
+        }
+        pub mod tracing {
+            pub mod transaction;
+        }
+    }
 }
 mod tile_proxy;
 

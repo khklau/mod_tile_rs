@@ -2,7 +2,6 @@ use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
-use crate::handler::description::DescriptionHandler;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
@@ -20,13 +19,14 @@ use crate::schema::slippy::result::{
     WriteOutcome, WriteResponseResult,
 };
 use crate::schema::tile::config::{ TileConfig, load };
-use crate::slippy::reader::SlippyRequestReader;
-use crate::slippy::writer::SlippyResponseWriter;
-use crate::storage::file_system;
-use crate::telemetry::metrics::cache::CacheAnalysis;
-use crate::telemetry::metrics::render::RenderAnalysis;
-use crate::telemetry::metrics::response::ResponseAnalysis;
-use crate::telemetry::tracing::transaction::TransactionTrace;
+use crate::implement::handler::description::DescriptionHandler;
+use crate::implement::slippy::reader::SlippyRequestReader;
+use crate::implement::slippy::writer::SlippyResponseWriter;
+use crate::implement::storage::file_system;
+use crate::implement::telemetry::metrics::cache::CacheAnalysis;
+use crate::implement::telemetry::metrics::render::RenderAnalysis;
+use crate::implement::telemetry::metrics::response::ResponseAnalysis;
+use crate::implement::telemetry::tracing::transaction::TransactionTrace;
 
 use chrono::Utc;
 
