@@ -37,31 +37,31 @@ pub mod test_utils {
     pub struct MockZeroResponseMetrics { }
 
     impl ResponseMetrics for MockZeroResponseMetrics {
-        fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64 { 0 }
+        fn count_response_by_status_code(&self, _status_code: &StatusCode) -> u64 { 0 }
 
-        fn count_response_by_zoom_level(&self, zoom: u32) -> u64 { 0 }
+        fn count_response_by_zoom_level(&self, _zoom: u32) -> u64 { 0 }
 
-        fn count_response_by_status_code_and_zoom_level(&self, status_code: &StatusCode, zoom: u32) -> u64 { 0 }
+        fn count_response_by_status_code_and_zoom_level(&self, _status_code: &StatusCode, _zoom: u32) -> u64 { 0 }
 
         fn count_total_tile_response(&self) -> u64 { 0 }
 
         fn tally_total_tile_response_duration(&self) -> u64 { 0 }
 
-        fn count_tile_response_by_zoom_level(&self, zoom: u32) -> u64 { 0 }
+        fn count_tile_response_by_zoom_level(&self, _zoom: u32) -> u64 { 0 }
 
-        fn tally_tile_response_duration_by_zoom_level(&self, zoom: u32) -> u64 { 0 }
+        fn tally_tile_response_duration_by_zoom_level(&self, _zoom: u32) -> u64 { 0 }
     }
 
     pub struct MockZeroCacheMetrics { }
 
     impl CacheMetrics for MockZeroCacheMetrics {
-        fn count_tile_cache_hit_by_age(&self, age: &TileAge) -> u64 { 0 }
+        fn count_tile_cache_hit_by_age(&self, _age: &TileAge) -> u64 { 0 }
     }
 
     pub struct MockZeroRenderMetrics { }
 
     impl RenderMetrics for MockZeroRenderMetrics {
-        fn count_tile_renders_by_age(&self, age: &TileAge) -> u64 { 0 }
+        fn count_tile_renders_by_age(&self, _age: &TileAge) -> u64 { 0 }
     }
 
     pub fn with_mock_zero_metrics<F>(func: F) -> Result<(), Box<dyn Error>>

@@ -14,7 +14,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
-use crate::schema::slippy::context::ReadContext;
+use crate::schema::slippy::context::{ ReadContext, WriteContext };
 use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
@@ -251,10 +251,14 @@ impl<'p> TileProxy<'p> {
         let write = self.write_response;
         let request_context = RequestContext::find_or_create(record, &self.config).unwrap();
         let mut response_context = ResponseContext::from(request_context);
+        let mut context = WriteContext {
+            module_config: &self.config,
+            response_context: &mut response_context,
+        };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {
                 HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
-                HandleOutcome::Handled(response) => write(&mut response_context, &response),
+                HandleOutcome::Handled(response) => write(&mut context, &response),
             },
             Err(_) => {
                 Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
@@ -262,10 +266,10 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in write_observers.iter_mut() {
             debug!(
-                response_context.get_host().record,
+                context.response_context.get_host().record,
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
-            (*observer_iter).on_write(write, &response_context, &read_result, &handle_result, &write_result);
+            (*observer_iter).on_write(write, &context, &read_result, &handle_result, &write_result);
         }
         debug!(record.server, "TileServer::write_response - finish");
         return (write_result, self);
@@ -415,7 +419,7 @@ mod tests {
         fn on_write(
             &mut self,
             _func: WriteResponseFunc,
-            _context: &ResponseContext,
+            _context: &WriteContext,
             _read_result: &ReadRequestResult,
             _handle_result: &HandleRequestResult,
             _write_result: &WriteResponseResult,

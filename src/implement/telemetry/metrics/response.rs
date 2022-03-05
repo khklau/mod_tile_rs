@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::MAX_ZOOM_SERVER;
-use crate::apache2::response::ResponseContext;
 use crate::schema::handler::context::HandleContext;
+use crate::schema::slippy::context::WriteContext;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
 use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
 use crate::interface::telemetry::metrics::{
@@ -94,7 +94,7 @@ impl ResponseAnalysis {
 
     fn on_tile_write(
         &mut self,
-        context: &ResponseContext,
+        context: &WriteContext,
         request: &request::Request,
         _response: &response::Response,
     ) -> () {
@@ -108,7 +108,7 @@ impl ResponseAnalysis {
             self.tile_reponse_count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.get_host().record,
+                context.response_context.get_host().record,
                 "ResponseAnalysis::on_tile_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -116,7 +116,7 @@ impl ResponseAnalysis {
 
     fn on_http_response_write(
         &mut self,
-        context: &ResponseContext,
+        context: &WriteContext,
         request: &request::Request,
         http_response: &HttpResponse,
     ) -> () {
@@ -134,7 +134,7 @@ impl ResponseAnalysis {
             count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.get_host().record,
+                context.response_context.get_host().record,
                 "ResponseAnalysis::on_http_response_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -145,7 +145,7 @@ impl WriteResponseObserver for ResponseAnalysis {
     fn on_write(
         &mut self,
         _func: WriteResponseFunc,
-        context: &ResponseContext,
+        context: &WriteContext,
         read_result: &ReadRequestResult,
         handle_result: &HandleRequestResult,
         write_result: &WriteResponseResult,
@@ -314,7 +314,7 @@ mod tests {
     use std::ffi::CString;
 
     fn mock_write(
-        _context: &mut ResponseContext,
+        _context: &mut WriteContext,
         _response: &response::Response
     ) -> WriteResponseResult {
         return Ok(WriteOutcome::NotWritten)
@@ -602,8 +602,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let response_context = ResponseContext::from(handle_context.request_context);
-                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let mut context = WriteContext {
+                    module_config: &module_config,
+                    response_context: &mut response_context,
+                };
+                analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
                 assert_eq!(
                     1,
                     analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -935,8 +939,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let response_context = ResponseContext::from(handle_context.request_context);
-                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let context = WriteContext {
+                    module_config: &module_config,
+                    response_context: &mut response_context,
+                };
+                analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
                     1,
                     analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -1026,8 +1034,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let response_context = ResponseContext::from(handle_context.request_context);
-                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let context = WriteContext {
+                    module_config: &module_config,
+                    response_context: &mut response_context,
+                };
+                analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
                     0,
                     analysis.count_response_by_status_code(&StatusCode::OK),
@@ -1109,8 +1121,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let response_context = ResponseContext::from(handle_context.request_context);
-                analysis.on_write(mock_write, &response_context, &read_result, &handle_result, &write_result);
+                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let context = WriteContext {
+                    module_config: &module_config,
+                    response_context: &mut response_context,
+                };
+                analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
                     0,
                     analysis.count_total_tile_response(),
