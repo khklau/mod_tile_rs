@@ -87,14 +87,15 @@ mod tests {
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
         let mut layer_handler = DescriptionHandler { };
         let layer_name = String::from("default");
-        let tile_config = ModuleConfig::new();
-        let layer_config = tile_config.layers.get(&layer_name).unwrap();
+        let module_config = ModuleConfig::new();
+        let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
-                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    module_config: &module_config,
+                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -119,14 +120,15 @@ mod tests {
     fn test_default_config_json() -> Result<(), Box<dyn Error>> {
         let mut layer_handler = DescriptionHandler { };
         let layer_name = String::from("default");
-        let tile_config = ModuleConfig::new();
-        let layer_config = tile_config.layers.get(&layer_name).unwrap();
+        let module_config = ModuleConfig::new();
+        let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
-                    request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
+                    module_config: &module_config,
+                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,

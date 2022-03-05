@@ -28,6 +28,11 @@ mod schema {
         pub mod result;
     }
 }
+mod framework {
+    pub mod apache2 {
+        pub mod config;
+    }
+}
 #[macro_use]
 mod apache2 {
     #[macro_use]
@@ -114,7 +119,7 @@ pub static mut TILE_MODULE: module = module {
 
 
 #[no_mangle]
-pub extern "C" fn load_tile_config(
+pub extern "C" fn load_config(
     cmd_ptr: *mut cmd_parms,
     _: *mut c_void,
     value: *const c_char,
@@ -127,18 +132,18 @@ pub extern "C" fn load_tile_config(
         return cstr!("Nullptr server_rec");
     }
     let record = unsafe { &mut *(command.server) };
-    debug!(record, "tile_server::load_tile_config - start");
+    debug!(record, "tile_server::load_config - start");
     let path_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
     let tile_server = TileProxy::find_or_create(record).unwrap();
     let mut file_path = PathBuf::new();
     file_path.push(path_str);
-    match tile_server.load_tile_config(file_path) {
+    match tile_server.load_config(file_path) {
         Ok(_) => {
-            info!(record, "tile_server::load_tile_config - loaded config from {}", path_str);
+            info!(record, "tile_server::load_config - loaded config from {}", path_str);
             return ptr::null();
         },
         Err(why) => {
-            error!(record, "tile_server::load_tile_config - failed because {}", why);
+            error!(record, "tile_server::load_config - failed because {}", why);
             return cstr!("Failed to load tile config file");
         },
     };

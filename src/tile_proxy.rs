@@ -10,7 +10,7 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS, OK,
     apr_status_t, request_rec, server_rec,
 };
-use crate::schema::apache2::config::{ ModuleConfig, load };
+use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
@@ -19,6 +19,7 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
+use crate::framework::apache2::config::Loadable;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
@@ -86,8 +87,8 @@ impl<'p> TileProxy<'p> {
             },
             None => {
                 info!(record, "TileServer::find_or_create - not found");
-                let tile_config = ModuleConfig::new();
-                Self::create(record, tile_config)?
+                let module_config = ModuleConfig::new();
+                Self::create(record, module_config)?
             },
         };
         info!(context.record, "TileServer::find_or_create - finish");
@@ -96,7 +97,7 @@ impl<'p> TileProxy<'p> {
 
     pub fn create(
         record: &'p mut server_rec,
-        tile_config: ModuleConfig,
+        module_config: ModuleConfig,
     ) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
@@ -106,7 +107,7 @@ impl<'p> TileProxy<'p> {
             Some(drop_tile_server),
         )?.0;
         new_server.record = record;
-        new_server.config = tile_config;
+        new_server.config = module_config;
         new_server.config_file_path = None;
         new_server.read_request = SlippyRequestReader::read;
         new_server.layer_handler = DescriptionHandler { };
@@ -122,14 +123,14 @@ impl<'p> TileProxy<'p> {
         return Ok(new_server);
     }
 
-    pub fn load_tile_config(
+    pub fn load_config(
         &mut self,
         file_path: PathBuf,
     ) -> Result<(), Box<dyn Error>> {
         let original_request_timeout = self.config.renderd.render_timeout.clone();
         let server_name = self.record.get_host_name();
-        let tile_config = load(file_path.as_path(), server_name)?;
-        self.config = tile_config;
+        let module_config = ModuleConfig::load(file_path.as_path(), server_name)?;
+        self.config = module_config;
         self.config.renderd.render_timeout = original_request_timeout;
         self.config_file_path = Some(file_path.clone());
         return Ok(());
@@ -148,7 +149,7 @@ impl<'p> TileProxy<'p> {
     ) -> Result<(), Box<dyn Error>> {
         if let Some(original_path) = &self.config_file_path {
             let copied_path = original_path.clone();
-            self.load_tile_config(copied_path)?;
+            self.load_config(copied_path)?;
         }
         let context = VirtualHostContext::find_or_create(record, &self.config).unwrap();
         file_system::initialise(context)?;
@@ -202,6 +203,7 @@ impl<'p> TileProxy<'p> {
         };
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = HandleContext {
+            module_config: &self.config,
             request_context: RequestContext::find_or_create(record, &self.config).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
@@ -292,14 +294,14 @@ mod tests {
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
         with_server_rec(|record| {
-            let tile_config = ModuleConfig::new();
-            let proxy = TileProxy::create(record, tile_config).unwrap();
+            let module_config = ModuleConfig::new();
+            let proxy = TileProxy::create(record, module_config).unwrap();
 
             let expected_timeout = Duration::new(30, 50);
             proxy.set_render_timeout(&expected_timeout);
             let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             expected_path.push("resources/test/tile/basic_valid.conf");
-            proxy.load_tile_config(expected_path.clone())?;
+            proxy.load_config(expected_path.clone())?;
 
             let actual_timeout = proxy.config.renderd.render_timeout.clone();
             assert_eq!(expected_timeout, actual_timeout, "Failed to preserve request timeout during reload");
@@ -333,8 +335,8 @@ mod tests {
                 let mut mock1 = MockReadObserver {
                     count: 0,
                 };
-                let tile_config = ModuleConfig::new();
-                let proxy = TileProxy::create(server, tile_config).unwrap();
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::create(server, module_config).unwrap();
                 proxy.read_observers = Some([&mut mock1]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
@@ -375,8 +377,8 @@ mod tests {
                 let mut mock3 = MockHandleObserver {
                     count: 0,
                 };
-                let tile_config = ModuleConfig::new();
-                let proxy = TileProxy::create(server, tile_config).unwrap();
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::create(server, module_config).unwrap();
                 proxy.handle_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
@@ -428,8 +430,8 @@ mod tests {
                 let mut mock2 = MockWriteObserver {
                     count: 0,
                 };
-                let tile_config = ModuleConfig::new();
-                let proxy = TileProxy::create(server, tile_config).unwrap();
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::create(server, module_config).unwrap();
                 proxy.write_observers = Some([&mut mock1, &mut mock2]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();

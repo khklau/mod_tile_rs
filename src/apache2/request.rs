@@ -43,7 +43,7 @@ impl<'r> RequestContext<'r> {
     }
 
     pub fn get_config(&self) -> &ModuleConfig{
-        self.get_host().tile_config
+        self.get_host().module_config
     }
 
     pub fn find_or_create(

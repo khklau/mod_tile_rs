@@ -351,10 +351,10 @@ mod tests {
     #[test]
     fn test_parse_report_mod_stats() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let tile_config = ModuleConfig::new();
+            let module_config = ModuleConfig::new();
             let uri = CString::new("/mod_tile_rs")?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -373,11 +373,11 @@ mod tests {
     fn test_parse_describe_layer() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -400,12 +400,12 @@ mod tests {
     fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -437,12 +437,12 @@ mod tests {
     fn test_parse_serve_tile_v3_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/999.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             match SlippyRequestParser::parse(context, request_url).unwrap_err() {
@@ -461,12 +461,12 @@ mod tests {
     fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -498,12 +498,12 @@ mod tests {
     fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -535,11 +535,11 @@ mod tests {
     fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -570,11 +570,11 @@ mod tests {
     fn test_parse_serve_tile_v2_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/999.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             match SlippyRequestParser::parse(context, request_url).unwrap_err() {
@@ -593,11 +593,11 @@ mod tests {
     fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();
@@ -628,11 +628,11 @@ mod tests {
     fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
             let layer_name = "default";
-            let mut tile_config = ModuleConfig::new();
-            let layer_config = tile_config.layers.get_mut(layer_name).unwrap();
+            let mut module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = RequestContext::create_with_tile_config(record, &tile_config)?;
+            let context = RequestContext::create_with_tile_config(record, &module_config)?;
             let request_url = context.uri;
 
             let actual_request = SlippyRequestParser::parse(context, request_url)?.expect_matched();

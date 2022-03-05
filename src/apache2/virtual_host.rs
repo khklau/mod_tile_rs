@@ -67,7 +67,7 @@ impl ProcessRecord for process_rec {
 
 pub struct VirtualHostContext<'h> {
     pub record: &'h mut server_rec,
-    pub tile_config: &'h ModuleConfig,
+    pub module_config: &'h ModuleConfig,
     pub trace_path: PathBuf,
     pub trace_file: RefCell<File>,
 }
@@ -118,7 +118,7 @@ impl<'h> VirtualHostContext<'h> {
             Some(drop_virtual_host_context),
         )?.0;
         new_context.record = record;
-        new_context.tile_config = config;
+        new_context.module_config = config;
 
         let path_str = format!(
             "/tmp/mod_tile_rs-trace-pid{}-tid{}.txt",
