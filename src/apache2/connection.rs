@@ -5,7 +5,7 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::schema::tile::config::TileConfig;
+use crate::schema::tile::config::ModuleConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -33,7 +33,7 @@ impl<'c> ConnectionContext<'c> {
 
     pub fn find_or_create(
         record: &'c mut conn_rec,
-        config: &'c TileConfig,
+        config: &'c ModuleConfig,
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
@@ -107,7 +107,7 @@ pub mod test_utils {
     use crate::apache2::memory::test_utils::with_pool;
     use crate::apache2::virtual_host::VirtualHostContext;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
-    use crate::schema::tile::config::TileConfig;
+    use crate::schema::tile::config::ModuleConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;
@@ -117,7 +117,7 @@ pub mod test_utils {
     impl<'c> ConnectionContext<'c> {
         pub fn create_with_tile_config(
             record: &'c mut conn_rec,
-            config: &'c TileConfig,
+            config: &'c ModuleConfig,
         ) -> Result<&'c mut Self, Box<dyn Error>> {
             let server = unsafe { &mut *(record.base_server) };
             let host_context = VirtualHostContext::create(server, config)?;

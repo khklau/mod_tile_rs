@@ -7,7 +7,7 @@ use crate::binding::apache2::{
     apr_status_t, request_rec,
 };
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::schema::tile::config::TileConfig;
+use crate::schema::tile::config::ModuleConfig;
 
 use snowflake::SnowflakeIdGenerator;
 
@@ -42,13 +42,13 @@ impl<'r> RequestContext<'r> {
         self.connection.host
     }
 
-    pub fn get_config(&self) -> &TileConfig{
+    pub fn get_config(&self) -> &ModuleConfig{
         self.get_host().tile_config
     }
 
     pub fn find_or_create(
         record: &'r mut request_rec,
-        config: &'r TileConfig,
+        config: &'r ModuleConfig,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
@@ -136,7 +136,7 @@ pub mod test_utils {
     use crate::apache2::memory::test_utils::with_pool;
     use crate::apache2::connection::ConnectionContext;
     use crate::apache2::connection::test_utils::with_conn_rec;
-    use crate::schema::tile::config::TileConfig;
+    use crate::schema::tile::config::ModuleConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;
@@ -146,7 +146,7 @@ pub mod test_utils {
     impl<'r> RequestContext<'r> {
         pub fn create_with_tile_config(
             record: &'r mut request_rec,
-            config: &'r TileConfig,
+            config: &'r ModuleConfig,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
             let connection = unsafe { &mut *(record.connection) };
             let conn_context = ConnectionContext::create_with_tile_config(connection, config)?;

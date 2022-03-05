@@ -306,7 +306,7 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
-    use crate::schema::tile::config::TileConfig;
+    use crate::schema::tile::config::ModuleConfig;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -326,7 +326,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -402,7 +402,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -470,7 +470,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -538,7 +538,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -631,7 +631,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -707,7 +707,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -783,7 +783,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -868,7 +868,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -960,7 +960,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,
@@ -1040,7 +1040,7 @@ mod tests {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     request_context: RequestContext::create_with_tile_config(request, &tile_config)?,
                     cache_metrics,

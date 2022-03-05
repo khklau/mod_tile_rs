@@ -11,14 +11,14 @@ use std::time::Duration;
 
 
 #[derive(Debug)]
-pub struct TileConfig {
+pub struct ModuleConfig {
     pub renderd: RenderdConfig,
     pub layers: HashMap<String, LayerConfig>,
 }
 
-impl TileConfig {
-    pub fn new() -> TileConfig {
-        let mut value = TileConfig {
+impl ModuleConfig {
+    pub fn new() -> ModuleConfig {
+        let mut value = ModuleConfig {
             renderd: RenderdConfig::new(),
             layers: HashMap::new(),
         };
@@ -89,7 +89,7 @@ impl LayerConfig {
 pub fn load(
     path: &Path,
     server_name: Option<&str>,
-) -> Result<TileConfig, ParseError> {
+) -> Result<ModuleConfig, ParseError> {
     let mut ini = Ini::new();
     ini.load(path)?;
     return parse(&ini, server_name);
@@ -98,8 +98,8 @@ pub fn load(
 fn parse(
     ini: &Ini,
     server_name: Option<&str>,
-) -> Result<TileConfig, ParseError> {
-    let mut config = TileConfig::new();
+) -> Result<ModuleConfig, ParseError> {
+    let mut config = ModuleConfig::new();
     'sections: for section_name in &(ini.sections()) {
         match section_name.to_lowercase().as_str() {
             "mapnik" => {

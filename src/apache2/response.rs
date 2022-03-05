@@ -252,7 +252,7 @@ impl Writer for Apache2Writer {
 mod tests {
     use super::*;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::schema::tile::config::TileConfig;
+    use crate::schema::tile::config::ModuleConfig;
 
     use std::cmp::min;
     use std::collections::VecDeque;
@@ -302,7 +302,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = TileConfig::new();
+            let config = ModuleConfig::new();
             let request_context = RequestContext::create_with_tile_config(request, &config)?;
             let mut context = ResponseContext::from(request_context);
             context.writer = Some(&mut writer);
@@ -325,7 +325,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = TileConfig::new();
+            let config = ModuleConfig::new();
             let request_context = RequestContext::create_with_tile_config(request, &config)?;
             let mut context = ResponseContext::from(request_context);
             context.writer = Some(&mut writer);
@@ -348,7 +348,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = TileConfig::new();
+            let config = ModuleConfig::new();
             let request_context = RequestContext::create_with_tile_config(request, &config)?;
             let mut context = ResponseContext::from(request_context);
             context.writer = Some(&mut writer);
@@ -371,7 +371,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = TileConfig::new();
+            let config = ModuleConfig::new();
             let request_context = RequestContext::create_with_tile_config(request, &config)?;
             let mut context = ResponseContext::from(request_context);
             context.writer = Some(&mut writer);

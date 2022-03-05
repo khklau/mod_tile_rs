@@ -5,7 +5,7 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::schema::tile::config::TileConfig;
+use crate::schema::tile::config::ModuleConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -67,7 +67,7 @@ impl ProcessRecord for process_rec {
 
 pub struct VirtualHostContext<'h> {
     pub record: &'h mut server_rec,
-    pub tile_config: &'h TileConfig,
+    pub tile_config: &'h ModuleConfig,
     pub trace_path: PathBuf,
     pub trace_file: RefCell<File>,
 }
@@ -85,7 +85,7 @@ impl<'h> VirtualHostContext<'h> {
 
     pub fn find_or_create(
         record: &'h mut server_rec,
-        config: &'h TileConfig,
+        config: &'h ModuleConfig,
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::find_or_create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
@@ -108,7 +108,7 @@ impl<'h> VirtualHostContext<'h> {
 
     pub fn create(
         record: &'h mut server_rec,
-        config: &'h TileConfig,
+        config: &'h ModuleConfig,
     ) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::create - start");
         let proc_record = server_rec::get_process_record(record.process)?;

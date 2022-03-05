@@ -3,7 +3,7 @@ use crate::interface::handler::RequestHandler;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::tile::config::TileConfig;
+use crate::schema::tile::config::ModuleConfig;
 
 use chrono::Utc;
 use mime;
@@ -48,7 +48,7 @@ impl RequestHandler for DescriptionHandler {
     }
 }
 
-fn describe(config: &TileConfig, layer: &String) -> response::Description {
+fn describe(config: &ModuleConfig, layer: &String) -> response::Description {
     let layer_config = &config.layers[layer];
     let mut value = response::Description {
         tilejson: "2.0.0",
@@ -78,7 +78,7 @@ mod tests {
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::RequestContext;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
-    use crate::schema::tile::config::TileConfig;
+    use crate::schema::tile::config::ModuleConfig;
 
     use std::error::Error;
     use std::ffi::CString;
@@ -87,7 +87,7 @@ mod tests {
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
         let mut layer_handler = DescriptionHandler { };
         let layer_name = String::from("default");
-        let tile_config = TileConfig::new();
+        let tile_config = ModuleConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
@@ -119,7 +119,7 @@ mod tests {
     fn test_default_config_json() -> Result<(), Box<dyn Error>> {
         let mut layer_handler = DescriptionHandler { };
         let layer_name = String::from("default");
-        let tile_config = TileConfig::new();
+        let tile_config = ModuleConfig::new();
         let layer_config = tile_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {

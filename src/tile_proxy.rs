@@ -18,7 +18,7 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
-use crate::schema::tile::config::{ TileConfig, load };
+use crate::schema::tile::config::{ ModuleConfig, load };
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
@@ -49,7 +49,7 @@ pub enum HandleRequestError {
 
 pub struct TileProxy<'p> {
     record: &'p mut server_rec,
-    config: TileConfig,
+    config: ModuleConfig,
     config_file_path: Option<PathBuf>,
     read_request: ReadRequestFunc,
     layer_handler: DescriptionHandler,
@@ -86,7 +86,7 @@ impl<'p> TileProxy<'p> {
             },
             None => {
                 info!(record, "TileServer::find_or_create - not found");
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 Self::create(record, tile_config)?
             },
         };
@@ -96,7 +96,7 @@ impl<'p> TileProxy<'p> {
 
     pub fn create(
         record: &'p mut server_rec,
-        tile_config: TileConfig,
+        tile_config: ModuleConfig,
     ) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
@@ -292,7 +292,7 @@ mod tests {
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
         with_server_rec(|record| {
-            let tile_config = TileConfig::new();
+            let tile_config = ModuleConfig::new();
             let proxy = TileProxy::create(record, tile_config).unwrap();
 
             let expected_timeout = Duration::new(30, 50);
@@ -333,7 +333,7 @@ mod tests {
                 let mut mock1 = MockReadObserver {
                     count: 0,
                 };
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let proxy = TileProxy::create(server, tile_config).unwrap();
                 proxy.read_observers = Some([&mut mock1]);
                 let uri = CString::new("/mod_tile_rs")?;
@@ -375,7 +375,7 @@ mod tests {
                 let mut mock3 = MockHandleObserver {
                     count: 0,
                 };
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let proxy = TileProxy::create(server, tile_config).unwrap();
                 proxy.handle_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
                 let uri = CString::new("/mod_tile_rs")?;
@@ -428,7 +428,7 @@ mod tests {
                 let mut mock2 = MockWriteObserver {
                     count: 0,
                 };
-                let tile_config = TileConfig::new();
+                let tile_config = ModuleConfig::new();
                 let proxy = TileProxy::create(server, tile_config).unwrap();
                 proxy.write_observers = Some([&mut mock1, &mut mock2]);
                 let uri = CString::new("/mod_tile_rs")?;
