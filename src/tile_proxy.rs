@@ -14,6 +14,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
+use crate::schema::slippy::context::ReadContext;
 use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
@@ -179,11 +180,14 @@ impl<'p> TileProxy<'p> {
             None => [&mut self.trans_trace],
         };
         let read = self.read_request;
-        let context = RequestContext::find_or_create(record, &self.config).unwrap();
-        let read_result = read(context);
+        let context = ReadContext {
+            module_config: &self.config,
+            request_context: RequestContext::find_or_create(record, &self.config).unwrap(),
+        };
+        let read_result = read(&context);
         for observer_iter in read_observers.iter_mut() {
-            debug!(context.get_host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(read, context, &read_result);
+            debug!(context.request_context.get_host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
+            (*observer_iter).on_read(read, &context, &read_result);
         }
         debug!(record.server, "TileServer::read_request - finish");
         return (read_result, self);
@@ -321,7 +325,7 @@ mod tests {
         fn on_read(
             &mut self,
             _func: ReadRequestFunc,
-            _context: &RequestContext,
+            _context: &ReadContext,
             _result: &ReadRequestResult
         ) -> () {
             self.count += 1;

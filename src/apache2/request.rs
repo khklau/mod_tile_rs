@@ -42,10 +42,6 @@ impl<'r> RequestContext<'r> {
         self.connection.host
     }
 
-    pub fn get_config(&self) -> &ModuleConfig{
-        self.get_host().module_config
-    }
-
     pub fn find_or_create(
         record: &'r mut request_rec,
         config: &'r ModuleConfig,

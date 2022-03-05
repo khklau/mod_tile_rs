@@ -1,4 +1,3 @@
-use crate::apache2::request::RequestContext;
 use crate::apache2::response::ResponseContext;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
 use crate::interface::slippy::{
@@ -6,6 +5,7 @@ use crate::interface::slippy::{
 };
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::slippy::context::ReadContext;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, };
 
 
@@ -15,7 +15,7 @@ impl ReadRequestObserver for TransactionTrace {
     fn on_read(
         &mut self,
         _func: ReadRequestFunc,
-        _context: &RequestContext,
+        _context: &ReadContext,
         _result: &ReadRequestResult
     ) -> () {
     }

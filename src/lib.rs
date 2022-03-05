@@ -17,6 +17,7 @@ mod schema {
         pub mod error;
     }
     pub mod slippy {
+        pub mod context;
         pub mod error;
         pub mod result;
         pub mod request;

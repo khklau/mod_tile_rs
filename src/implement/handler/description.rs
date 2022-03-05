@@ -29,7 +29,7 @@ impl RequestHandler for DescriptionHandler {
                 }
             },
         };
-        let description = describe(context.request_context.get_config(), layer);
+        let description = describe(context.module_config, layer);
         let response = response::Response {
             header: response::Header::new(
                 context.request_context.record,
