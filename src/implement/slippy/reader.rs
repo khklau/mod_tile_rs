@@ -7,7 +7,7 @@ use crate::schema::slippy::request::{
     BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
-use crate::schema::tile::config::{ LayerConfig, MAX_ZOOM_SERVER };
+use crate::schema::apache2::config::{ LayerConfig, MAX_ZOOM_SERVER };
 
 use scan_fmt::scan_fmt;
 
@@ -342,8 +342,8 @@ impl ServeTileV2RequestParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::schema::tile::config::ModuleConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ffi::CString;

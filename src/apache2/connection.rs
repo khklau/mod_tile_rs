@@ -4,8 +4,8 @@ use crate::binding::apache2::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
 };
+use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::schema::tile::config::ModuleConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -104,10 +104,10 @@ pub mod test_utils {
     use crate::binding::apache2::{
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
+    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::memory::test_utils::with_pool;
     use crate::apache2::virtual_host::VirtualHostContext;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
-    use crate::schema::tile::config::ModuleConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;

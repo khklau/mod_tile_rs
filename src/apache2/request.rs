@@ -6,8 +6,8 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
     apr_status_t, request_rec,
 };
+use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::schema::tile::config::ModuleConfig;
 
 use snowflake::SnowflakeIdGenerator;
 
@@ -133,10 +133,10 @@ pub mod test_utils {
         apr_off_t, apr_pool_t, apr_port_t, apr_time_t, apr_uid_t, apr_uri_t,
         conn_rec, request_rec,
     };
+    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::memory::test_utils::with_pool;
     use crate::apache2::connection::ConnectionContext;
     use crate::apache2::connection::test_utils::with_conn_rec;
-    use crate::schema::tile::config::ModuleConfig;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;

@@ -1,9 +1,9 @@
 use crate::schema::handler::context::HandleContext;
 use crate::interface::handler::RequestHandler;
+use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::tile::config::ModuleConfig;
 
 use chrono::Utc;
 use mime;
@@ -75,10 +75,10 @@ fn describe(config: &ModuleConfig, layer: &String) -> response::Description {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::RequestContext;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
-    use crate::schema::tile::config::ModuleConfig;
 
     use std::error::Error;
     use std::ffi::CString;

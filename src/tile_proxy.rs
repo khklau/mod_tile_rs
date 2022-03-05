@@ -10,6 +10,7 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS, OK,
     apr_status_t, request_rec, server_rec,
 };
+use crate::schema::apache2::config::{ ModuleConfig, load };
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
@@ -18,7 +19,6 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
-use crate::schema::tile::config::{ ModuleConfig, load };
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;

@@ -1,3 +1,4 @@
+use crate::schema::apache2::config::MAX_ZOOM_SERVER;
 use crate::apache2::response::ResponseContext;
 use crate::schema::handler::context::HandleContext;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
@@ -14,7 +15,6 @@ use crate::schema::slippy::result::{
     WriteResponseResult, WriteOutcome,
 };
 use crate::schema::tile::age::TileAge;
-use crate::schema::tile::config::MAX_ZOOM_SERVER;
 use crate::schema::tile::source::TileSource;
 
 use chrono::Duration;
@@ -301,12 +301,12 @@ mod tests {
     use crate::apache2::response::ResponseContext;
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
+    use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::handler::result::HandleOutcome;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
-    use crate::schema::tile::config::ModuleConfig;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;

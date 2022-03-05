@@ -4,8 +4,8 @@ use crate::binding::apache2::{
     apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
+use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::schema::tile::config::ModuleConfig;
 
 use std::any::type_name;
 use std::boxed::Box;
