@@ -46,7 +46,7 @@ impl ResponseAnalysis {
     fn on_handled_tile(
         &mut self,
         context: &HandleContext,
-        request: &request::Request,
+        request: &request::SlippyRequest,
         response: &response::TileResponse,
         handle_duration: &Duration,
     ) -> () {
@@ -57,7 +57,7 @@ impl ResponseAnalysis {
     fn accrue_tile_handle_duration(
         &mut self,
         context: &HandleContext,
-        request: &request::Request,
+        request: &request::SlippyRequest,
         handle_duration: &Duration,
     ) -> () {
         let zoom_level = match &request.body {
@@ -95,8 +95,8 @@ impl ResponseAnalysis {
     fn on_tile_write(
         &mut self,
         context: &WriteContext,
-        request: &request::Request,
-        _response: &response::Response,
+        request: &request::SlippyRequest,
+        _response: &response::SlippyResponse,
     ) -> () {
         let zoom_level = match &request.body {
             request::BodyVariant::ServeTileV2(v2_request) => v2_request.z as usize,
@@ -117,7 +117,7 @@ impl ResponseAnalysis {
     fn on_http_response_write(
         &mut self,
         context: &WriteContext,
-        request: &request::Request,
+        request: &request::SlippyRequest,
         http_response: &HttpResponse,
     ) -> () {
         if !(self.response_count_by_status_and_zoom.contains_key(&http_response.status_code)) {
@@ -182,7 +182,7 @@ impl HandleRequestObserver for ResponseAnalysis {
         match (read_result, &handle_result.result) {
             (Ok(read_outcome), Ok(handle_outcome)) => match (read_outcome, handle_outcome) {
                 (ReadOutcome::Matched(request), HandleOutcome::Handled(response)) => match &response.body {
-                    response::BodyVariant::Tile(tile_response) => self.on_handled_tile(context, request, tile_response, &handle_duration),
+                    response::BodyVariant::Tile(tile_response) => self.on_handled_tile(context, request, &tile_response, &handle_duration),
                     _ => (),
                 },
                 _ => (),
@@ -297,8 +297,8 @@ impl<T: Default> TileMetricTable<T> {
 mod tests {
     use super::*;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::apache2::request::RequestContext;
-    use crate::apache2::response::ResponseContext;
+    use crate::apache2::request::Apache2Request;
+    use crate::apache2::response::Apache2Response;
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::schema::apache2::config::ModuleConfig;
@@ -315,7 +315,7 @@ mod tests {
 
     fn mock_write(
         _context: &mut WriteContext,
-        _response: &response::Response
+        _response: &response::SlippyResponse
     ) -> WriteResponseResult {
         return Ok(WriteOutcome::NotWritten)
     }
@@ -329,14 +329,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -362,7 +362,7 @@ mod tests {
                     after_timestamp,
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -406,14 +406,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -430,7 +430,7 @@ mod tests {
                     after_timestamp,
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -475,14 +475,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -505,7 +505,7 @@ mod tests {
                     after_timestamp: Utc::now(),
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -544,14 +544,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -575,7 +575,7 @@ mod tests {
                     after_timestamp: Utc::now(),
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -602,7 +602,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(handle_context.request_context);
                 let mut context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
@@ -642,14 +642,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -675,7 +675,7 @@ mod tests {
                     after_timestamp,
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -719,14 +719,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -752,7 +752,7 @@ mod tests {
                     after_timestamp,
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -796,14 +796,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -834,7 +834,7 @@ mod tests {
                             after_timestamp,
                             result: Ok(
                                 HandleOutcome::Handled(
-                                    response::Response {
+                                    response::SlippyResponse {
                                         header: response::Header::new(
                                             handle_context.request_context.record,
                                             handle_context.request_context.connection.record,
@@ -882,14 +882,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -912,7 +912,7 @@ mod tests {
                     after_timestamp: Utc::now(),
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -939,7 +939,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(handle_context.request_context);
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
@@ -979,14 +979,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -1001,7 +1001,7 @@ mod tests {
                     after_timestamp: Utc::now(),
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -1034,7 +1034,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(handle_context.request_context);
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
@@ -1064,14 +1064,14 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
@@ -1094,7 +1094,7 @@ mod tests {
                     after_timestamp: Utc::now(),
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
@@ -1121,7 +1121,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = ResponseContext::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(handle_context.request_context);
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,

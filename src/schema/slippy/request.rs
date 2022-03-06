@@ -8,7 +8,7 @@ use std::string::String;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
-pub struct Request {
+pub struct SlippyRequest {
     pub header: Header,
     pub body: BodyVariant,
 }

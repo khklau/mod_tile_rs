@@ -1,6 +1,6 @@
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::context::WriteContext;
-use crate::schema::slippy::response::{ BodyVariant, Header, Description, Response };
+use crate::schema::slippy::response::{ BodyVariant, Header, Description, SlippyResponse };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult };
 
 use chrono::{ TimeZone, Utc, };
@@ -13,7 +13,7 @@ pub struct SlippyResponseWriter { }
 impl SlippyResponseWriter {
     pub fn write(
         context: &mut WriteContext,
-        response: &Response
+        response: &SlippyResponse
     ) -> WriteResponseResult {
         match &response.body {
             BodyVariant::Description(descr) => {

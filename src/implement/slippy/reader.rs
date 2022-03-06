@@ -4,7 +4,7 @@ use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
 use crate::schema::slippy::request::{
-    BodyVariant, Header, Request, ServeTileRequestV2, ServeTileRequestV3
+    BodyVariant, Header, SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::apache2::config::{ LayerConfig, MAX_ZOOM_SERVER };
@@ -20,7 +20,7 @@ impl SlippyRequestReader {
     pub fn read(
         context: &ReadContext,
     ) -> Result<ReadOutcome, ReadError> {
-        let request_url= context.request_context.uri;
+        let request_url= context.request.uri;
         SlippyRequestParser::parse(&context, request_url)
     }
 }
@@ -31,7 +31,7 @@ impl SlippyRequestParser {
         context: &ReadContext,
         request_url: &str,
     ) -> Result<ReadOutcome, ReadError> {
-        debug!(context.request_context.get_host().record, "SlippyRequestParser::parse - start");
+        debug!(context.request.get_host().record, "SlippyRequestParser::parse - start");
         // try match stats request
         if let ReadOutcome::Matched(request) = StatisticsRequestParser::parse(&context, request_url)? {
             return Ok(ReadOutcome::Matched(request));
@@ -45,7 +45,7 @@ impl SlippyRequestParser {
         );
         for (layer, config) in &(context.module_config.layers) {
             info!(
-                context.request_context.get_host().record,
+                context.request.get_host().record,
                 "SlippyRequestParser::parse - comparing layer {} with base URL {} to uri",
                 layer,
                 request_url
@@ -59,7 +59,7 @@ impl SlippyRequestParser {
                 }
             };
         }
-        info!(context.request_context.get_host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
+        info!(context.request.get_host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
         return Ok(ReadOutcome::NotMatched);
     }
 }
@@ -94,17 +94,17 @@ impl StatisticsRequestParser {
         let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
         if request_url.eq(&stats_uri) {
-            info!(context.request_context.get_host().record, "StatisticsRequestParser::parse - matched ReportStatistics");
-            return Ok(ReadOutcome::Matched(Request {
+            info!(context.request.get_host().record, "StatisticsRequestParser::parse - matched ReportStatistics");
+            return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                 ),
                 body: BodyVariant::ReportStatistics,
             }));
         } else {
-            info!(context.request_context.get_host().record, "StatisticsRequestParser::parse - no match");
+            info!(context.request.get_host().record, "StatisticsRequestParser::parse - no match");
             return Ok(ReadOutcome::NotMatched);
         }
     }
@@ -118,18 +118,18 @@ impl DescribeLayerRequestParser {
         request_url: &str,
     ) -> Result<ReadOutcome, ReadError> {
         if request_url.eq_ignore_ascii_case("/tile-layer.json") {
-            info!(context.request_context.get_host().record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
-            return Ok(ReadOutcome::Matched(Request {
+            info!(context.request.get_host().record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
+            return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &(layer_config.name),
                 ),
                 body: BodyVariant::DescribeLayer
             }));
         } else {
-            info!(context.request_context.get_host().record, "DescribeLayerRequestParser::parse - no match");
+            info!(context.request.get_host().record, "DescribeLayerRequestParser::parse - no match");
             return Ok(ReadOutcome::NotMatched);
         }
     }
@@ -170,13 +170,13 @@ impl ServeTileV3RequestParser {
             String, i32, i32, u32, String, String
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
-                info!(context.request_context.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
+                info!(context.request.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
                 if z <= MAX_ZOOM_SERVER as u32 {
-                    return Ok(ReadOutcome::Matched(Request {
+                    return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
-                            context.request_context.record,
-                            context.request_context.connection.record,
-                            context.request_context.get_host().record,
+                            context.request.record,
+                            context.request.connection.record,
+                            context.request.get_host().record,
                             &(layer_config.name),
                         ),
                         body: BodyVariant::ServeTileV3(
@@ -210,13 +210,13 @@ impl ServeTileV3RequestParser {
             String, i32, i32, u32, String
         ) {
             Ok((parameter, x, y, z, extension)) => {
-                info!(context.request_context.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
+                info!(context.request.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
                 if z <= MAX_ZOOM_SERVER as u32 {
-                    return Ok(ReadOutcome::Matched(Request {
+                    return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
-                            context.request_context.record,
-                            context.request_context.connection.record,
-                            context.request_context.get_host().record,
+                            context.request.record,
+                            context.request.connection.record,
+                            context.request.get_host().record,
                             &(layer_config.name),
                         ),
                         body: BodyVariant::ServeTileV3(
@@ -243,7 +243,7 @@ impl ServeTileV3RequestParser {
             Err(_) => ()
         }
 
-        info!(context.request_context.get_host().record, "ServeTileV3RequestParser::parse - no match");
+        info!(context.request.get_host().record, "ServeTileV3RequestParser::parse - no match");
         return Ok(ReadOutcome::NotMatched);
     }
 }
@@ -264,12 +264,12 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension, option)) => {
             if z <= MAX_ZOOM_SERVER as u32 {
-                info!(context.request_context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
-                return Ok(ReadOutcome::Matched(Request {
+                info!(context.request.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
+                return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
-                        context.request_context.record,
-                        context.request_context.connection.record,
-                        context.request_context.get_host().record,
+                        context.request.record,
+                        context.request.connection.record,
+                        context.request.get_host().record,
                         &(layer_config.name),
                     ),
                     body: BodyVariant::ServeTileV2(
@@ -303,12 +303,12 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension)) => {
             if z <= MAX_ZOOM_SERVER as u32 {
-                info!(context.request_context.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
-                return Ok(ReadOutcome::Matched(Request {
+                info!(context.request.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
+                return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
-                        context.request_context.record,
-                        context.request_context.connection.record,
-                        context.request_context.get_host().record,
+                        context.request.record,
+                        context.request.connection.record,
+                        context.request.get_host().record,
                         &(layer_config.name),
                     ),
                     body: BodyVariant::ServeTileV2(
@@ -333,7 +333,7 @@ impl ServeTileV2RequestParser {
         },
         Err(_) => ()
     }
-        info!(context.request_context.get_host().record, "ServeTileV2RequestParser::parse - no match");
+        info!(context.request.get_host().record, "ServeTileV2RequestParser::parse - no match");
         return Ok(ReadOutcome::NotMatched)
     }
 }
@@ -344,7 +344,7 @@ mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::apache2::request::RequestContext;
+    use crate::apache2::request::Apache2Request;
     use std::boxed::Box;
     use std::error::Error;
     use std::ffi::CString;
@@ -357,15 +357,15 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_header = Header::new(
-                context.request_context.record,
-                context.request_context.connection.record,
-                context.request_context.get_host().record,
+                context.request.record,
+                context.request.connection.record,
+                context.request.get_host().record,
             );
             assert_eq!(expected_header, actual_request.header, "Wrong header generated");
             assert!(matches!(actual_request.body, BodyVariant::ReportStatistics));
@@ -383,17 +383,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::DescribeLayer,
@@ -414,17 +414,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -454,9 +454,9 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             match SlippyRequestParser::parse(&context, request_url).unwrap_err() {
                 ReadError::Param(err) => {
@@ -481,17 +481,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -521,17 +521,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -560,17 +560,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
@@ -598,9 +598,9 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             match SlippyRequestParser::parse(&context, request_url).unwrap_err() {
                 ReadError::Param(err) => {
@@ -624,17 +624,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
@@ -662,17 +662,17 @@ mod tests {
             record.uri = uri.into_raw();
             let context = ReadContext {
                 module_config: &module_config,
-                request_context: RequestContext::create_with_tile_config(record, &module_config)?,
+                request: Apache2Request::create_with_tile_config(record)?,
             };
-            let request_url= context.request_context.uri;
+            let request_url= context.request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_layer = String::from(layer_name);
-            let expected_request = Request {
+            let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
-                    context.request_context.record,
-                    context.request_context.connection.record,
-                    context.request_context.get_host().record,
+                    context.request.record,
+                    context.request.connection.record,
+                    context.request.get_host().record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(

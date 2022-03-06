@@ -1,18 +1,18 @@
 use crate::schema::handler::error::HandleError;
-use crate::schema::slippy::response::Response;
+use crate::schema::slippy::response::SlippyResponse;
 
 use chrono::{ DateTime, Utc, };
 
 
 #[derive(Debug)]
 pub enum HandleOutcome {
-    Handled(Response),
+    Handled(SlippyResponse),
     NotHandled,
 }
 
 #[cfg(test)]
 impl HandleOutcome {
-    pub fn expect_handled(self) -> Response {
+    pub fn expect_handled(self) -> SlippyResponse {
         if let HandleOutcome::Handled(response) = self {
             response
         } else {

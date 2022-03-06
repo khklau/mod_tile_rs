@@ -1,7 +1,7 @@
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::apache2::request::RequestContext;
-use crate::apache2::response::ResponseContext;
-use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHostContext, };
+use crate::apache2::request::Apache2Request;
+use crate::apache2::response::Apache2Response;
+use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHost, };
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
@@ -152,7 +152,7 @@ impl<'p> TileProxy<'p> {
             let copied_path = original_path.clone();
             self.load_config(copied_path)?;
         }
-        let context = VirtualHostContext::find_or_create(record, &self.config).unwrap();
+        let context = VirtualHost::find_or_create(record).unwrap();
         file_system::initialise(context)?;
         return Ok(());
     }
@@ -182,11 +182,11 @@ impl<'p> TileProxy<'p> {
         let read = self.read_request;
         let context = ReadContext {
             module_config: &self.config,
-            request_context: RequestContext::find_or_create(record, &self.config).unwrap(),
+            request: Apache2Request::find_or_create(record).unwrap(),
         };
         let read_result = read(&context);
         for observer_iter in read_observers.iter_mut() {
-            debug!(context.request_context.get_host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
+            debug!(context.request.get_host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(read, &context, &read_result);
         }
         debug!(record.server, "TileServer::read_request - finish");
@@ -208,7 +208,7 @@ impl<'p> TileProxy<'p> {
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = HandleContext {
             module_config: &self.config,
-            request_context: RequestContext::find_or_create(record, &self.config).unwrap(),
+            request_context: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
             response_metrics: &self.response_analysis,
@@ -249,8 +249,8 @@ impl<'p> TileProxy<'p> {
             None => [&mut self.trans_trace, &mut self.response_analysis],
         };
         let write = self.write_response;
-        let request_context = RequestContext::find_or_create(record, &self.config).unwrap();
-        let mut response_context = ResponseContext::from(request_context);
+        let request_context = Apache2Request::find_or_create(record).unwrap();
+        let mut response_context = Apache2Response::from(request_context);
         let mut context = WriteContext {
             module_config: &self.config,
             response_context: &mut response_context,
@@ -390,10 +390,10 @@ mod tests {
                 proxy.handle_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
+                let context = Apache2Request::create_with_tile_config(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
                                 context.connection.record,
@@ -443,10 +443,10 @@ mod tests {
                 proxy.write_observers = Some([&mut mock1, &mut mock2]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let context = RequestContext::create_with_tile_config(request, &proxy.config)?;
+                let context = Apache2Request::create_with_tile_config(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
-                        request::Request {
+                        request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
                                 context.connection.record,
@@ -461,7 +461,7 @@ mod tests {
                     after_timestamp: Utc::now(),
                     result: Ok(
                         HandleOutcome::Handled(
-                            response::Response {
+                            response::SlippyResponse {
                                 header: response::Header::new(
                                     context.record,
                                     context.connection.record,

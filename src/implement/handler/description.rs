@@ -16,7 +16,7 @@ impl RequestHandler for DescriptionHandler {
     fn handle(
         &mut self,
         context: &HandleContext,
-        request: &request::Request,
+        request: &request::SlippyRequest,
     ) -> HandleRequestResult {
         let before_timestamp = Utc::now();
         let layer = match request.body {
@@ -30,7 +30,7 @@ impl RequestHandler for DescriptionHandler {
             },
         };
         let description = describe(context.module_config, layer);
-        let response = response::Response {
+        let response = response::SlippyResponse {
             header: response::Header::new(
                 context.request_context.record,
                 context.request_context.connection.record,
@@ -77,7 +77,7 @@ mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
-    use crate::apache2::request::RequestContext;
+    use crate::apache2::request::Apache2Request;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
 
     use std::error::Error;
@@ -95,12 +95,12 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
-                let request = request::Request {
+                let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
                         handle_context.request_context.record,
                         handle_context.request_context.connection.record,
@@ -128,12 +128,12 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    request_context: RequestContext::create_with_tile_config(request, &module_config)?,
+                    request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
-                let request = request::Request {
+                let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
                         handle_context.request_context.record,
                         handle_context.request_context.connection.record,
@@ -154,7 +154,7 @@ mod tests {
                     maxzoom: layer_config.max_zoom,
                     tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
                 };
-                let expected_response = response::Response {
+                let expected_response = response::SlippyResponse {
                     header: response::Header::new(
                         handle_context.request_context.record,
                         handle_context.request_context.connection.record,

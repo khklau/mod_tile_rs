@@ -1,19 +1,19 @@
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::error::{ ReadError, WriteError };
-use crate::schema::slippy::request::Request;
+use crate::schema::slippy::request::SlippyRequest;
 
 use std::result::Result;
 
 
 #[derive(Debug)]
 pub enum ReadOutcome {
-    Matched(Request),
+    Matched(SlippyRequest),
     NotMatched,
 }
 
 #[cfg(test)]
 impl ReadOutcome {
-    pub fn expect_matched(self) -> Request {
+    pub fn expect_matched(self) -> SlippyRequest {
         if let ReadOutcome::Matched(request) = self {
             request
         } else {

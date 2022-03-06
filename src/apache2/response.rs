@@ -1,5 +1,5 @@
-use crate::apache2::request::RequestContext;
-use crate::apache2::virtual_host::VirtualHostContext;
+use crate::apache2::request::Apache2Request;
+use crate::apache2::virtual_host::VirtualHost;
 
 use crate::binding::apache2::request_rec;
 #[cfg(not(test))]
@@ -18,22 +18,22 @@ use std::mem::size_of;
 use std::option::Option;
 
 
-pub struct ResponseContext<'r> {
-    pub request: &'r mut RequestContext<'r>,
+pub struct Apache2Response<'r> {
+    pub request: &'r mut Apache2Request<'r>,
     apache2_writer: Apache2Writer,
     writer: Option<&'r mut dyn Writer<ElementType = u8>>,
 }
 
-impl<'r> ResponseContext<'r> {
-    pub fn from(request: &'r mut RequestContext<'r>) -> ResponseContext<'r> {
-        ResponseContext {
+impl<'r> Apache2Response<'r> {
+    pub fn from(request: &'r mut Apache2Request<'r>) -> Apache2Response<'r> {
+        Apache2Response {
             request: request,
             apache2_writer: Apache2Writer { },
             writer: None,
         }
     }
 
-    pub fn get_host(&self) -> &VirtualHostContext {
+    pub fn get_host(&self) -> &VirtualHost {
         self.request.get_host()
     }
 
@@ -251,7 +251,6 @@ impl Writer for Apache2Writer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
 
     use std::cmp::min;
@@ -302,9 +301,8 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = ModuleConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &config)?;
-            let mut context = ResponseContext::from(request_context);
+            let request_context = Apache2Request::create_with_tile_config(request)?;
+            let mut context = Apache2Response::from(request_context);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -325,9 +323,8 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = ModuleConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &config)?;
-            let mut context = ResponseContext::from(request_context);
+            let request_context = Apache2Request::create_with_tile_config(request)?;
+            let mut context = Apache2Response::from(request_context);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -348,9 +345,8 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = ModuleConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &config)?;
-            let mut context = ResponseContext::from(request_context);
+            let request_context = Apache2Request::create_with_tile_config(request)?;
+            let mut context = Apache2Response::from(request_context);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -371,9 +367,8 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let config = ModuleConfig::new();
-            let request_context = RequestContext::create_with_tile_config(request, &config)?;
-            let mut context = ResponseContext::from(request_context);
+            let request_context = Apache2Request::create_with_tile_config(request)?;
+            let mut context = Apache2Response::from(request_context);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");

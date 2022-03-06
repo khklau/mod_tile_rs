@@ -13,7 +13,7 @@ use std::vec::Vec;
 
 
 #[derive(Debug, PartialEq)]
-pub struct Response {
+pub struct SlippyResponse {
     pub header: Header,
     pub body: BodyVariant,
 }

@@ -4,7 +4,6 @@ use crate::binding::apache2::{
     apr_pool_t, apr_status_t, process_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidRecordError;
 
 use std::any::type_name;
@@ -65,13 +64,13 @@ impl ProcessRecord for process_rec {
 }
 
 
-pub struct VirtualHostContext<'h> {
+pub struct VirtualHost<'h> {
     pub record: &'h mut server_rec,
     pub trace_path: PathBuf,
     pub trace_file: RefCell<File>,
 }
 
-impl<'h> VirtualHostContext<'h> {
+impl<'h> VirtualHost<'h> {
 
     pub fn get_id(record: &server_rec) -> CString {
         let id = CString::new(format!(
@@ -82,10 +81,7 @@ impl<'h> VirtualHostContext<'h> {
         id
     }
 
-    pub fn find_or_create(
-        record: &'h mut server_rec,
-        config: &'h ModuleConfig,
-    ) -> Result<&'h mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::find_or_create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
         let context = match retrieve(
@@ -98,20 +94,17 @@ impl<'h> VirtualHostContext<'h> {
             },
             None => {
                 info!(record, "VirtualHostContext::find_or_create - not found");
-                Self::create(record, config)?
+                Self::create(record)?
             },
         };
         info!(context.record, "VirtualHostContext::find_or_create - finish");
         return Ok(context);
     }
 
-    pub fn create(
-        record: &'h mut server_rec,
-        config: &'h ModuleConfig,
-    ) -> Result<&'h mut Self, Box<dyn Error>> {
+    pub fn create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
-        let new_context = alloc::<VirtualHostContext<'h>>(
+        let new_context = alloc::<VirtualHost<'h>>(
             proc_record.get_pool(),
             &(Self::get_id(record)),
             Some(drop_virtual_host_context),
@@ -136,7 +129,7 @@ impl<'h> VirtualHostContext<'h> {
 
 #[no_mangle]
 extern "C" fn drop_virtual_host_context(context_void: *mut c_void) -> apr_status_t {
-    let context_ref = match access_pool_object::<VirtualHostContext>(context_void) {
+    let context_ref = match access_pool_object::<VirtualHost>(context_void) {
         None => {
             return APR_BADARG as apr_status_t;
         },

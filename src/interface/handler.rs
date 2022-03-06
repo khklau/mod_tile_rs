@@ -1,6 +1,6 @@
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::HandleRequestResult;
-use crate::schema::slippy::request::Request;
+use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadRequestResult;
 
 
@@ -8,7 +8,7 @@ pub trait RequestHandler {
     fn handle(
         &mut self,
         context: &HandleContext,
-        request: &Request,
+        request: &SlippyRequest,
     ) -> HandleRequestResult;
 }
 
@@ -37,7 +37,7 @@ pub mod test_utils {
         fn handle(
             &mut self,
             _context: &HandleContext,
-            _request: &request::Request,
+            _request: &request::SlippyRequest,
         ) -> HandleRequestResult {
             return HandleRequestResult {
                 before_timestamp: Utc::now(),

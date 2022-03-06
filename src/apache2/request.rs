@@ -1,12 +1,11 @@
-use crate::apache2::connection::ConnectionContext;
+use crate::apache2::connection::Connection;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
-use crate::apache2::virtual_host::VirtualHostContext;
+use crate::apache2::virtual_host::VirtualHost;
 
 use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
     apr_status_t, request_rec,
 };
-use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidRecordError;
 
 use snowflake::SnowflakeIdGenerator;
@@ -20,14 +19,14 @@ use std::ptr;
 use std::result::Result;
 
 
-pub struct RequestContext<'r> {
+pub struct Apache2Request<'r> {
     pub record: &'r mut request_rec,
-    pub connection: &'r mut ConnectionContext<'r>,
+    pub connection: &'r mut Connection<'r>,
     pub request_id: i64,
     pub uri: &'r str,
 }
 
-impl<'r> RequestContext<'r> {
+impl<'r> Apache2Request<'r> {
 
     pub fn get_context_id(record: &request_rec) -> CString {
         let id = CString::new(format!(
@@ -38,14 +37,11 @@ impl<'r> RequestContext<'r> {
         id
     }
 
-    pub fn get_host(&self) -> &VirtualHostContext {
+    pub fn get_host(&self) -> &VirtualHost {
         self.connection.host
     }
 
-    pub fn find_or_create(
-        record: &'r mut request_rec,
-        config: &'r ModuleConfig,
-    ) -> Result<&'r mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
@@ -65,7 +61,7 @@ impl<'r> RequestContext<'r> {
             Some(existing_context) => existing_context,
             None => {
                 let connection = unsafe { &mut *(record.connection) };
-                let conn_context = ConnectionContext::find_or_create(connection, config)?;
+                let conn_context = Connection::find_or_create(connection)?;
                 Self::create(record, conn_context)?
             },
         };
@@ -75,7 +71,7 @@ impl<'r> RequestContext<'r> {
 
     pub fn create(
         record: &'r mut request_rec,
-        conn_context: &'r mut ConnectionContext<'r>,
+        conn_context: &'r mut Connection<'r>,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
@@ -92,7 +88,7 @@ impl<'r> RequestContext<'r> {
         let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
 
         info!(conn_context.host.record, "RequestContext::create - start");
-        let new_context = alloc::<RequestContext<'r>>(
+        let new_context = alloc::<Apache2Request<'r>>(
             record_pool,
             &(Self::get_context_id(record)),
             Some(drop_request_context),
@@ -109,7 +105,7 @@ impl<'r> RequestContext<'r> {
 
 #[no_mangle]
 extern "C" fn drop_request_context(context_void: *mut c_void) -> apr_status_t {
-    let context_ref = match access_pool_object::<RequestContext>(context_void) {
+    let context_ref = match access_pool_object::<Apache2Request>(context_void) {
         None => {
             return APR_BADARG as apr_status_t;
         },
@@ -122,16 +118,15 @@ extern "C" fn drop_request_context(context_void: *mut c_void) -> apr_status_t {
 
 #[cfg(test)]
 pub mod test_utils {
-    use super::RequestContext;
+    use super::Apache2Request;
     use crate::binding::apache2::{
         __BindgenBitfieldUnit, apr_dev_t, apr_fileperms_t, apr_filetype_e, apr_finfo_t, apr_gid_t,
         apr_ino_t, apr_int32_t, apr_int64_t,
         apr_off_t, apr_pool_t, apr_port_t, apr_time_t, apr_uid_t, apr_uri_t,
         conn_rec, request_rec,
     };
-    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::memory::test_utils::with_pool;
-    use crate::apache2::connection::ConnectionContext;
+    use crate::apache2::connection::Connection;
     use crate::apache2::connection::test_utils::with_conn_rec;
     use std::boxed::Box;
     use std::error::Error;
@@ -139,14 +134,13 @@ pub mod test_utils {
     use std::os::raw::{ c_int, c_uint, };
     use std::ptr;
 
-    impl<'r> RequestContext<'r> {
+    impl<'r> Apache2Request<'r> {
         pub fn create_with_tile_config(
             record: &'r mut request_rec,
-            config: &'r ModuleConfig,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
             let connection = unsafe { &mut *(record.connection) };
-            let conn_context = ConnectionContext::create_with_tile_config(connection, config)?;
-            RequestContext::create(record, conn_context)
+            let conn_context = Connection::create_with_tile_config(connection)?;
+            Apache2Request::create(record, conn_context)
         }
     }
 

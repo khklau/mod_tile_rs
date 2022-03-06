@@ -1,12 +1,12 @@
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::context::{ ReadContext, WriteContext };
-use crate::schema::slippy::response::Response;
+use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult };
 
 
 pub type ReadRequestFunc = fn(&ReadContext) -> ReadRequestResult;
 
-pub type WriteResponseFunc = fn(&mut WriteContext, &Response) -> WriteResponseResult;
+pub type WriteResponseFunc = fn(&mut WriteContext, &SlippyResponse) -> WriteResponseResult;
 
 pub trait ReadRequestObserver {
     fn on_read(

@@ -1,10 +1,9 @@
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::apache2::virtual_host::VirtualHostContext;
+use crate::apache2::virtual_host::VirtualHost;
 use crate::binding::apache2::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidRecordError;
 
 use std::any::type_name;
@@ -15,12 +14,12 @@ use std::os::raw::c_void;
 use std::ptr;
 
 
-pub struct ConnectionContext<'c> {
+pub struct Connection<'c> {
     pub record: &'c mut conn_rec,
-    pub host: &'c mut VirtualHostContext<'c>,
+    pub host: &'c mut VirtualHost<'c>,
 }
 
-impl<'c> ConnectionContext<'c> {
+impl<'c> Connection<'c> {
 
     pub fn get_id(record: &conn_rec) -> CString {
         let id = CString::new(format!(
@@ -31,10 +30,7 @@ impl<'c> ConnectionContext<'c> {
         id
     }
 
-    pub fn find_or_create(
-        record: &'c mut conn_rec,
-        config: &'c ModuleConfig,
-    ) -> Result<&'c mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'c mut conn_rec) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
@@ -54,7 +50,7 @@ impl<'c> ConnectionContext<'c> {
             Some(existing_context) => existing_context,
             None => {
                 let server = unsafe { &mut *(record.base_server) };
-                let host_context = VirtualHostContext::find_or_create(server, config)?;
+                let host_context = VirtualHost::find_or_create(server)?;
                 Self::create(record, host_context)?
             },
         };
@@ -64,7 +60,7 @@ impl<'c> ConnectionContext<'c> {
 
     pub fn create(
         record: &'c mut conn_rec,
-        host_context: &'c mut VirtualHostContext<'c>,
+        host_context: &'c mut VirtualHost<'c>,
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::create - start");
         if record.pool == ptr::null_mut() {
@@ -73,7 +69,7 @@ impl<'c> ConnectionContext<'c> {
                 "pool field is null pointer",
             )));
         }
-        let new_context = alloc::<ConnectionContext<'c>>(
+        let new_context = alloc::<Connection<'c>>(
             unsafe { &mut *(record.pool) },
             &(Self::get_id(record)),
             Some(drop_connection_context),
@@ -87,7 +83,7 @@ impl<'c> ConnectionContext<'c> {
 
 #[no_mangle]
 extern "C" fn drop_connection_context(context_void: *mut c_void) -> apr_status_t {
-    let context_ref = match access_pool_object::<ConnectionContext>(context_void) {
+    let context_ref = match access_pool_object::<Connection>(context_void) {
         None => {
             return APR_BADARG as apr_status_t;
         },
@@ -100,13 +96,12 @@ extern "C" fn drop_connection_context(context_void: *mut c_void) -> apr_status_t
 
 #[cfg(test)]
 pub mod test_utils {
-    use super::ConnectionContext;
+    use super::Connection;
     use crate::binding::apache2::{
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
-    use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::memory::test_utils::with_pool;
-    use crate::apache2::virtual_host::VirtualHostContext;
+    use crate::apache2::virtual_host::VirtualHost;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
     use std::boxed::Box;
     use std::error::Error;
@@ -114,14 +109,13 @@ pub mod test_utils {
     use std::os::raw::{ c_int, c_long, c_uint, };
     use std::ptr;
 
-    impl<'c> ConnectionContext<'c> {
+    impl<'c> Connection<'c> {
         pub fn create_with_tile_config(
             record: &'c mut conn_rec,
-            config: &'c ModuleConfig,
         ) -> Result<&'c mut Self, Box<dyn Error>> {
             let server = unsafe { &mut *(record.base_server) };
-            let host_context = VirtualHostContext::create(server, config)?;
-            ConnectionContext::create(record, host_context)
+            let host_context = VirtualHost::create(server)?;
+            Connection::create(record, host_context)
         }
     }
 
