@@ -8,16 +8,11 @@ use crate::schema::apache2::error::InvalidRecordError;
 
 use std::any::type_name;
 use std::boxed::Box;
-use std::cell::RefCell;
 use std::error::Error;
 use std::ffi::{ CStr, CString, };
-use std::fs::{ File, OpenOptions, };
 use std::option::Option;
 use std::os::raw::c_void;
-use std::path::PathBuf;
-use std::process;
 use std::ptr;
-use thread_id;
 
 
 pub trait ServerRecord {
@@ -66,8 +61,6 @@ impl ProcessRecord for process_rec {
 
 pub struct VirtualHost<'h> {
     pub record: &'h mut server_rec,
-    pub trace_path: PathBuf,
-    pub trace_file: RefCell<File>,
 }
 
 impl<'h> VirtualHost<'h> {
@@ -110,18 +103,6 @@ impl<'h> VirtualHost<'h> {
             Some(drop_virtual_host_context),
         )?.0;
         new_context.record = record;
-
-        let path_str = format!(
-            "/tmp/mod_tile_rs-trace-pid{}-tid{}.txt",
-            process::id(),
-            thread_id::get(),
-        );
-        new_context.trace_path = PathBuf::from(path_str.as_str());
-        new_context.trace_file = RefCell::new(OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&new_context.trace_path.as_path())?
-        );
         info!(new_context.record, "VirtualHostContext::create - finish");
         return Ok(new_context);
     }
