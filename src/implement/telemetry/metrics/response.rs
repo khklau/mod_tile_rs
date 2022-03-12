@@ -16,6 +16,7 @@ use crate::schema::slippy::result::{
 };
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
+use crate::apache2::request::RequestRecord;
 
 use chrono::Duration;
 use http::status::StatusCode;
@@ -108,7 +109,7 @@ impl ResponseAnalysis {
             self.tile_reponse_count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.response_context.get_host().record,
+                context.response_context.record.get_server_record().unwrap(),
                 "ResponseAnalysis::on_tile_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -134,7 +135,7 @@ impl ResponseAnalysis {
             count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.response_context.get_host().record,
+                context.response_context.record.get_server_record().unwrap(),
                 "ResponseAnalysis::on_http_response_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -602,7 +603,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(request);
                 let mut context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
@@ -939,7 +940,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(request);
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
@@ -1034,7 +1035,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(request);
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
@@ -1121,7 +1122,7 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(handle_context.request_context);
+                let mut response_context = Apache2Response::from(request);
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,

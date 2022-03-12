@@ -1,5 +1,4 @@
-use crate::apache2::request::Apache2Request;
-use crate::apache2::virtual_host::VirtualHost;
+use crate::apache2::request::RequestRecord;
 
 use crate::binding::apache2::request_rec;
 #[cfg(not(test))]
@@ -19,22 +18,18 @@ use std::option::Option;
 
 
 pub struct Apache2Response<'r> {
-    pub request: &'r mut Apache2Request<'r>,
+    pub record: &'r mut request_rec,
     apache2_writer: Apache2Writer,
     writer: Option<&'r mut dyn Writer<ElementType = u8>>,
 }
 
 impl<'r> Apache2Response<'r> {
-    pub fn from(request: &'r mut Apache2Request<'r>) -> Apache2Response<'r> {
+    pub fn from(record: &'r mut request_rec) -> Apache2Response<'r> {
         Apache2Response {
-            request: request,
+            record,
             apache2_writer: Apache2Writer { },
             writer: None,
         }
-    }
-
-    pub fn get_host(&self) -> &VirtualHost {
-        self.request.get_host()
     }
 
     #[cfg(not(test))]
@@ -46,21 +41,21 @@ impl<'r> Apache2Response<'r> {
         let c_key = CString::new(key.as_str()).unwrap();
         let c_value = CString::new(value.to_str()?).unwrap();
         debug!(
-            self.request.get_host().record,
+            self.record.get_server_record().unwrap(),
             "ResponseContext::append_http_header - appending {} - {}",
             c_key.to_str().unwrap(),
             c_value.to_str().unwrap()
         );
         unsafe {
             apr_table_mergen(
-                self.request.record.headers_out,
+                self.record.headers_out,
                 apr_psprintf(
-                    self.request.record.pool,
+                    self.record.pool,
                     cstr!("%s"),
                     c_key.as_c_str().as_ptr(),
                 ),
                 apr_psprintf(
-                    self.request.record.pool,
+                    self.record.pool,
                     cstr!("%s"),
                     c_value.as_c_str().as_ptr()
                 )
@@ -87,21 +82,21 @@ impl<'r> Apache2Response<'r> {
         let c_key = CString::new(key.as_str()).unwrap();
         let c_value = CString::new(value.to_str()?).unwrap();
         debug!(
-            self.request.get_host().record,
+            self.record.get_server_record().unwrap(),
             "ResponseContext::set_http_header - setting {} - {}",
             c_key.to_str().unwrap(),
             c_value.to_str().unwrap()
         );
         unsafe {
             apr_table_setn(
-                self.request.record.headers_out,
+                self.record.headers_out,
                 apr_psprintf(
-                    self.request.record.pool,
+                    self.record.pool,
                     cstr!("%s"),
                     c_key.as_c_str().as_ptr(),
                 ),
                 apr_psprintf(
-                    self.request.record.pool,
+                    self.record.pool,
                     cstr!("%s"),
                     c_value.as_c_str().as_ptr(),
                 )
@@ -127,7 +122,7 @@ impl<'r> Apache2Response<'r> {
         let mime_str = CString::new(mime.essence_str()).unwrap();
         unsafe {
             ap_set_content_type(
-                self.request.record,
+                self.record as *mut request_rec,
                 mime_str.as_c_str().as_ptr(),
             );
         }
@@ -148,7 +143,7 @@ impl<'r> Apache2Response<'r> {
     ) -> () {
         unsafe {
             ap_set_content_length(
-                self.request.record,
+                self.record as *mut request_rec,
                 length as i64,
             );
         }
@@ -172,13 +167,21 @@ impl<'r> Apache2Response<'r> {
         };
         let mut payload_slice = payload.as_ref();
         while payload_slice.len() > 0 {
-            debug!(self.request.get_host().record, "ResponseContext::write_content - writing slice {}", String::from_utf8_lossy(payload_slice));
+            debug!(
+                self.record.get_server_record().unwrap(),
+                "ResponseContext::write_content - writing slice {}",
+                String::from_utf8_lossy(payload_slice)
+            );
             let result = writer.write(
                 payload_slice.as_ptr(),
                 payload_slice.len(),
-                self.request.record
+                self.record,
             );
-            debug!(self.request.get_host().record, "ResponseContext::write_content - write result {}", result);
+            debug!(
+                self.record.get_server_record().unwrap(),
+                "ResponseContext::write_content - write result {}",
+                result
+            );
             if result >= 0 {
                 let elements_written = (result as usize) / size_of::<u8>();
                 payload_slice = payload_slice.split_at(elements_written).1;
@@ -191,7 +194,7 @@ impl<'r> Apache2Response<'r> {
 
     #[cfg(not(test))]
     pub fn flush_response(&mut self) -> Result<(), ResponseWriteError> {
-        let result = unsafe { ap_rflush(self.request.record) };
+        let result = unsafe { ap_rflush(self.record as *mut request_rec) };
         if result < 0 {
             return Err(ResponseWriteError { error_code: result });
         } else {
@@ -301,8 +304,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let request_context = Apache2Request::create_with_tile_config(request)?;
-            let mut context = Apache2Response::from(request_context);
+            let mut context = Apache2Response::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -323,8 +325,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let request_context = Apache2Request::create_with_tile_config(request)?;
-            let mut context = Apache2Response::from(request_context);
+            let mut context = Apache2Response::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -345,8 +346,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let request_context = Apache2Request::create_with_tile_config(request)?;
-            let mut context = Apache2Response::from(request_context);
+            let mut context = Apache2Response::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -367,8 +367,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let request_context = Apache2Request::create_with_tile_config(request)?;
-            let mut context = Apache2Response::from(request_context);
+            let mut context = Apache2Response::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");

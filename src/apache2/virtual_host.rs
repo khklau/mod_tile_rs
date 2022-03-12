@@ -1,7 +1,8 @@
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::apache2::request::RequestRecord;
 
 use crate::binding::apache2::{
-    apr_pool_t, apr_status_t, process_rec, server_rec,
+    apr_pool_t, apr_status_t, process_rec, request_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::error::InvalidRecordError;
@@ -60,7 +61,7 @@ impl ProcessRecord for process_rec {
 
 
 pub struct VirtualHost<'h> {
-    pub record: &'h mut server_rec,
+    pub record: &'h server_rec,
 }
 
 impl<'h> VirtualHost<'h> {
@@ -74,7 +75,7 @@ impl<'h> VirtualHost<'h> {
         id
     }
 
-    pub fn find_or_create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'h server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::find_or_create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
         let context = match retrieve(
@@ -94,7 +95,7 @@ impl<'h> VirtualHost<'h> {
         return Ok(context);
     }
 
-    pub fn create(record: &'h mut server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+    pub fn create(record: &'h server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         info!(record, "VirtualHostContext::create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
         let new_context = alloc::<VirtualHost<'h>>(
@@ -104,6 +105,20 @@ impl<'h> VirtualHost<'h> {
         )?.0;
         new_context.record = record;
         info!(new_context.record, "VirtualHostContext::create - finish");
+        return Ok(new_context);
+    }
+
+    pub fn new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+        let record = request.get_server_record()?;
+        debug!(record, "VirtualHostContext::new - start");
+        let proc_record = server_rec::get_process_record(record.process)?;
+        let new_context = alloc::<VirtualHost<'h>>(
+            proc_record.get_pool(),
+            &(Self::get_id(record)),
+            Some(drop_virtual_host_context),
+        )?.0;
+        new_context.record = record;
+        debug!(new_context.record, "VirtualHostContext::new - finish");
         return Ok(new_context);
     }
 }

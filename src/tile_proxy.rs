@@ -1,5 +1,5 @@
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::apache2::request::Apache2Request;
+use crate::apache2::request::{ Apache2Request, RequestRecord };
 use crate::apache2::response::Apache2Response;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHost, };
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
@@ -146,14 +146,13 @@ impl<'p> TileProxy<'p> {
 
     pub fn initialise(
         &mut self,
-        record: &mut server_rec,
+        _record: &mut server_rec,
     ) -> Result<(), Box<dyn Error>> {
         if let Some(original_path) = &self.config_file_path {
             let copied_path = original_path.clone();
             self.load_config(copied_path)?;
         }
-        let context = VirtualHost::find_or_create(record).unwrap();
-        file_system::initialise(context)?;
+        file_system::initialise()?;
         return Ok(());
     }
 
@@ -183,6 +182,7 @@ impl<'p> TileProxy<'p> {
         let context = ReadContext {
             module_config: &self.config,
             request: Apache2Request::find_or_create(record).unwrap(),
+            host: VirtualHost::new(record).unwrap(),
         };
         let read_result = read(&context);
         for observer_iter in read_observers.iter_mut() {
@@ -249,8 +249,7 @@ impl<'p> TileProxy<'p> {
             None => [&mut self.trans_trace, &mut self.response_analysis],
         };
         let write = self.write_response;
-        let request_context = Apache2Request::find_or_create(record).unwrap();
-        let mut response_context = Apache2Response::from(request_context);
+        let mut response_context = Apache2Response::from(record);
         let mut context = WriteContext {
             module_config: &self.config,
             response_context: &mut response_context,
@@ -266,7 +265,7 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in write_observers.iter_mut() {
             debug!(
-                context.response_context.get_host().record,
+                context.response_context.record.get_server_record().unwrap(),
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
             (*observer_iter).on_write(write, &context, &read_result, &handle_result, &write_result);

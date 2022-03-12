@@ -345,6 +345,7 @@ mod tests {
     use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
+    use crate::apache2::virtual_host::VirtualHost;
     use std::boxed::Box;
     use std::error::Error;
     use std::ffi::CString;
@@ -358,6 +359,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -384,6 +386,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -415,6 +418,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -455,6 +459,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -482,6 +487,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -522,6 +528,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -561,6 +568,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -599,6 +607,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -625,6 +634,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -663,6 +673,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
+                host: VirtualHost::new(record)?,
             };
             let request_url= context.request.uri;
 

@@ -4,7 +4,7 @@ use crate::apache2::virtual_host::VirtualHost;
 
 use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
-    apr_status_t, request_rec,
+    apr_status_t, conn_rec, request_rec, server_rec,
 };
 use crate::schema::apache2::error::InvalidRecordError;
 
@@ -19,8 +19,38 @@ use std::ptr;
 use std::result::Result;
 
 
+pub trait RequestRecord {
+    fn get_connection_record<'s>(self: &'s Self) -> Result<&'s conn_rec, InvalidRecordError>;
+
+    fn get_server_record<'s>(self: &'s Self) -> Result<&'s server_rec, InvalidRecordError>;
+}
+
+impl RequestRecord for request_rec {
+    fn get_connection_record<'s>(self: &'s Self) -> Result<&'s conn_rec, InvalidRecordError> {
+        if self.connection == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                self as *const request_rec,
+                "request_rec.connection field is null pointer",
+            ))
+        } else {
+            Ok(unsafe { &(*self.connection) } )
+        }
+    }
+
+    fn get_server_record<'s>(self: &'s Self) -> Result<&'s server_rec, InvalidRecordError> {
+        if self.server == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                self as *const request_rec,
+                "request_rec.server field is null pointer",
+            ))
+        } else {
+            Ok(unsafe { &(*self.server) } )
+        }
+    }
+}
+
 pub struct Apache2Request<'r> {
-    pub record: &'r mut request_rec,
+    pub record: &'r request_rec,
     pub connection: &'r mut Connection<'r>,
     pub request_id: i64,
     pub uri: &'r str,
@@ -41,7 +71,7 @@ impl<'r> Apache2Request<'r> {
         self.connection.host
     }
 
-    pub fn find_or_create(record: &'r mut request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
+    pub fn find_or_create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
@@ -70,7 +100,7 @@ impl<'r> Apache2Request<'r> {
     }
 
     pub fn create(
-        record: &'r mut request_rec,
+        record: &'r request_rec,
         conn_context: &'r mut Connection<'r>,
     ) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
@@ -136,7 +166,7 @@ pub mod test_utils {
 
     impl<'r> Apache2Request<'r> {
         pub fn create_with_tile_config(
-            record: &'r mut request_rec,
+            record: &'r request_rec,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
             let connection = unsafe { &mut *(record.connection) };
             let conn_context = Connection::create_with_tile_config(connection)?;
