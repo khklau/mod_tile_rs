@@ -249,10 +249,13 @@ impl<'p> TileProxy<'p> {
             None => [&mut self.trans_trace, &mut self.response_analysis],
         };
         let write = self.write_response;
-        let mut response_context = Apache2Response::from(record);
+        // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
+        let write_record = record as *mut request_rec;
+        let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
         let mut context = WriteContext {
             module_config: &self.config,
             response_context: &mut response_context,
+            host: VirtualHost::new(record).unwrap(),
         };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {

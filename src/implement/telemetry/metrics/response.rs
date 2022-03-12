@@ -297,9 +297,11 @@ impl<T: Default> TileMetricTable<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::binding::apache2::request_rec;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
     use crate::apache2::response::Apache2Response;
+    use crate::apache2::virtual_host::VirtualHost;
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::schema::apache2::config::ModuleConfig;
@@ -603,10 +605,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(request);
+                let write_record = request as *mut request_rec;
+                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let mut context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
+                    host: VirtualHost::new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -940,10 +944,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(request);
+                let write_record = request as *mut request_rec;
+                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
+                    host: VirtualHost::new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1035,10 +1041,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(request);
+                let write_record = request as *mut request_rec;
+                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
+                    host: VirtualHost::new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1122,10 +1130,12 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut response_context = Apache2Response::from(request);
+                let write_record = request as *mut request_rec;
+                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
+                    host: VirtualHost::new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(

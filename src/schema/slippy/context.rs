@@ -13,4 +13,5 @@ pub struct ReadContext<'c> {
 pub struct WriteContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub response_context: &'c mut Apache2Response<'c>,
+    pub host: &'c VirtualHost<'c>,
 }
