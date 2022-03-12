@@ -44,12 +44,12 @@ impl<'c> Connection<'c> {
             )));
         }
         let context = match retrieve(
-            unsafe { &mut *(record.pool) },
+            unsafe { record.pool.as_mut().unwrap() },
             &(Self::get_id(record))
         ) {
             Some(existing_context) => existing_context,
             None => {
-                let server = unsafe { &mut *(record.base_server) };
+                let server = unsafe { record.base_server.as_mut().unwrap() };
                 let host_context = VirtualHost::find_or_create(server)?;
                 Self::create(record, host_context)?
             },
@@ -70,7 +70,7 @@ impl<'c> Connection<'c> {
             )));
         }
         let new_context = alloc::<Connection<'c>>(
-            unsafe { &mut *(record.pool) },
+            unsafe { record.pool.as_mut().unwrap() },
             &(Self::get_id(record)),
             Some(drop_connection_context),
         )?.0;
@@ -113,7 +113,7 @@ pub mod test_utils {
         pub fn create_with_tile_config(
             record: &'c mut conn_rec,
         ) -> Result<&'c mut Self, Box<dyn Error>> {
-            let server = unsafe { &mut *(record.base_server) };
+            let server = unsafe { record.base_server.as_mut().unwrap() };
             let host_context = VirtualHost::create(server)?;
             Connection::create(record, host_context)
         }

@@ -38,7 +38,7 @@ impl ServerRecord for server_rec {
                 "server_rec.process field is a null pointer",
             ));
         }
-        let proc_record = unsafe { &mut *(process) };
+        let proc_record = unsafe { process.as_mut().unwrap() };
         if proc_record.pool == ptr::null_mut() {
             return Err(InvalidRecordError::new(
                 proc_record as *const process_rec,
@@ -55,7 +55,7 @@ pub trait ProcessRecord {
 
 impl ProcessRecord for process_rec {
     fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t {
-        unsafe { &mut *(self.pool) }
+        unsafe { self.pool.as_mut().unwrap() }
     }
 }
 

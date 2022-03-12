@@ -85,12 +85,12 @@ impl<'r> Apache2Request<'r> {
             )));
         }
         let context = match retrieve(
-            unsafe { &mut *(record.pool) },
+            unsafe { record.pool.as_mut().unwrap() },
             &(Self::get_context_id(record))
         ) {
             Some(existing_context) => existing_context,
             None => {
-                let connection = unsafe { &mut *(record.connection) };
+                let connection = unsafe { record.connection.as_mut().unwrap() };
                 let conn_context = Connection::find_or_create(connection)?;
                 Self::create(record, conn_context)?
             },
@@ -114,7 +114,7 @@ impl<'r> Apache2Request<'r> {
                 "uri field is null pointer",
             )));
         }
-        let record_pool = unsafe { &mut *(record.pool) };
+        let record_pool = unsafe { record.pool.as_mut().unwrap() };
         let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
 
         info!(conn_context.host.record, "RequestContext::create - start");
@@ -168,7 +168,7 @@ pub mod test_utils {
         pub fn create_with_tile_config(
             record: &'r request_rec,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
-            let connection = unsafe { &mut *(record.connection) };
+            let connection = unsafe { record.connection.as_mut().unwrap() };
             let conn_context = Connection::create_with_tile_config(connection)?;
             Apache2Request::create(record, conn_context)
         }

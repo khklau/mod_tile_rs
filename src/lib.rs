@@ -128,11 +128,11 @@ pub extern "C" fn load_config(
     if cmd_ptr == ptr::null_mut() {
         return cstr!("Null cmd_parms");
     }
-    let command = unsafe { &mut *cmd_ptr };
+    let command = unsafe { cmd_ptr.as_mut().unwrap() };
     if command.server == ptr::null_mut() {
         return cstr!("Nullptr server_rec");
     }
-    let record = unsafe { &mut *(command.server) };
+    let record = unsafe { command.server.as_mut().unwrap() };
     debug!(record, "tile_server::load_config - start");
     let path_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
     let tile_server = TileProxy::find_or_create(record).unwrap();
@@ -159,11 +159,11 @@ pub extern "C" fn load_request_timeout(
     if cmd_ptr == ptr::null_mut() {
         return cstr!("Null cmd_parms");
     }
-    let command = unsafe { &mut *cmd_ptr };
+    let command = unsafe { cmd_ptr.as_mut().unwrap() };
     if command.server == ptr::null_mut() {
         return cstr!("Nullptr server_rec");
     }
-    let record = unsafe { &mut *(command.server) };
+    let record = unsafe { command.server.as_mut().unwrap() };
     debug!(record, "tile_server::load_request_timeout - start");
     let timeout_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
     let timeout_uint = match scan_fmt!(timeout_str, "{d}", i32) {
@@ -210,8 +210,8 @@ pub extern "C" fn initialise(
 ) -> () {
     if child_pool != ptr::null_mut() && record != ptr::null_mut() {
         info!(record, "initialise - start");
-        let server = TileProxy::find_or_create(unsafe { &mut *record }).unwrap();
-        if let Err(why) = server.initialise(unsafe { &mut *record }) {
+        let server = TileProxy::find_or_create(unsafe { record.as_mut().unwrap() }).unwrap();
+        if let Err(why) = server.initialise(unsafe { record.as_mut().unwrap() }) {
             error!(record, "initialise - failed to initialise TileServer: {}", why);
         } else {
             info!(record, "initialise - finish");
@@ -226,13 +226,13 @@ pub extern "C" fn handle_request(
     if record_ptr == ptr::null_mut() {
         return HTTP_INTERNAL_SERVER_ERROR as c_int;
     }
-    let record = &mut unsafe { *record_ptr };
+    let record = unsafe { record_ptr.as_mut().unwrap() };
     if record.server == ptr::null_mut() {
         return HTTP_INTERNAL_SERVER_ERROR as c_int;
     }
 
     debug!(record.server, "tile_server::handle_request - start");
-    let server = &mut unsafe { *(record.server) };
+    let server = unsafe { record.server.as_mut().unwrap() };
     let tile_server = TileProxy::find_or_create(server).unwrap();
     match tile_server.handle_request(record) {
         Ok(result) => {

@@ -47,7 +47,7 @@ pub fn alloc<'p, T>(
             pool as *mut apr_pool_t,
         );
         if set_result == (APR_SUCCESS as i32) {
-            return Ok((&mut *ptr_zeroed, pool));
+            return Ok((ptr_zeroed.as_mut().unwrap(), pool));
         } else {
             return Err(AllocError{ layout });
         }
@@ -66,8 +66,7 @@ pub fn retrieve<'p, T>(
             pool as *const apr_pool_t as *mut apr_pool_t
         );
         if get_result == (APR_SUCCESS as i32) {
-            let existing_value = &mut (*value_ptr);
-            return Some(existing_value);
+            return value_ptr.as_mut();
         } else {
             return None;
         }
@@ -79,7 +78,7 @@ pub fn access_pool_object<'t, T>(object_void: *mut c_void) -> Option<&'t mut T> 
         return None;
     }
     let object_ptr = object_void as *mut T;
-    let object_ref = unsafe { &mut *object_ptr };
+    let object_ref = unsafe { object_ptr.as_mut().unwrap() };
     return Some(object_ref);
 }
 
@@ -104,7 +103,7 @@ pub mod test_utils {
                 ptr::null_mut(),
             );
             assert_eq!(create_result, APR_SUCCESS as i32, "Failed to create pool");
-            let pool_ref = &mut *pool_ptr;
+            let pool_ref = pool_ptr.as_mut().unwrap();
             let func_result = func(pool_ref);
             apr_pool_destroy(pool_ptr);
             return func_result;
@@ -140,7 +139,7 @@ mod tests {
             return APR_BADARG as apr_status_t;
         }
         let wrapper_ptr = wrapper_void as *mut CounterWrapper;
-        let wrapper_ref = &mut *wrapper_ptr;
+        let wrapper_ref = wrapper_ptr.as_mut().unwrap();
         wrapper_ref.counter.count += 1;
         return APR_SUCCESS as apr_status_t;
     }

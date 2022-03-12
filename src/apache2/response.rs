@@ -162,7 +162,7 @@ impl<'r> Apache2Response<'r> {
         payload: T,
     ) -> Result<usize, ResponseWriteError> {
         let writer: &mut dyn Writer<ElementType = u8> = match &mut self.writer {
-            Some(obj) => &mut *(*obj),
+            Some(obj) => *obj,
             None => &mut self.apache2_writer,
         };
         let mut payload_slice = payload.as_ref();
