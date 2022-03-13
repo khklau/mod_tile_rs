@@ -98,7 +98,7 @@ impl StatisticsRequestParser {
             return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                 ),
                 body: BodyVariant::ReportStatistics,
@@ -122,7 +122,7 @@ impl DescribeLayerRequestParser {
             return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &(layer_config.name),
                 ),
@@ -175,7 +175,7 @@ impl ServeTileV3RequestParser {
                     return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
                             context.request.record,
-                            context.request.connection.record,
+                            context.connection.record,
                             context.host.record,
                             &(layer_config.name),
                         ),
@@ -215,7 +215,7 @@ impl ServeTileV3RequestParser {
                     return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
                             context.request.record,
-                            context.request.connection.record,
+                            context.connection.record,
                             context.host.record,
                             &(layer_config.name),
                         ),
@@ -268,7 +268,7 @@ impl ServeTileV2RequestParser {
                 return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
                         context.request.record,
-                        context.request.connection.record,
+                        context.connection.record,
                         context.host.record,
                         &(layer_config.name),
                     ),
@@ -307,7 +307,7 @@ impl ServeTileV2RequestParser {
                 return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
                         context.request.record,
-                        context.request.connection.record,
+                        context.connection.record,
                         context.host.record,
                         &(layer_config.name),
                     ),
@@ -368,7 +368,7 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request_url)?.expect_matched();
             let expected_header = Header::new(
                 context.request.record,
-                context.request.connection.record,
+                context.connection.record,
                 context.host.record,
             );
             assert_eq!(expected_header, actual_request.header, "Wrong header generated");
@@ -398,7 +398,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),
@@ -431,7 +431,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),
@@ -502,7 +502,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),
@@ -544,7 +544,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),
@@ -585,7 +585,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),
@@ -653,7 +653,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),
@@ -693,7 +693,7 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
-                    context.request.connection.record,
+                    context.connection.record,
                     context.host.record,
                     &expected_layer,
                 ),

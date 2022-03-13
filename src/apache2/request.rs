@@ -1,4 +1,3 @@
-use crate::apache2::connection::Connection;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
 
 use crate::binding::apache2::{
@@ -50,7 +49,6 @@ impl RequestRecord for request_rec {
 
 pub struct Apache2Request<'r> {
     pub record: &'r request_rec,
-    pub connection: &'r mut Connection<'r>,
     pub request_id: i64,
     pub uri: &'r str,
 }
@@ -84,19 +82,13 @@ impl<'r> Apache2Request<'r> {
             &(Self::get_context_id(record))
         ) {
             Some(existing_context) => existing_context,
-            None => {
-                let conn_context = Connection::find_or_make_new(record)?;
-                Self::create(record, conn_context)?
-            },
+            None => Self::create(record)?,
         };
         info!(context.record.server, "RequestContext::find_or_create - finish");
         return Ok(context);
     }
 
-    pub fn create(
-        record: &'r request_rec,
-        conn_context: &'r mut Connection<'r>,
-    ) -> Result<&'r mut Self, Box<dyn Error>> {
+    pub fn create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
                 record as *const request_rec,
@@ -118,7 +110,6 @@ impl<'r> Apache2Request<'r> {
             Some(drop_request_context),
         )?.0;
         new_context.record = record;
-        new_context.connection = conn_context;
         let mut generator = SnowflakeIdGenerator::new(1, 1);
         new_context.request_id = generator.real_time_generate();
         new_context.uri = uri;
@@ -150,7 +141,6 @@ pub mod test_utils {
         conn_rec, request_rec,
     };
     use crate::apache2::memory::test_utils::with_pool;
-    use crate::apache2::connection::Connection;
     use crate::apache2::connection::test_utils::with_conn_rec;
     use std::boxed::Box;
     use std::error::Error;
@@ -162,8 +152,7 @@ pub mod test_utils {
         pub fn create_with_tile_config(
             record: &'r request_rec,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
-            let conn_context = Connection::new(record)?;
-            Apache2Request::create(record, conn_context)
+            Apache2Request::create(record)
         }
     }
 

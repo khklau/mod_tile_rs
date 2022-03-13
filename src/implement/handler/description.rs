@@ -33,7 +33,7 @@ impl RequestHandler for DescriptionHandler {
         let response = response::SlippyResponse {
             header: response::Header::new(
                 context.request_context.record,
-                context.request_context.connection.record,
+                context.connection.record,
                 context.host.record,
                 &mime::APPLICATION_JSON,
             ),
@@ -107,7 +107,7 @@ mod tests {
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
                         handle_context.request_context.record,
-                        handle_context.request_context.connection.record,
+                        handle_context.connection.record,
                         handle_context.host.record,
                         &layer_name,
                     ),
@@ -142,7 +142,7 @@ mod tests {
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
                         handle_context.request_context.record,
-                        handle_context.request_context.connection.record,
+                        handle_context.connection.record,
                         handle_context.host.record,
                         &layer_name,
                     ),
@@ -163,7 +163,7 @@ mod tests {
                 let expected_response = response::SlippyResponse {
                     header: response::Header::new(
                         handle_context.request_context.record,
-                        handle_context.request_context.connection.record,
+                        handle_context.connection.record,
                         handle_context.host.record,
                         &mime::APPLICATION_JSON,
                     ),

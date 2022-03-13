@@ -398,12 +398,13 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
+                let connection = Connection::find_or_make_new(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
-                                context.connection.record,
+                                connection.record,
                                 proxy.record,
                             ),
                             body: request::BodyVariant::ReportStatistics,
@@ -451,12 +452,13 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
+                let connection = Connection::find_or_make_new(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
-                                context.connection.record,
+                                connection.record,
                                 proxy.record,
                             ),
                             body: request::BodyVariant::ReportStatistics,
@@ -471,7 +473,7 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     context.record,
-                                    context.connection.record,
+                                    connection.record,
                                     proxy.record,
                                     &mime::APPLICATION_JSON,
                                 ),
