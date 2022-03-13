@@ -75,7 +75,8 @@ impl<'h> VirtualHost<'h> {
         id
     }
 
-    pub fn find_or_create(record: &'h server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+    pub fn find_or_make_new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+        let record = request.get_server_record()?;
         info!(record, "VirtualHostContext::find_or_create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
         let context = match retrieve(
@@ -88,24 +89,11 @@ impl<'h> VirtualHost<'h> {
             },
             None => {
                 info!(record, "VirtualHostContext::find_or_create - not found");
-                Self::create(record)?
+                Self::new(request)?
             },
         };
         info!(context.record, "VirtualHostContext::find_or_create - finish");
         return Ok(context);
-    }
-
-    pub fn create(record: &'h server_rec) -> Result<&'h mut Self, Box<dyn Error>> {
-        info!(record, "VirtualHostContext::create - start");
-        let proc_record = server_rec::get_process_record(record.process)?;
-        let new_context = alloc::<VirtualHost<'h>>(
-            proc_record.get_pool(),
-            &(Self::get_id(record)),
-            Some(drop_virtual_host_context),
-        )?.0;
-        new_context.record = record;
-        info!(new_context.record, "VirtualHostContext::create - finish");
-        return Ok(new_context);
     }
 
     pub fn new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {

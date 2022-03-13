@@ -34,7 +34,7 @@ impl RequestHandler for DescriptionHandler {
             header: response::Header::new(
                 context.request_context.record,
                 context.request_context.connection.record,
-                context.request_context.get_host().record,
+                context.host.record,
                 &mime::APPLICATION_JSON,
             ),
             body: response::BodyVariant::Description(description),
@@ -96,7 +96,7 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -106,7 +106,7 @@ mod tests {
                     header: request::Header::new_with_layer(
                         handle_context.request_context.record,
                         handle_context.request_context.connection.record,
-                        handle_context.request_context.get_host().record,
+                        handle_context.host.record,
                         &layer_name,
                     ),
                     body: request::BodyVariant::ReportStatistics,
@@ -130,7 +130,7 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -140,7 +140,7 @@ mod tests {
                     header: request::Header::new_with_layer(
                         handle_context.request_context.record,
                         handle_context.request_context.connection.record,
-                        handle_context.request_context.get_host().record,
+                        handle_context.host.record,
                         &layer_name,
                     ),
                     body: request::BodyVariant::DescribeLayer,
@@ -161,7 +161,7 @@ mod tests {
                     header: response::Header::new(
                         handle_context.request_context.record,
                         handle_context.request_context.connection.record,
-                        handle_context.request_context.get_host().record,
+                        handle_context.host.record,
                         &mime::APPLICATION_JSON,
                     ),
                     body: response::BodyVariant::Description(expected_data),

@@ -1,5 +1,4 @@
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::apache2::virtual_host::VirtualHost;
 use crate::binding::apache2::{
     apr_status_t, conn_rec,
     APR_BADARG, APR_SUCCESS,
@@ -16,7 +15,6 @@ use std::ptr;
 
 pub struct Connection<'c> {
     pub record: &'c mut conn_rec,
-    pub host: &'c mut VirtualHost<'c>,
 }
 
 impl<'c> Connection<'c> {
@@ -48,11 +46,7 @@ impl<'c> Connection<'c> {
             &(Self::get_id(record))
         ) {
             Some(existing_context) => existing_context,
-            None => {
-                let server = unsafe { record.base_server.as_mut().unwrap() };
-                let host_context = VirtualHost::find_or_create(server)?;
-                Self::create(record, host_context)?
-            },
+            None => Self::create(record)?,
         };
         info!(context.record.base_server, "ConnectionContext::find_or_create - finish");
         return Ok(context);
@@ -60,7 +54,6 @@ impl<'c> Connection<'c> {
 
     pub fn create(
         record: &'c mut conn_rec,
-        host_context: &'c mut VirtualHost<'c>,
     ) -> Result<&'c mut Self, Box<dyn Error>> {
         info!(record.base_server, "ConnectionContext::create - start");
         if record.pool == ptr::null_mut() {
@@ -75,7 +68,6 @@ impl<'c> Connection<'c> {
             Some(drop_connection_context),
         )?.0;
         new_context.record = record;
-        new_context.host = host_context;
         info!(new_context.record.base_server, "ConnectionContext::create - finish");
         return Ok(new_context);
     }
@@ -101,7 +93,6 @@ pub mod test_utils {
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
     use crate::apache2::memory::test_utils::with_pool;
-    use crate::apache2::virtual_host::VirtualHost;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
     use std::boxed::Box;
     use std::error::Error;
@@ -113,9 +104,7 @@ pub mod test_utils {
         pub fn create_with_tile_config(
             record: &'c mut conn_rec,
         ) -> Result<&'c mut Self, Box<dyn Error>> {
-            let server = unsafe { record.base_server.as_mut().unwrap() };
-            let host_context = VirtualHost::create(server)?;
-            Connection::create(record, host_context)
+            Connection::create(record)
         }
     }
 

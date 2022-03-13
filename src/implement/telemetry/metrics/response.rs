@@ -71,7 +71,7 @@ impl ResponseAnalysis {
             self.tile_handle_duration_by_zoom[zoom_level] = self.tile_handle_duration_by_zoom[zoom_level] + *handle_duration;
         } else {
             warn!(
-                context.request_context.get_host().record,
+                context.host.record,
                 "ResponseAnalysis::accrue_tile_handle_duration - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -85,7 +85,7 @@ impl ResponseAnalysis {
         let counter = self.tile_handle_count_by_source_and_age.update(&response.source, &response.age);
         *counter += 1;
         debug!(
-            context.request_context.get_host().record,
+            context.host.record,
             "ResponseAnalysis::increment_tile_handle_count - updating count for source {:?} and age {:?} to {}",
             &response.source,
             &response.age,
@@ -332,7 +332,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -344,7 +344,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -370,7 +370,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -410,7 +410,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -422,7 +422,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::DescribeLayer,
                         }
@@ -439,7 +439,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Description(
@@ -480,7 +480,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -492,7 +492,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {
@@ -515,7 +515,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -550,7 +550,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -562,7 +562,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -586,7 +586,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -614,7 +614,7 @@ mod tests {
                 let mut context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
-                    host: VirtualHost::new(request).unwrap(),
+                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -651,7 +651,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -663,7 +663,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -689,7 +689,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -729,7 +729,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -741,7 +741,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -767,7 +767,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -807,7 +807,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -819,7 +819,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -850,7 +850,7 @@ mod tests {
                                         header: response::Header::new(
                                             handle_context.request_context.record,
                                             handle_context.request_context.connection.record,
-                                            handle_context.request_context.get_host().record,
+                                            handle_context.host.record,
                                             &mime::APPLICATION_JSON,
                                         ),
                                         body: response::BodyVariant::Tile(
@@ -894,7 +894,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -906,7 +906,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {
@@ -929,7 +929,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -957,7 +957,7 @@ mod tests {
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
-                    host: VirtualHost::new(request).unwrap(),
+                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -994,7 +994,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -1006,7 +1006,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::DescribeLayer,
                         }
@@ -1021,7 +1021,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Description(
@@ -1055,7 +1055,7 @@ mod tests {
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
-                    host: VirtualHost::new(request).unwrap(),
+                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1082,7 +1082,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::new(request)?,
+                    host: VirtualHost::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -1094,7 +1094,7 @@ mod tests {
                             header: request::Header::new(
                                 handle_context.request_context.record,
                                 handle_context.request_context.connection.record,
-                                handle_context.request_context.get_host().record,
+                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {
@@ -1117,7 +1117,7 @@ mod tests {
                                 header: response::Header::new(
                                     handle_context.request_context.record,
                                     handle_context.request_context.connection.record,
-                                    handle_context.request_context.get_host().record,
+                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -1145,7 +1145,7 @@ mod tests {
                 let context = WriteContext {
                     module_config: &module_config,
                     response_context: &mut response_context,
-                    host: VirtualHost::new(request).unwrap(),
+                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(

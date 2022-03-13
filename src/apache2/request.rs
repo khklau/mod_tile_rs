@@ -1,6 +1,5 @@
 use crate::apache2::connection::Connection;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
-use crate::apache2::virtual_host::VirtualHost;
 
 use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
@@ -67,10 +66,6 @@ impl<'r> Apache2Request<'r> {
         id
     }
 
-    pub fn get_host(&self) -> &VirtualHost {
-        self.connection.host
-    }
-
     pub fn find_or_create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
         info!(record.server, "RequestContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
@@ -117,7 +112,7 @@ impl<'r> Apache2Request<'r> {
         let record_pool = unsafe { record.pool.as_mut().unwrap() };
         let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
 
-        info!(conn_context.host.record, "RequestContext::create - start");
+        info!(record.get_server_record().unwrap(), "RequestContext::create - start");
         let new_context = alloc::<Apache2Request<'r>>(
             record_pool,
             &(Self::get_context_id(record)),
@@ -128,7 +123,7 @@ impl<'r> Apache2Request<'r> {
         let mut generator = SnowflakeIdGenerator::new(1, 1);
         new_context.request_id = generator.real_time_generate();
         new_context.uri = uri;
-        info!(new_context.connection.host.record, "RequestContext::create - finish");
+        info!(record.get_server_record().unwrap(), "RequestContext::create - finish");
         return Ok(new_context);
     }
 }

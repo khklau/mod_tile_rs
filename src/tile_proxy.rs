@@ -182,11 +182,11 @@ impl<'p> TileProxy<'p> {
         let context = ReadContext {
             module_config: &self.config,
             request: Apache2Request::find_or_create(record).unwrap(),
-            host: VirtualHost::new(record).unwrap(),
+            host: VirtualHost::find_or_make_new(record).unwrap(),
         };
         let read_result = read(&context);
         for observer_iter in read_observers.iter_mut() {
-            debug!(context.request.get_host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
+            debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(read, &context, &read_result);
         }
         debug!(record.server, "TileServer::read_request - finish");
@@ -208,7 +208,7 @@ impl<'p> TileProxy<'p> {
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = HandleContext {
             module_config: &self.config,
-            host: VirtualHost::new(record).unwrap(),
+            host: VirtualHost::find_or_make_new(record).unwrap(),
             request_context: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
@@ -230,7 +230,7 @@ impl<'p> TileProxy<'p> {
             },
         };
         for observer_iter in handle_observers.iter_mut() {
-            debug!(context.request_context.get_host().record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+            debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
             (*observer_iter).on_handle(handler, &context, &read_result, &handle_result);
         }
         debug!(record.server, "TileServer::call_handlers - finish");
@@ -256,7 +256,7 @@ impl<'p> TileProxy<'p> {
         let mut context = WriteContext {
             module_config: &self.config,
             response_context: &mut response_context,
-            host: VirtualHost::new(record).unwrap(),
+            host: VirtualHost::find_or_make_new(record).unwrap(),
         };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {
@@ -400,7 +400,7 @@ mod tests {
                             header: request::Header::new(
                                 context.record,
                                 context.connection.record,
-                                context.get_host().record,
+                                proxy.record,
                             ),
                             body: request::BodyVariant::ReportStatistics,
                         }
@@ -453,7 +453,7 @@ mod tests {
                             header: request::Header::new(
                                 context.record,
                                 context.connection.record,
-                                context.get_host().record,
+                                proxy.record,
                             ),
                             body: request::BodyVariant::ReportStatistics,
                         }
@@ -468,7 +468,7 @@ mod tests {
                                 header: response::Header::new(
                                     context.record,
                                     context.connection.record,
-                                    context.get_host().record,
+                                    proxy.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Description(

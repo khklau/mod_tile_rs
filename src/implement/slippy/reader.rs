@@ -31,7 +31,7 @@ impl SlippyRequestParser {
         context: &ReadContext,
         request_url: &str,
     ) -> Result<ReadOutcome, ReadError> {
-        debug!(context.request.get_host().record, "SlippyRequestParser::parse - start");
+        debug!(context.host.record, "SlippyRequestParser::parse - start");
         // try match stats request
         if let ReadOutcome::Matched(request) = StatisticsRequestParser::parse(&context, request_url)? {
             return Ok(ReadOutcome::Matched(request));
@@ -45,7 +45,7 @@ impl SlippyRequestParser {
         );
         for (layer, config) in &(context.module_config.layers) {
             info!(
-                context.request.get_host().record,
+                context.host.record,
                 "SlippyRequestParser::parse - comparing layer {} with base URL {} to uri",
                 layer,
                 request_url
@@ -59,7 +59,7 @@ impl SlippyRequestParser {
                 }
             };
         }
-        info!(context.request.get_host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
+        info!(context.host.record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
         return Ok(ReadOutcome::NotMatched);
     }
 }
@@ -94,17 +94,17 @@ impl StatisticsRequestParser {
         let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
         if request_url.eq(&stats_uri) {
-            info!(context.request.get_host().record, "StatisticsRequestParser::parse - matched ReportStatistics");
+            info!(context.host.record, "StatisticsRequestParser::parse - matched ReportStatistics");
             return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                 ),
                 body: BodyVariant::ReportStatistics,
             }));
         } else {
-            info!(context.request.get_host().record, "StatisticsRequestParser::parse - no match");
+            info!(context.host.record, "StatisticsRequestParser::parse - no match");
             return Ok(ReadOutcome::NotMatched);
         }
     }
@@ -118,18 +118,18 @@ impl DescribeLayerRequestParser {
         request_url: &str,
     ) -> Result<ReadOutcome, ReadError> {
         if request_url.eq_ignore_ascii_case("/tile-layer.json") {
-            info!(context.request.get_host().record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
+            info!(context.host.record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
             return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &(layer_config.name),
                 ),
                 body: BodyVariant::DescribeLayer
             }));
         } else {
-            info!(context.request.get_host().record, "DescribeLayerRequestParser::parse - no match");
+            info!(context.host.record, "DescribeLayerRequestParser::parse - no match");
             return Ok(ReadOutcome::NotMatched);
         }
     }
@@ -170,13 +170,13 @@ impl ServeTileV3RequestParser {
             String, i32, i32, u32, String, String
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
-                info!(context.request.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
+                info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
                 if z <= MAX_ZOOM_SERVER as u32 {
                     return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
                             context.request.record,
                             context.request.connection.record,
-                            context.request.get_host().record,
+                            context.host.record,
                             &(layer_config.name),
                         ),
                         body: BodyVariant::ServeTileV3(
@@ -210,13 +210,13 @@ impl ServeTileV3RequestParser {
             String, i32, i32, u32, String
         ) {
             Ok((parameter, x, y, z, extension)) => {
-                info!(context.request.get_host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
+                info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
                 if z <= MAX_ZOOM_SERVER as u32 {
                     return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
                             context.request.record,
                             context.request.connection.record,
-                            context.request.get_host().record,
+                            context.host.record,
                             &(layer_config.name),
                         ),
                         body: BodyVariant::ServeTileV3(
@@ -243,7 +243,7 @@ impl ServeTileV3RequestParser {
             Err(_) => ()
         }
 
-        info!(context.request.get_host().record, "ServeTileV3RequestParser::parse - no match");
+        info!(context.host.record, "ServeTileV3RequestParser::parse - no match");
         return Ok(ReadOutcome::NotMatched);
     }
 }
@@ -264,12 +264,12 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension, option)) => {
             if z <= MAX_ZOOM_SERVER as u32 {
-                info!(context.request.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
+                info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
                 return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
                         context.request.record,
                         context.request.connection.record,
-                        context.request.get_host().record,
+                        context.host.record,
                         &(layer_config.name),
                     ),
                     body: BodyVariant::ServeTileV2(
@@ -303,12 +303,12 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension)) => {
             if z <= MAX_ZOOM_SERVER as u32 {
-                info!(context.request.get_host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
+                info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
                 return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
                         context.request.record,
                         context.request.connection.record,
-                        context.request.get_host().record,
+                        context.host.record,
                         &(layer_config.name),
                     ),
                     body: BodyVariant::ServeTileV2(
@@ -333,7 +333,7 @@ impl ServeTileV2RequestParser {
         },
         Err(_) => ()
     }
-        info!(context.request.get_host().record, "ServeTileV2RequestParser::parse - no match");
+        info!(context.host.record, "ServeTileV2RequestParser::parse - no match");
         return Ok(ReadOutcome::NotMatched)
     }
 }
@@ -359,7 +359,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -367,7 +367,7 @@ mod tests {
             let expected_header = Header::new(
                 context.request.record,
                 context.request.connection.record,
-                context.request.get_host().record,
+                context.host.record,
             );
             assert_eq!(expected_header, actual_request.header, "Wrong header generated");
             assert!(matches!(actual_request.body, BodyVariant::ReportStatistics));
@@ -386,7 +386,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -396,7 +396,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::DescribeLayer,
@@ -418,7 +418,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -428,7 +428,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -459,7 +459,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -487,7 +487,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -497,7 +497,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -528,7 +528,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -538,7 +538,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -568,7 +568,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -578,7 +578,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
@@ -607,7 +607,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -634,7 +634,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -644,7 +644,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
@@ -673,7 +673,7 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 request: Apache2Request::create_with_tile_config(record)?,
-                host: VirtualHost::new(record)?,
+                host: VirtualHost::find_or_make_new(record)?,
             };
             let request_url= context.request.uri;
 
@@ -683,7 +683,7 @@ mod tests {
                 header: Header::new_with_layer(
                     context.request.record,
                     context.request.connection.record,
-                    context.request.get_host().record,
+                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
