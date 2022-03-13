@@ -78,6 +78,7 @@ mod tests {
     use crate::schema::apache2::config::ModuleConfig;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
+    use crate::apache2::virtual_host::VirtualHost;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
 
     use std::error::Error;
@@ -95,6 +96,7 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -128,6 +130,7 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,

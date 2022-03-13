@@ -208,6 +208,7 @@ impl<'p> TileProxy<'p> {
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = HandleContext {
             module_config: &self.config,
+            host: VirtualHost::new(record).unwrap(),
             request_context: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,

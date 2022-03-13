@@ -332,6 +332,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -409,6 +410,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -478,6 +480,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -547,6 +550,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -647,6 +651,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -724,6 +729,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -801,6 +807,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -887,6 +894,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -986,6 +994,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -1073,6 +1082,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
+                    host: VirtualHost::new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
