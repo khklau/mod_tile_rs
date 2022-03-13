@@ -76,6 +76,7 @@ fn describe(config: &ModuleConfig, layer: &String) -> response::Description {
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
+    use crate::apache2::connection::Connection;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
     use crate::apache2::virtual_host::VirtualHost;
@@ -97,6 +98,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
+                    connection: Connection::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -131,6 +133,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
+                    connection: Connection::find_or_make_new(request)?,
                     request_context: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,

@@ -211,6 +211,7 @@ impl<'p> TileProxy<'p> {
         let context = HandleContext {
             module_config: &self.config,
             host: VirtualHost::find_or_make_new(record).unwrap(),
+            connection: Connection::find_or_make_new(record).unwrap(),
             request_context: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
