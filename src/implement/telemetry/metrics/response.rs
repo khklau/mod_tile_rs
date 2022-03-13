@@ -298,6 +298,7 @@ impl<T: Default> TileMetricTable<T> {
 mod tests {
     use super::*;
     use crate::binding::apache2::request_rec;
+    use crate::apache2::connection::Connection;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
     use crate::apache2::response::Apache2Response;
@@ -613,8 +614,9 @@ mod tests {
                 let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let mut context = WriteContext {
                     module_config: &module_config,
-                    response_context: &mut response_context,
                     host: VirtualHost::find_or_make_new(request).unwrap(),
+                    connection: Connection::find_or_make_new(request).unwrap(),
+                    response_context: &mut response_context,
                 };
                 analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -956,8 +958,9 @@ mod tests {
                 let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
+                    host: VirtualHost::find_or_make_new(request)?,
+                    connection: Connection::find_or_make_new(request)?,
                     response_context: &mut response_context,
-                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1054,8 +1057,9 @@ mod tests {
                 let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
+                    host: VirtualHost::find_or_make_new(request)?,
+                    connection: Connection::find_or_make_new(request)?,
                     response_context: &mut response_context,
-                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1144,8 +1148,9 @@ mod tests {
                 let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
+                    host: VirtualHost::find_or_make_new(request)?,
+                    connection: Connection::find_or_make_new(request)?,
                     response_context: &mut response_context,
-                    host: VirtualHost::find_or_make_new(request).unwrap(),
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(

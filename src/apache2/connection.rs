@@ -1,9 +1,10 @@
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::binding::apache2::{
-    apr_status_t, conn_rec,
+    apr_status_t, conn_rec, request_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::error::InvalidRecordError;
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::apache2::request::RequestRecord;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -14,7 +15,7 @@ use std::ptr;
 
 
 pub struct Connection<'c> {
-    pub record: &'c mut conn_rec,
+    pub record: &'c conn_rec,
 }
 
 impl<'c> Connection<'c> {
@@ -28,7 +29,8 @@ impl<'c> Connection<'c> {
         id
     }
 
-    pub fn find_or_create(record: &'c mut conn_rec) -> Result<&'c mut Self, Box<dyn Error>> {
+    pub fn find_or_make_new(request: &'c request_rec) -> Result<&'c mut Self, Box<dyn Error>> {
+        let record = request.get_connection_record().unwrap();
         info!(record.base_server, "ConnectionContext::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
@@ -46,15 +48,14 @@ impl<'c> Connection<'c> {
             &(Self::get_id(record))
         ) {
             Some(existing_context) => existing_context,
-            None => Self::create(record)?,
+            None => Self::new(request)?,
         };
         info!(context.record.base_server, "ConnectionContext::find_or_create - finish");
         return Ok(context);
     }
 
-    pub fn create(
-        record: &'c mut conn_rec,
-    ) -> Result<&'c mut Self, Box<dyn Error>> {
+    pub fn new(request: &'c request_rec) -> Result<&'c mut Self, Box<dyn Error>> {
+        let record = request.get_connection_record().unwrap();
         info!(record.base_server, "ConnectionContext::create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
@@ -88,7 +89,6 @@ extern "C" fn drop_connection_context(context_void: *mut c_void) -> apr_status_t
 
 #[cfg(test)]
 pub mod test_utils {
-    use super::Connection;
     use crate::binding::apache2::{
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
@@ -99,14 +99,6 @@ pub mod test_utils {
     use std::ops::FnOnce;
     use std::os::raw::{ c_int, c_long, c_uint, };
     use std::ptr;
-
-    impl<'c> Connection<'c> {
-        pub fn create_with_tile_config(
-            record: &'c mut conn_rec,
-        ) -> Result<&'c mut Self, Box<dyn Error>> {
-            Connection::create(record)
-        }
-    }
 
     impl conn_rec {
         pub fn new() -> conn_rec {

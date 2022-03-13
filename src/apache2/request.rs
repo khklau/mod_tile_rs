@@ -85,8 +85,7 @@ impl<'r> Apache2Request<'r> {
         ) {
             Some(existing_context) => existing_context,
             None => {
-                let connection = unsafe { record.connection.as_mut().unwrap() };
-                let conn_context = Connection::find_or_create(connection)?;
+                let conn_context = Connection::find_or_make_new(record)?;
                 Self::create(record, conn_context)?
             },
         };
@@ -163,8 +162,7 @@ pub mod test_utils {
         pub fn create_with_tile_config(
             record: &'r request_rec,
         ) -> Result<&'r mut Self, Box<dyn Error>> {
-            let connection = unsafe { record.connection.as_mut().unwrap() };
-            let conn_context = Connection::create_with_tile_config(connection)?;
+            let conn_context = Connection::new(record)?;
             Apache2Request::create(record, conn_context)
         }
     }

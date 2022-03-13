@@ -1,3 +1,4 @@
+use crate::apache2::connection::Connection;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::{ Apache2Request, RequestRecord };
 use crate::apache2::response::Apache2Response;
@@ -181,8 +182,9 @@ impl<'p> TileProxy<'p> {
         let read = self.read_request;
         let context = ReadContext {
             module_config: &self.config,
-            request: Apache2Request::find_or_create(record).unwrap(),
             host: VirtualHost::find_or_make_new(record).unwrap(),
+            connection: Connection::find_or_make_new(record).unwrap(),
+            request: Apache2Request::find_or_create(record).unwrap(),
         };
         let read_result = read(&context);
         for observer_iter in read_observers.iter_mut() {
@@ -255,8 +257,9 @@ impl<'p> TileProxy<'p> {
         let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
         let mut context = WriteContext {
             module_config: &self.config,
-            response_context: &mut response_context,
             host: VirtualHost::find_or_make_new(record).unwrap(),
+            connection: Connection::find_or_make_new(record).unwrap(),
+            response_context: &mut response_context,
         };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {
