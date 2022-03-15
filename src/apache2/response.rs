@@ -42,7 +42,7 @@ impl<'r> Apache2Response<'r> {
         let c_value = CString::new(value.to_str()?).unwrap();
         debug!(
             self.record.get_server_record().unwrap(),
-            "ResponseContext::append_http_header - appending {} - {}",
+            "Response::append_http_header - appending {} - {}",
             c_key.to_str().unwrap(),
             c_value.to_str().unwrap()
         );
@@ -83,7 +83,7 @@ impl<'r> Apache2Response<'r> {
         let c_value = CString::new(value.to_str()?).unwrap();
         debug!(
             self.record.get_server_record().unwrap(),
-            "ResponseContext::set_http_header - setting {} - {}",
+            "Response::set_http_header - setting {} - {}",
             c_key.to_str().unwrap(),
             c_value.to_str().unwrap()
         );
@@ -169,7 +169,7 @@ impl<'r> Apache2Response<'r> {
         while payload_slice.len() > 0 {
             debug!(
                 self.record.get_server_record().unwrap(),
-                "ResponseContext::write_content - writing slice {}",
+                "Response::write_content - writing slice {}",
                 String::from_utf8_lossy(payload_slice)
             );
             let result = writer.write(
@@ -179,7 +179,7 @@ impl<'r> Apache2Response<'r> {
             );
             debug!(
                 self.record.get_server_record().unwrap(),
-                "ResponseContext::write_content - write result {}",
+                "Response::write_content - write result {}",
                 result
             );
             if result >= 0 {

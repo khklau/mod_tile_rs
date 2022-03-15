@@ -31,7 +31,7 @@ impl<'c> Connection<'c> {
 
     pub fn find_or_make_new(request: &'c request_rec) -> Result<&'c mut Self, Box<dyn Error>> {
         let record = request.get_connection_record().unwrap();
-        info!(record.base_server, "ConnectionContext::find_or_create - start");
+        info!(record.base_server, "Connection::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
                 record as *const conn_rec,
@@ -43,47 +43,47 @@ impl<'c> Connection<'c> {
                 "base_server field is null pointer",
             )));
         }
-        let context = match retrieve(
+        let connection = match retrieve(
             unsafe { record.pool.as_mut().unwrap() },
             &(Self::get_id(record))
         ) {
-            Some(existing_context) => existing_context,
+            Some(existing_connection) => existing_connection,
             None => Self::new(request)?,
         };
-        info!(context.record.base_server, "ConnectionContext::find_or_create - finish");
-        return Ok(context);
+        info!(connection.record.base_server, "Connection::find_or_create - finish");
+        return Ok(connection);
     }
 
     pub fn new(request: &'c request_rec) -> Result<&'c mut Self, Box<dyn Error>> {
         let record = request.get_connection_record().unwrap();
-        info!(record.base_server, "ConnectionContext::create - start");
+        info!(record.base_server, "Connection::create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
                 record as *const conn_rec,
                 "pool field is null pointer",
             )));
         }
-        let new_context = alloc::<Connection<'c>>(
+        let new_connection = alloc::<Connection<'c>>(
             unsafe { record.pool.as_mut().unwrap() },
             &(Self::get_id(record)),
-            Some(drop_connection_context),
+            Some(drop_connection),
         )?.0;
-        new_context.record = record;
-        info!(new_context.record.base_server, "ConnectionContext::create - finish");
-        return Ok(new_context);
+        new_connection.record = record;
+        info!(new_connection.record.base_server, "Connection::create - finish");
+        return Ok(new_connection);
     }
 }
 
 #[no_mangle]
-extern "C" fn drop_connection_context(context_void: *mut c_void) -> apr_status_t {
-    let context_ref = match access_pool_object::<Connection>(context_void) {
+extern "C" fn drop_connection(connection_void: *mut c_void) -> apr_status_t {
+    let connection_ref = match access_pool_object::<Connection>(connection_void) {
         None => {
             return APR_BADARG as apr_status_t;
         },
         Some(host) => host,
     };
-    info!(context_ref.record.base_server, "drop_connection_context - dropping");
-    drop(context_ref);
+    info!(connection_ref.record.base_server, "drop_connection - dropping");
+    drop(connection_ref);
     return APR_SUCCESS as apr_status_t;
 }
 

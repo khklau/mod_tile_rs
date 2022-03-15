@@ -16,5 +16,5 @@ pub struct WriteContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
-    pub response_context: &'c mut Apache2Response<'c>,
+    pub response: &'c mut Apache2Response<'c>,
 }

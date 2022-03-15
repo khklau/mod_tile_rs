@@ -32,7 +32,7 @@ impl RequestHandler for DescriptionHandler {
         let description = describe(context.module_config, layer);
         let response = response::SlippyResponse {
             header: response::Header::new(
-                context.request_context.record,
+                context.request.record,
                 context.connection.record,
                 context.host.record,
                 &mime::APPLICATION_JSON,
@@ -99,14 +99,14 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
-                        handle_context.request_context.record,
+                        handle_context.request.record,
                         handle_context.connection.record,
                         handle_context.host.record,
                         &layer_name,
@@ -134,14 +134,14 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
                 };
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
-                        handle_context.request_context.record,
+                        handle_context.request.record,
                         handle_context.connection.record,
                         handle_context.host.record,
                         &layer_name,
@@ -162,7 +162,7 @@ mod tests {
                 };
                 let expected_response = response::SlippyResponse {
                     header: response::Header::new(
-                        handle_context.request_context.record,
+                        handle_context.request.record,
                         handle_context.connection.record,
                         handle_context.host.record,
                         &mime::APPLICATION_JSON,

@@ -11,7 +11,7 @@ pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
-    pub request_context: &'c mut Apache2Request<'c>,
+    pub request: &'c mut Apache2Request<'c>,
     pub cache_metrics: &'c dyn CacheMetrics,
     pub render_metrics: &'c dyn RenderMetrics,
     pub response_metrics: &'c dyn ResponseMetrics,

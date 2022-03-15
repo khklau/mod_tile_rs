@@ -77,50 +77,50 @@ impl<'h> VirtualHost<'h> {
 
     pub fn find_or_make_new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         let record = request.get_server_record()?;
-        info!(record, "VirtualHostContext::find_or_create - start");
+        info!(record, "VirtualHost::find_or_create - start");
         let proc_record = server_rec::get_process_record(record.process)?;
-        let context = match retrieve(
+        let host = match retrieve(
             proc_record.get_pool(),
             &(Self::get_id(record))
         ) {
-            Some(existing_context) => {
-                info!(record, "VirtualHostContext::find_or_create - existing found");
-                existing_context
+            Some(existing_host) => {
+                info!(record, "VirtualHost::find_or_create - existing found");
+                existing_host
             },
             None => {
-                info!(record, "VirtualHostContext::find_or_create - not found");
+                info!(record, "VirtualHost::find_or_create - not found");
                 Self::new(request)?
             },
         };
-        info!(context.record, "VirtualHostContext::find_or_create - finish");
-        return Ok(context);
+        info!(host.record, "VirtualHost::find_or_create - finish");
+        return Ok(host);
     }
 
     pub fn new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {
         let record = request.get_server_record()?;
-        debug!(record, "VirtualHostContext::new - start");
+        debug!(record, "VirtualHost::new - start");
         let proc_record = server_rec::get_process_record(record.process)?;
-        let new_context = alloc::<VirtualHost<'h>>(
+        let new_host = alloc::<VirtualHost<'h>>(
             proc_record.get_pool(),
             &(Self::get_id(record)),
-            Some(drop_virtual_host_context),
+            Some(drop_virtual_host),
         )?.0;
-        new_context.record = record;
-        debug!(new_context.record, "VirtualHostContext::new - finish");
-        return Ok(new_context);
+        new_host.record = record;
+        debug!(new_host.record, "VirtualHost::new - finish");
+        return Ok(new_host);
     }
 }
 
 #[no_mangle]
-extern "C" fn drop_virtual_host_context(context_void: *mut c_void) -> apr_status_t {
-    let context_ref = match access_pool_object::<VirtualHost>(context_void) {
+extern "C" fn drop_virtual_host(host_void: *mut c_void) -> apr_status_t {
+    let host_ref = match access_pool_object::<VirtualHost>(host_void) {
         None => {
             return APR_BADARG as apr_status_t;
         },
         Some(host) => host,
     };
-    info!(context_ref.record, "drop_virtual_host_context - dropping");
-    drop(context_ref);
+    info!(host_ref.record, "drop_virtual_host - dropping");
+    drop(host_ref);
     return APR_SUCCESS as apr_status_t;
 }
 

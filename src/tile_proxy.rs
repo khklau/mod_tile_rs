@@ -83,9 +83,9 @@ impl<'p> TileProxy<'p> {
             proc_record.get_pool(),
             &(Self::get_id(record))
         ) {
-            Some(existing_context) => {
+            Some(existing_proxy) => {
                 info!(record, "TileServer::find_or_create - existing found");
-                existing_context
+                existing_proxy
             },
             None => {
                 info!(record, "TileServer::find_or_create - not found");
@@ -212,7 +212,7 @@ impl<'p> TileProxy<'p> {
             module_config: &self.config,
             host: VirtualHost::find_or_make_new(record).unwrap(),
             connection: Connection::find_or_make_new(record).unwrap(),
-            request_context: Apache2Request::find_or_create(record).unwrap(),
+            request: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
             response_metrics: &self.response_analysis,
@@ -255,12 +255,12 @@ impl<'p> TileProxy<'p> {
         let write = self.write_response;
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
-        let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+        let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
         let mut context = WriteContext {
             module_config: &self.config,
             host: VirtualHost::find_or_make_new(record).unwrap(),
             connection: Connection::find_or_make_new(record).unwrap(),
-            response_context: &mut response_context,
+            response: &mut response,
         };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {
@@ -273,7 +273,7 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in write_observers.iter_mut() {
             debug!(
-                context.response_context.record.get_server_record().unwrap(),
+                context.response.record.get_server_record().unwrap(),
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
             (*observer_iter).on_write(write, &context, &read_result, &handle_result, &write_result);

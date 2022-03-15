@@ -109,7 +109,7 @@ impl ResponseAnalysis {
             self.tile_reponse_count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.response_context.record.get_server_record().unwrap(),
+                context.response.record.get_server_record().unwrap(),
                 "ResponseAnalysis::on_tile_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -135,7 +135,7 @@ impl ResponseAnalysis {
             count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.response_context.record.get_server_record().unwrap(),
+                context.response.record.get_server_record().unwrap(),
                 "ResponseAnalysis::on_http_response_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -335,7 +335,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -344,7 +344,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -370,7 +370,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -414,7 +414,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -423,7 +423,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -440,7 +440,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -485,7 +485,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -494,7 +494,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -517,7 +517,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -556,7 +556,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -565,7 +565,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -589,7 +589,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -615,12 +615,12 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let mut context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request).unwrap(),
                     connection: Connection::find_or_make_new(request).unwrap(),
-                    response_context: &mut response_context,
+                    response: &mut response,
                 };
                 analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -659,7 +659,7 @@ mod tests {
                     module_config: &module_config,
                     connection: Connection::find_or_make_new(request)?,
                     host: VirtualHost::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -668,7 +668,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -694,7 +694,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -738,7 +738,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -747,7 +747,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -773,7 +773,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -817,7 +817,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -826,7 +826,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -857,7 +857,7 @@ mod tests {
                                 HandleOutcome::Handled(
                                     response::SlippyResponse {
                                         header: response::Header::new(
-                                            handle_context.request_context.record,
+                                            handle_context.request.record,
                                             handle_context.connection.record,
                                             handle_context.host.record,
                                             &mime::APPLICATION_JSON,
@@ -905,7 +905,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -914,7 +914,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -937,7 +937,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -963,12 +963,12 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    response_context: &mut response_context,
+                    response: &mut response,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1007,7 +1007,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -1016,7 +1016,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -1031,7 +1031,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -1063,12 +1063,12 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    response_context: &mut response_context,
+                    response: &mut response,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1097,7 +1097,7 @@ mod tests {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    request_context: Apache2Request::create_with_tile_config(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
                     response_metrics,
@@ -1106,7 +1106,7 @@ mod tests {
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
-                                handle_context.request_context.record,
+                                handle_context.request.record,
                                 handle_context.connection.record,
                                 handle_context.host.record,
                             ),
@@ -1129,7 +1129,7 @@ mod tests {
                         HandleOutcome::Handled(
                             response::SlippyResponse {
                                 header: response::Header::new(
-                                    handle_context.request_context.record,
+                                    handle_context.request.record,
                                     handle_context.connection.record,
                                     handle_context.host.record,
                                     &mime::APPLICATION_JSON,
@@ -1155,12 +1155,12 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response_context = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_make_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
-                    response_context: &mut response_context,
+                    response: &mut response,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(

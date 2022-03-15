@@ -55,7 +55,7 @@ pub struct Apache2Request<'r> {
 
 impl<'r> Apache2Request<'r> {
 
-    pub fn get_context_id(record: &request_rec) -> CString {
+    pub fn get_id(record: &request_rec) -> CString {
         let id = CString::new(format!(
             "{}@{:p}",
             type_name::<Self>(),
@@ -65,7 +65,7 @@ impl<'r> Apache2Request<'r> {
     }
 
     pub fn find_or_create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
-        info!(record.server, "RequestContext::find_or_create - start");
+        info!(record.server, "Request::find_or_create - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
                 record as *const request_rec,
@@ -77,15 +77,15 @@ impl<'r> Apache2Request<'r> {
                 "connection field is null pointer",
             )));
         }
-        let context = match retrieve(
+        let request = match retrieve(
             unsafe { record.pool.as_mut().unwrap() },
-            &(Self::get_context_id(record))
+            &(Self::get_id(record))
         ) {
-            Some(existing_context) => existing_context,
+            Some(existing_request) => existing_request,
             None => Self::create(record)?,
         };
-        info!(context.record.server, "RequestContext::find_or_create - finish");
-        return Ok(context);
+        info!(request.record.server, "Request::find_or_create - finish");
+        return Ok(request);
     }
 
     pub fn create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
@@ -103,31 +103,31 @@ impl<'r> Apache2Request<'r> {
         let record_pool = unsafe { record.pool.as_mut().unwrap() };
         let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
 
-        info!(record.get_server_record().unwrap(), "RequestContext::create - start");
-        let new_context = alloc::<Apache2Request<'r>>(
+        info!(record.get_server_record().unwrap(), "Request::create - start");
+        let new_request = alloc::<Apache2Request<'r>>(
             record_pool,
-            &(Self::get_context_id(record)),
-            Some(drop_request_context),
+            &(Self::get_id(record)),
+            Some(drop_request),
         )?.0;
-        new_context.record = record;
+        new_request.record = record;
         let mut generator = SnowflakeIdGenerator::new(1, 1);
-        new_context.request_id = generator.real_time_generate();
-        new_context.uri = uri;
-        info!(record.get_server_record().unwrap(), "RequestContext::create - finish");
-        return Ok(new_context);
+        new_request.request_id = generator.real_time_generate();
+        new_request.uri = uri;
+        info!(record.get_server_record().unwrap(), "Request::create - finish");
+        return Ok(new_request);
     }
 }
 
 #[no_mangle]
-extern "C" fn drop_request_context(context_void: *mut c_void) -> apr_status_t {
-    let context_ref = match access_pool_object::<Apache2Request>(context_void) {
+extern "C" fn drop_request(request_void: *mut c_void) -> apr_status_t {
+    let request_ref = match access_pool_object::<Apache2Request>(request_void) {
         None => {
             return APR_BADARG as apr_status_t;
         },
         Some(host) => host,
     };
-    info!(context_ref.record.server, "drop_connection_context - dropping");
-    drop(context_ref);
+    info!(request_ref.record.server, "drop_connection - dropping");
+    drop(request_ref);
     return APR_SUCCESS as apr_status_t;
 }
 
