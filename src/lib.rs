@@ -15,6 +15,7 @@ mod schema {
     pub mod apache2 {
         pub mod config;
         pub mod error;
+        pub mod virtual_host;
     }
     pub mod slippy {
         pub mod context;
@@ -28,6 +29,16 @@ mod schema {
         pub mod error;
         pub mod result;
     }
+}
+mod interface {
+    pub mod apache2 {
+        pub mod pool;
+    }
+    pub mod telemetry {
+        pub mod metrics;
+    }
+    pub mod handler;
+    pub mod slippy;
 }
 mod framework {
     pub mod apache2 {
@@ -43,13 +54,6 @@ mod apache2 {
     pub mod request;
     pub mod response;
     pub mod virtual_host;
-}
-mod interface {
-    pub mod telemetry {
-        pub mod metrics;
-    }
-    pub mod handler;
-    pub mod slippy;
 }
 mod implement {
     pub mod handler {

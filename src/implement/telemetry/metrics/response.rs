@@ -298,19 +298,20 @@ impl<T: Default> TileMetricTable<T> {
 mod tests {
     use super::*;
     use crate::binding::apache2::request_rec;
-    use crate::apache2::connection::Connection;
-    use crate::apache2::request::test_utils::with_request_rec;
-    use crate::apache2::request::Apache2Request;
-    use crate::apache2::response::Apache2Response;
-    use crate::apache2::virtual_host::VirtualHost;
-    use crate::interface::handler::test_utils::MockRequestHandler;
-    use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
+    use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::handler::result::HandleOutcome;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
+    use crate::interface::apache2::pool::PoolStored;
+    use crate::interface::handler::test_utils::MockRequestHandler;
+    use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
+    use crate::apache2::connection::Connection;
+    use crate::apache2::request::test_utils::with_request_rec;
+    use crate::apache2::request::Apache2Request;
+    use crate::apache2::response::Apache2Response;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -333,7 +334,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -412,7 +413,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -483,7 +484,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -554,7 +555,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -618,7 +619,7 @@ mod tests {
                 let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let mut context = WriteContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request).unwrap(),
+                    host: VirtualHost::find_or_allocate_new(request).unwrap(),
                     connection: Connection::find_or_make_new(request).unwrap(),
                     response: &mut response,
                 };
@@ -658,7 +659,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     connection: Connection::find_or_make_new(request)?,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -736,7 +737,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -815,7 +816,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -903,7 +904,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -966,7 +967,7 @@ mod tests {
                 let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     response: &mut response,
                 };
@@ -1005,7 +1006,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -1066,7 +1067,7 @@ mod tests {
                 let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     response: &mut response,
                 };
@@ -1095,7 +1096,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -1158,7 +1159,7 @@ mod tests {
                 let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     response: &mut response,
                 };

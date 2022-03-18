@@ -1,3 +1,6 @@
+use crate::schema::apache2::error::InvalidRecordError;
+use crate::schema::apache2::virtual_host::VirtualHost;
+use crate::interface::apache2::pool::PoolStored;
 use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestRecord;
 
@@ -5,7 +8,6 @@ use crate::binding::apache2::{
     apr_pool_t, apr_status_t, process_rec, request_rec, server_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::schema::apache2::error::InvalidRecordError;
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -60,13 +62,10 @@ impl ProcessRecord for process_rec {
 }
 
 
-pub struct VirtualHost<'h> {
-    pub record: &'h server_rec,
-}
+impl<'p> PoolStored<'p> for VirtualHost<'p> {
 
-impl<'h> VirtualHost<'h> {
-
-    pub fn get_id(record: &server_rec) -> CString {
+    fn get_id(request: &request_rec) -> CString {
+        let record = request.get_server_record().unwrap();
         let id = CString::new(format!(
             "{}@{:p}",
             type_name::<Self>(),
@@ -75,37 +74,36 @@ impl<'h> VirtualHost<'h> {
         id
     }
 
-    pub fn find_or_make_new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {
+    fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn Error>> {
         let record = request.get_server_record()?;
-        info!(record, "VirtualHost::find_or_create - start");
+        info!(record, "VirtualHost::find_or_allocate_new - start");
         let proc_record = server_rec::get_process_record(record.process)?;
         let host = match retrieve(
             proc_record.get_pool(),
-            &(Self::get_id(record))
+            &(Self::get_id(request))
         ) {
             Some(existing_host) => {
-                info!(record, "VirtualHost::find_or_create - existing found");
+                info!(record, "VirtualHost::find_or_allocate_new - existing found");
                 existing_host
             },
             None => {
-                info!(record, "VirtualHost::find_or_create - not found");
+                info!(record, "VirtualHost::find_or_allocate_new - not found");
                 Self::new(request)?
             },
         };
-        info!(host.record, "VirtualHost::find_or_create - finish");
+        info!(host.record, "VirtualHost::find_or_allocate_new - finish");
         return Ok(host);
     }
 
-    pub fn new(request: &'h request_rec) -> Result<&'h mut Self, Box<dyn Error>> {
-        let record = request.get_server_record()?;
-        debug!(record, "VirtualHost::new - start");
-        let proc_record = server_rec::get_process_record(record.process)?;
-        let new_host = alloc::<VirtualHost<'h>>(
+    fn new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn Error>> {
+        debug!(request.get_server_record()?, "VirtualHost::new - start");
+        let proc_record = server_rec::get_process_record(request.get_server_record()?.process)?;
+        let new_host = alloc::<VirtualHost<'p>>(
             proc_record.get_pool(),
-            &(Self::get_id(record)),
+            &(Self::get_id(request)),
             Some(drop_virtual_host),
         )?.0;
-        new_host.record = record;
+        new_host.record = request.get_server_record()?;
         debug!(new_host.record, "VirtualHost::new - finish");
         return Ok(new_host);
     }

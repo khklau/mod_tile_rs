@@ -1,17 +1,9 @@
-use crate::apache2::connection::Connection;
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::apache2::request::{ Apache2Request, RequestRecord };
-use crate::apache2::response::Apache2Response;
-use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, VirtualHost, };
-use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
-use crate::interface::slippy::{
-    ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
-};
 use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS, OK,
     apr_status_t, request_rec, server_rec,
 };
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
@@ -21,7 +13,17 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
+use crate::interface::apache2::pool::PoolStored;
+use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
+use crate::interface::slippy::{
+    ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
+};
 use crate::framework::apache2::config::Loadable;
+use crate::apache2::connection::Connection;
+use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::apache2::request::{ Apache2Request, RequestRecord };
+use crate::apache2::response::Apache2Response;
+use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, };
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
@@ -182,7 +184,7 @@ impl<'p> TileProxy<'p> {
         let read = self.read_request;
         let context = ReadContext {
             module_config: &self.config,
-            host: VirtualHost::find_or_make_new(record).unwrap(),
+            host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_make_new(record).unwrap(),
             request: Apache2Request::find_or_create(record).unwrap(),
         };
@@ -210,7 +212,7 @@ impl<'p> TileProxy<'p> {
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = HandleContext {
             module_config: &self.config,
-            host: VirtualHost::find_or_make_new(record).unwrap(),
+            host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_make_new(record).unwrap(),
             request: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
@@ -258,7 +260,7 @@ impl<'p> TileProxy<'p> {
         let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
         let mut context = WriteContext {
             module_config: &self.config,
-            host: VirtualHost::find_or_make_new(record).unwrap(),
+            host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_make_new(record).unwrap(),
             response: &mut response,
         };

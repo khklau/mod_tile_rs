@@ -1,9 +1,9 @@
-use crate::schema::handler::context::HandleContext;
-use crate::interface::handler::RequestHandler;
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
+use crate::interface::handler::RequestHandler;
 
 use chrono::Utc;
 use mime;
@@ -76,11 +76,12 @@ fn describe(config: &ModuleConfig, layer: &String) -> response::Description {
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
+    use crate::schema::apache2::virtual_host::VirtualHost;
+    use crate::interface::apache2::pool::PoolStored;
+    use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::apache2::connection::Connection;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
-    use crate::apache2::virtual_host::VirtualHost;
-    use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
 
     use std::error::Error;
     use std::ffi::CString;
@@ -97,7 +98,7 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -132,7 +133,7 @@ mod tests {
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    host: VirtualHost::find_or_make_new(request)?,
+                    host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_make_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
