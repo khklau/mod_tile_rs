@@ -3,7 +3,7 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::RequestRecord;
 
 use std::any::type_name;
@@ -92,7 +92,7 @@ pub mod test_utils {
     use crate::binding::apache2::{
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
-    use crate::apache2::memory::test_utils::with_pool;
+    use crate::framework::apache2::memory::test_utils::with_pool;
     use crate::apache2::virtual_host::test_utils::with_server_rec;
     use std::boxed::Box;
     use std::error::Error;

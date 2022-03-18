@@ -1,10 +1,9 @@
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve, };
-
 use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
     apr_status_t, conn_rec, request_rec, server_rec,
 };
 use crate::schema::apache2::error::InvalidRecordError;
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, };
 
 use snowflake::SnowflakeIdGenerator;
 
@@ -140,7 +139,7 @@ pub mod test_utils {
         apr_off_t, apr_pool_t, apr_port_t, apr_time_t, apr_uid_t, apr_uri_t,
         conn_rec, request_rec,
     };
-    use crate::apache2::memory::test_utils::with_pool;
+    use crate::framework::apache2::memory::test_utils::with_pool;
     use crate::apache2::connection::test_utils::with_conn_rec;
     use std::boxed::Box;
     use std::error::Error;

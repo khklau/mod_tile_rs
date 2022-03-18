@@ -1,9 +1,10 @@
 use crate::binding::apache2::{
     APR_SUCCESS,
     apr_palloc, apr_pool_userdata_get, apr_pool_userdata_set,
-    apr_pool_t, apr_size_t, apr_status_t, memset,
+    apr_pool_t, apr_size_t, apr_status_t, memset, request_rec,
 };
 
+use std::boxed::Box;
 use std::alloc::Layout;
 use std::error::Error;
 use std::ffi::{CString, c_void,};
@@ -12,6 +13,7 @@ use std::option::Option;
 use std::os::raw::c_ulong;
 use std::ptr;
 use std::result::Result;
+
 
 #[derive(Debug)]
 pub struct AllocError {
@@ -27,6 +29,15 @@ impl fmt::Display for AllocError {
 }
 
 pub type CleanUpFn = unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void) -> apr_status_t;
+
+pub trait PoolStored<'p> {
+
+    fn get_id(request: &request_rec) -> CString;
+
+    fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>>;
+
+    fn new(request: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>>;
+}
 
 pub fn alloc<'p, T>(
     pool: &'p mut apr_pool_t,
@@ -81,6 +92,7 @@ pub fn access_pool_object<'t, T>(object_void: *mut c_void) -> Option<&'t mut T> 
     let object_ref = unsafe { object_ptr.as_mut().unwrap() };
     return Some(object_ref);
 }
+
 
 #[cfg(test)]
 pub mod test_utils {

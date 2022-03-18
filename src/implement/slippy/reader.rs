@@ -344,7 +344,7 @@ mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::apache2::virtual_host::VirtualHost;
-    use crate::interface::apache2::pool::PoolStored;
+    use crate::framework::apache2::memory::PoolStored;
     use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
     use crate::apache2::connection::Connection;

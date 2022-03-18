@@ -13,14 +13,14 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
-use crate::interface::apache2::pool::PoolStored;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
 use crate::framework::apache2::config::Loadable;
+use crate::framework::apache2::memory::PoolStored;
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::connection::Connection;
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::apache2::request::{ Apache2Request, RequestRecord };
 use crate::apache2::response::Apache2Response;
 use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, };

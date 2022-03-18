@@ -1,7 +1,6 @@
 use crate::schema::apache2::error::InvalidRecordError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::interface::apache2::pool::PoolStored;
-use crate::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, PoolStored, };
 use crate::apache2::request::RequestRecord;
 
 use crate::binding::apache2::{
@@ -129,7 +128,7 @@ pub mod test_utils {
         apr_interval_time_t, apr_pool_t, apr_port_t,
         process_rec, server_rec,
     };
-    use crate::apache2::memory::test_utils::with_pool;
+    use crate::framework::apache2::memory::test_utils::with_pool;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;

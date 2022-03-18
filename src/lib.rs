@@ -31,9 +31,6 @@ mod schema {
     }
 }
 mod interface {
-    pub mod apache2 {
-        pub mod pool;
-    }
     pub mod telemetry {
         pub mod metrics;
     }
@@ -43,6 +40,7 @@ mod interface {
 mod framework {
     pub mod apache2 {
         pub mod config;
+        pub mod memory;
     }
 }
 #[macro_use]
@@ -50,7 +48,6 @@ mod apache2 {
     #[macro_use]
     pub mod logger;
     pub mod connection;
-    pub mod memory;
     pub mod request;
     pub mod response;
     pub mod virtual_host;
