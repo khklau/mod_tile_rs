@@ -37,16 +37,18 @@ mod interface {
     pub mod handler;
     pub mod slippy;
 }
+#[macro_use]
+mod utility {
+    #[macro_use]
+    pub mod logging;
+}
 mod framework {
     pub mod apache2 {
         pub mod config;
         pub mod memory;
     }
 }
-#[macro_use]
 mod apache2 {
-    #[macro_use]
-    pub mod logger;
     pub mod connection;
     pub mod request;
     pub mod response;
