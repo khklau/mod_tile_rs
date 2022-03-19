@@ -93,7 +93,7 @@ pub mod test_utils {
         __BindgenBitfieldUnit, ap_conn_keepalive_e, apr_pool_t, conn_rec, server_rec,
     };
     use crate::framework::apache2::memory::test_utils::with_pool;
-    use crate::apache2::virtual_host::test_utils::with_server_rec;
+    use crate::framework::apache2::virtual_host::test_utils::with_server_rec;
     use std::boxed::Box;
     use std::error::Error;
     use std::ops::FnOnce;

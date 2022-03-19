@@ -20,10 +20,10 @@ use crate::interface::slippy::{
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::PoolStored;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
+use crate::framework::apache2::virtual_host::{ ServerRecord, ProcessRecord, };
 use crate::apache2::connection::Connection;
 use crate::apache2::request::{ Apache2Request, RequestRecord };
 use crate::apache2::response::Apache2Response;
-use crate::apache2::virtual_host::{ ServerRecord, ProcessRecord, };
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
@@ -301,11 +301,11 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::apache2::request::test_utils::with_request_rec;
-    use crate::apache2::virtual_host::test_utils::with_server_rec;
     use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
+    use crate::apache2::request::test_utils::with_request_rec;
+    use crate::framework::apache2::virtual_host::test_utils::with_server_rec;
     use chrono::Utc;
 
     #[test]
