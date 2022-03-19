@@ -46,6 +46,7 @@ mod framework {
     pub mod apache2 {
         pub mod config;
         pub mod memory;
+        pub mod record;
         pub mod virtual_host;
     }
 }

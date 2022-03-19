@@ -20,9 +20,9 @@ use crate::interface::slippy::{
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::PoolStored;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::framework::apache2::virtual_host::{ ServerRecord, ProcessRecord, };
+use crate::framework::apache2::record::{ RequestRecord, ServerRecord, ProcessRecord, };
 use crate::apache2::connection::Connection;
-use crate::apache2::request::{ Apache2Request, RequestRecord };
+use crate::apache2::request::Apache2Request;
 use crate::apache2::response::Apache2Response;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
@@ -304,8 +304,7 @@ mod tests {
     use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
-    use crate::apache2::request::test_utils::with_request_rec;
-    use crate::framework::apache2::virtual_host::test_utils::with_server_rec;
+    use crate::framework::apache2::record::test_utils::{ with_request_rec, with_server_rec };
     use chrono::Utc;
 
     #[test]

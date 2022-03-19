@@ -1,4 +1,3 @@
-use crate::apache2::request::RequestRecord;
 
 use crate::binding::apache2::request_rec;
 #[cfg(not(test))]
@@ -7,6 +6,7 @@ use crate::binding::apache2::{
     apr_psprintf, apr_table_setn, apr_table_mergen,
 };
 use crate::schema::apache2::error::ResponseWriteError;
+use crate::framework::apache2::record::RequestRecord;
 
 use http::header::{ HeaderName, HeaderValue, ToStrError, };
 use mime::Mime;
@@ -254,7 +254,7 @@ impl Writer for Apache2Writer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::apache2::request::test_utils::with_request_rec;
+    use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use std::cmp::min;
     use std::collections::VecDeque;

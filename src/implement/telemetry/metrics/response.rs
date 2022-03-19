@@ -1,11 +1,6 @@
 use crate::schema::apache2::config::MAX_ZOOM_SERVER;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::slippy::context::WriteContext;
-use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
-use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
-use crate::interface::telemetry::metrics::{
-    CacheMetrics, RenderMetrics, ResponseMetrics
-};
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
@@ -16,7 +11,12 @@ use crate::schema::slippy::result::{
 };
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::apache2::request::RequestRecord;
+use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
+use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
+use crate::interface::telemetry::metrics::{
+    CacheMetrics, RenderMetrics, ResponseMetrics
+};
+use crate::framework::apache2::record::RequestRecord;
 
 use chrono::Duration;
 use http::status::StatusCode;
@@ -308,8 +308,8 @@ mod tests {
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::memory::PoolStored;
+    use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::apache2::connection::Connection;
-    use crate::apache2::request::test_utils::with_request_rec;
     use crate::apache2::request::Apache2Request;
     use crate::apache2::response::Apache2Response;
     use chrono::Utc;
