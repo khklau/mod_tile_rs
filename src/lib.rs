@@ -45,15 +45,13 @@ mod utility {
 mod framework {
     pub mod apache2 {
         pub mod config;
+        pub mod connection;
         pub mod memory;
         pub mod record;
+        pub mod request;
+        pub mod response;
         pub mod virtual_host;
     }
-}
-mod apache2 {
-    pub mod connection;
-    pub mod request;
-    pub mod response;
 }
 mod implement {
     pub mod handler {

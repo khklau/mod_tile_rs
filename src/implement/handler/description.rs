@@ -80,8 +80,8 @@ mod tests {
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::memory::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::apache2::connection::Connection;
-    use crate::apache2::request::Apache2Request;
+    use crate::framework::apache2::connection::Connection;
+    use crate::framework::apache2::request::Apache2Request;
 
     use std::error::Error;
     use std::ffi::CString;
