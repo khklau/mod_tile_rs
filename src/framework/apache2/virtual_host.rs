@@ -28,19 +28,19 @@ impl<'p> PoolStored<'p> for VirtualHost<'p> {
     }
 
     fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn Error>> {
-        let record = request.get_server_record()?;
-        info!(record, "VirtualHost::find_or_allocate_new - start");
-        let proc_record = server_rec::get_process_record(record.process)?;
+        let server_record = request.get_server_record()?;
+        info!(server_record, "VirtualHost::find_or_allocate_new - start");
+        let proc_record = server_rec::get_process_record(server_record.process)?;
         let host = match retrieve(
             proc_record.get_pool(),
             &(Self::get_id(request))
         ) {
             Some(existing_host) => {
-                info!(record, "VirtualHost::find_or_allocate_new - existing found");
+                info!(server_record, "VirtualHost::find_or_allocate_new - existing found");
                 existing_host
             },
             None => {
-                info!(record, "VirtualHost::find_or_allocate_new - not found");
+                info!(server_record, "VirtualHost::find_or_allocate_new - not found");
                 Self::new(request)?
             },
         };

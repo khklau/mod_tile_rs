@@ -14,6 +14,7 @@ mod schema {
     #[macro_use]
     pub mod apache2 {
         pub mod config;
+        pub mod connection;
         pub mod error;
         pub mod virtual_host;
     }

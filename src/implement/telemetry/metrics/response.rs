@@ -298,8 +298,9 @@ impl<T: Default> TileMetricTable<T> {
 mod tests {
     use super::*;
     use crate::binding::apache2::request_rec;
-    use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::apache2::config::ModuleConfig;
+    use crate::schema::apache2::connection::Connection;
+    use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::handler::result::HandleOutcome;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
@@ -309,7 +310,6 @@ mod tests {
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::memory::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::framework::apache2::connection::Connection;
     use crate::framework::apache2::request::Apache2Request;
     use crate::framework::apache2::response::Apache2Response;
     use chrono::Utc;
@@ -335,7 +335,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -414,7 +414,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -485,7 +485,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -556,7 +556,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -620,7 +620,7 @@ mod tests {
                 let mut context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request).unwrap(),
-                    connection: Connection::find_or_make_new(request).unwrap(),
+                    connection: Connection::find_or_allocate_new(request).unwrap(),
                     response: &mut response,
                 };
                 analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
@@ -658,7 +658,7 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let handle_context = HandleContext {
                     module_config: &module_config,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
@@ -738,7 +738,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -817,7 +817,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -905,7 +905,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -968,7 +968,7 @@ mod tests {
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     response: &mut response,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
@@ -1007,7 +1007,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -1068,7 +1068,7 @@ mod tests {
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     response: &mut response,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
@@ -1097,7 +1097,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -1160,7 +1160,7 @@ mod tests {
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     response: &mut response,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);

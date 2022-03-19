@@ -1,9 +1,9 @@
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::interface::telemetry::metrics::{
     CacheMetrics, RenderMetrics, ResponseMetrics,
 };
-use crate::framework::apache2::connection::Connection;
 use crate::framework::apache2::request::Apache2Request;
 
 

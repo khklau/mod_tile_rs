@@ -76,11 +76,11 @@ fn describe(config: &ModuleConfig, layer: &String) -> response::Description {
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
+    use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::memory::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::framework::apache2::connection::Connection;
     use crate::framework::apache2::request::Apache2Request;
 
     use std::error::Error;
@@ -99,7 +99,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,
@@ -134,7 +134,7 @@ mod tests {
                 let handle_context = HandleContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_make_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
                     cache_metrics,
                     render_metrics,

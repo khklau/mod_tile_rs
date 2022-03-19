@@ -3,6 +3,7 @@ use crate::binding::apache2::{
     apr_status_t, request_rec, server_rec,
 };
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
@@ -21,7 +22,6 @@ use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::PoolStored;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::{ RequestRecord, ServerRecord, ProcessRecord, };
-use crate::framework::apache2::connection::Connection;
 use crate::framework::apache2::request::Apache2Request;
 use crate::framework::apache2::response::Apache2Response;
 use crate::implement::handler::description::DescriptionHandler;
@@ -185,7 +185,7 @@ impl<'p> TileProxy<'p> {
         let context = ReadContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_make_new(record).unwrap(),
+            connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_create(record).unwrap(),
         };
         let read_result = read(&context);
@@ -213,7 +213,7 @@ impl<'p> TileProxy<'p> {
         let context = HandleContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_make_new(record).unwrap(),
+            connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_create(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
@@ -261,7 +261,7 @@ impl<'p> TileProxy<'p> {
         let mut context = WriteContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_make_new(record).unwrap(),
+            connection: Connection::find_or_allocate_new(record).unwrap(),
             response: &mut response,
         };
         let write_result = match &handle_result.result {
@@ -399,7 +399,7 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
-                let connection = Connection::find_or_make_new(request)?;
+                let connection = Connection::find_or_allocate_new(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {
@@ -453,7 +453,7 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
-                let connection = Connection::find_or_make_new(request)?;
+                let connection = Connection::find_or_allocate_new(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {

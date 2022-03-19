@@ -1,26 +1,22 @@
 use crate::binding::apache2::{
-    apr_status_t, conn_rec, request_rec,
+    apr_status_t, request_rec,
     APR_BADARG, APR_SUCCESS,
 };
-use crate::schema::apache2::error::InvalidRecordError;
-use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::framework::apache2::record::RequestRecord;
+use crate::schema::apache2::connection::Connection;
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, PoolStored, };
+use crate::framework::apache2::record::{ ConnectionRecord, RequestRecord, };
 
 use std::any::type_name;
 use std::boxed::Box;
 use std::error::Error;
 use std::ffi::CString;
 use std::os::raw::c_void;
-use std::ptr;
 
 
-pub struct Connection<'c> {
-    pub record: &'c conn_rec,
-}
+impl<'p> PoolStored<'p> for Connection<'p> {
 
-impl<'c> Connection<'c> {
-
-    pub fn get_id(record: &conn_rec) -> CString {
+    fn get_id(request: &request_rec) -> CString {
+        let record = request.get_connection_record().unwrap();
         let id = CString::new(format!(
             "{}@-{}",
             type_name::<Self>(),
@@ -29,47 +25,32 @@ impl<'c> Connection<'c> {
         id
     }
 
-    pub fn find_or_make_new(request: &'c request_rec) -> Result<&'c mut Self, Box<dyn Error>> {
-        let record = request.get_connection_record().unwrap();
-        info!(record.base_server, "Connection::find_or_create - start");
-        if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                record as *const conn_rec,
-                "pool field is null pointer",
-            )));
-        } else if record.base_server == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                record as *const conn_rec,
-                "base_server field is null pointer",
-            )));
-        }
+    fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut Connection<'p>, Box<dyn Error>> {
+        let server_record = request.get_server_record()?;
+        debug!(server_record, "Connection::find_or_allocate_new - start");
+        let connection_record = request.get_connection_record().unwrap();
         let connection = match retrieve(
-            unsafe { record.pool.as_mut().unwrap() },
-            &(Self::get_id(record))
+            connection_record.get_pool(),
+            &(Self::get_id(request))
         ) {
             Some(existing_connection) => existing_connection,
             None => Self::new(request)?,
         };
-        info!(connection.record.base_server, "Connection::find_or_create - finish");
+        debug!(server_record, "Connection::find_or_allocate_new - finish");
         return Ok(connection);
     }
 
-    pub fn new(request: &'c request_rec) -> Result<&'c mut Self, Box<dyn Error>> {
-        let record = request.get_connection_record().unwrap();
-        info!(record.base_server, "Connection::create - start");
-        if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                record as *const conn_rec,
-                "pool field is null pointer",
-            )));
-        }
-        let new_connection = alloc::<Connection<'c>>(
-            unsafe { record.pool.as_mut().unwrap() },
-            &(Self::get_id(record)),
+    fn new(request: &'p request_rec) -> Result<&'p mut Connection<'p>, Box<dyn Error>> {
+        let server_record = request.get_server_record()?;
+        debug!(server_record, "Connection::new - start");
+        let connection_record = request.get_connection_record().unwrap();
+        let new_connection = alloc::<Connection<'p>>(
+            connection_record.get_pool(),
+            &(Self::get_id(request)),
             Some(drop_connection),
         )?.0;
-        new_connection.record = record;
-        info!(new_connection.record.base_server, "Connection::create - finish");
+        new_connection.record = connection_record;
+        debug!(server_record, "Connection::new - finish");
         return Ok(new_connection);
     }
 }

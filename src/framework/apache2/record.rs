@@ -36,6 +36,29 @@ impl RequestRecord for request_rec {
     }
 }
 
+pub trait ConnectionRecord {
+    fn get_server_record<'s>(self: &'s Self) -> Result<&'s server_rec, InvalidRecordError>;
+
+    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t;
+}
+
+impl ConnectionRecord for conn_rec {
+    fn get_server_record<'s>(self: &'s Self) -> Result<&'s server_rec, InvalidRecordError> {
+        if self.base_server == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                self as *const conn_rec,
+                "base_server field is null pointer",
+            ))
+        } else {
+            Ok(unsafe { &(*self.base_server) } )
+        }
+    }
+
+    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t {
+        unsafe { self.pool.as_mut().unwrap() }
+    }
+}
+
 pub trait ServerRecord {
     fn get_host_name<'s>(&'s self) -> Option<&'s str>;
 
