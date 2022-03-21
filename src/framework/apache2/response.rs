@@ -17,9 +17,18 @@ use std::mem::size_of;
 use std::option::Option;
 
 
+trait Writer {
+    type ElementType;
+
+    fn write(
+        &mut self,
+        buffer: *const Self::ElementType,
+        length: usize,
+    ) -> i32;
+}
+
 pub struct Apache2Response<'r> {
     pub record: &'r mut request_rec,
-    apache2_writer: Apache2Writer,
     writer: Option<&'r mut dyn Writer<ElementType = u8>>,
 }
 
@@ -27,7 +36,6 @@ impl<'r> Apache2Response<'r> {
     pub fn from(record: &'r mut request_rec) -> Apache2Response<'r> {
         Apache2Response {
             record,
-            apache2_writer: Apache2Writer { },
             writer: None,
         }
     }
@@ -163,7 +171,11 @@ impl<'r> Apache2Response<'r> {
     ) -> Result<usize, ResponseWriteError> {
         let writer: &mut dyn Writer<ElementType = u8> = match &mut self.writer {
             Some(obj) => *obj,
-            None => &mut self.apache2_writer,
+            None => {
+                // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
+                let write_record = self.record as *mut request_rec;
+                unsafe { write_record.as_mut().unwrap() }
+            }
         };
         let mut payload_slice = payload.as_ref();
         while payload_slice.len() > 0 {
@@ -175,7 +187,6 @@ impl<'r> Apache2Response<'r> {
             let result = writer.write(
                 payload_slice.as_ptr(),
                 payload_slice.len(),
-                self.record,
             );
             debug!(
                 self.record.get_server_record().unwrap(),
@@ -208,20 +219,8 @@ impl<'r> Apache2Response<'r> {
     }
 }
 
-trait Writer {
-    type ElementType;
 
-    fn write(
-        &mut self,
-        buffer: *const Self::ElementType,
-        length: usize,
-        record: &mut request_rec,
-    ) -> i32;
-}
-
-struct Apache2Writer { }
-
-impl Writer for Apache2Writer {
+impl Writer for request_rec {
     type ElementType = u8;
 
     #[cfg(not(test))]
@@ -229,13 +228,12 @@ impl Writer for Apache2Writer {
         &mut self,
         buffer: *const u8,
         length: usize,
-        record: &mut request_rec,
     ) -> i32 {
         unsafe {
             ap_rwrite(
                 buffer as *const c_void,
                 length as i32,
-                record
+                self
             )
         }
     }
@@ -245,7 +243,6 @@ impl Writer for Apache2Writer {
         &mut self,
         _buffer: *const u8,
         length: usize,
-        _record: &mut request_rec,
     ) -> i32 {
         length as i32
     }
@@ -268,14 +265,13 @@ mod tests {
         written_lengths: Vec<usize>,
     }
 
-    impl<'w> Writer for TestWriter {
+    impl Writer for TestWriter {
         type ElementType = u8;
 
         fn write(
             &mut self,
             payload: *const u8,
             length: usize,
-            _record: &mut request_rec,
         ) -> i32 {
             let allowed_length = if self.allowed_lengths.is_empty() {
                 self.default_length
