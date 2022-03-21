@@ -78,7 +78,7 @@ unsafe fn mod_test_teardown() {
 #[macro_export]
 macro_rules! error {
     ($server_expr:expr, $($arg:tt)+) => (
-        (log::log!(log::Level::Error, $($arg)+))
+        _log!(log::Level::Error, $server_expr, $($arg)+)
     );
 }
 
@@ -86,7 +86,7 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     ($server_expr:expr, $($arg:tt)+) => (
-        (log::log!(log::Level::Warn, $($arg)+))
+        _log!(log::Level::Warn, $server_expr, $($arg)+)
     );
 }
 
@@ -94,7 +94,7 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! info {
     ($server_expr:expr, $($arg:tt)+) => (
-        (log::log!(log::Level::Info, $($arg)+))
+        _log!(log::Level::Info, $server_expr, $($arg)+)
     );
 }
 
@@ -102,7 +102,7 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     ($server_expr:expr, $($arg:tt)+) => (
-        (log::log!(log::Level::Debug, $($arg)+))
+        _log!(log::Level::Debug, $server_expr, $($arg)+)
     );
 }
 
@@ -110,6 +110,16 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     ($server_expr:expr, $($arg:tt)+) => (
-        (log::log!(log::Level::Trace, $($arg)+))
+        _log!(log::Level::Trace, $server_expr, $($arg)+)
     );
+}
+
+#[cfg(test)]
+macro_rules! _log { (
+    $level:expr,
+    $server_expr:expr,
+    $($arg:tt)+) => {
+        let _ = &($server_expr);
+        (log::log!($level, $($arg)+));
+    }
 }
