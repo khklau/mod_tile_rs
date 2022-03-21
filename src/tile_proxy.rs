@@ -4,6 +4,7 @@ use crate::binding::apache2::{
 };
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::connection::Connection;
+use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
@@ -22,7 +23,6 @@ use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::PoolStored;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::{ RequestRecord, ServerRecord, };
-use crate::framework::apache2::request::Apache2Request;
 use crate::framework::apache2::response::Apache2Response;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
@@ -184,7 +184,7 @@ impl<'p> TileProxy<'p> {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_create(record).unwrap(),
+            request: Apache2Request::find_or_allocate_new(record).unwrap(),
         };
         let read_result = read(&context);
         for observer_iter in read_observers.iter_mut() {
@@ -212,7 +212,7 @@ impl<'p> TileProxy<'p> {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_create(record).unwrap(),
+            request: Apache2Request::find_or_allocate_new(record).unwrap(),
             cache_metrics: &self.response_analysis,
             render_metrics: &self.response_analysis,
             response_metrics: &self.response_analysis,

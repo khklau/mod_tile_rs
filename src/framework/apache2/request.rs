@@ -3,7 +3,8 @@ use crate::binding::apache2::{
     apr_status_t, request_rec,
 };
 use crate::schema::apache2::error::InvalidRecordError;
-use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, };
+use crate::schema::apache2::request::Apache2Request;
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, PoolStored, };
 use crate::framework::apache2::record::RequestRecord;
 
 use snowflake::SnowflakeIdGenerator;
@@ -17,15 +18,9 @@ use std::ptr;
 use std::result::Result;
 
 
-pub struct Apache2Request<'r> {
-    pub record: &'r request_rec,
-    pub request_id: i64,
-    pub uri: &'r str,
-}
+impl<'p> PoolStored<'p> for Apache2Request<'p> {
 
-impl<'r> Apache2Request<'r> {
-
-    pub fn get_id(record: &request_rec) -> CString {
+    fn get_id(record: &request_rec) -> CString {
         let id = CString::new(format!(
             "{}@{:p}",
             type_name::<Self>(),
@@ -34,8 +29,8 @@ impl<'r> Apache2Request<'r> {
         id
     }
 
-    pub fn find_or_create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
-        info!(record.server, "Request::find_or_create - start");
+    fn find_or_allocate_new(record: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>> {
+        debug!(record.server, "Apache2Request::find_or_allocate_new - start");
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
                 record as *const request_rec,
@@ -52,13 +47,13 @@ impl<'r> Apache2Request<'r> {
             &(Self::get_id(record))
         ) {
             Some(existing_request) => existing_request,
-            None => Self::create(record)?,
+            None => Self::new(record)?,
         };
-        info!(request.record.server, "Request::find_or_create - finish");
+        debug!(request.record.server, "Apache2Request::find_or_allocate_new - finish");
         return Ok(request);
     }
 
-    pub fn create(record: &'r request_rec) -> Result<&'r mut Self, Box<dyn Error>> {
+    fn new(record: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>> {
         if record.pool == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
                 record as *const request_rec,
@@ -73,8 +68,8 @@ impl<'r> Apache2Request<'r> {
         let record_pool = unsafe { record.pool.as_mut().unwrap() };
         let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
 
-        info!(record.get_server_record().unwrap(), "Request::create - start");
-        let new_request = alloc::<Apache2Request<'r>>(
+        info!(record.get_server_record().unwrap(), "Request::new - start");
+        let new_request = alloc::<Apache2Request<'p>>(
             record_pool,
             &(Self::get_id(record)),
             Some(drop_request),
@@ -83,7 +78,7 @@ impl<'r> Apache2Request<'r> {
         let mut generator = SnowflakeIdGenerator::new(1, 1);
         new_request.request_id = generator.real_time_generate();
         new_request.uri = uri;
-        info!(record.get_server_record().unwrap(), "Request::create - finish");
+        info!(record.get_server_record().unwrap(), "Request::new - finish");
         return Ok(new_request);
     }
 }
@@ -105,14 +100,15 @@ extern "C" fn drop_request(request_void: *mut c_void) -> apr_status_t {
 pub mod test_utils {
     use super::Apache2Request;
     use crate::binding::apache2::request_rec;
+    use crate::framework::apache2::memory::PoolStored;
     use std::boxed::Box;
     use std::error::Error;
 
-    impl<'r> Apache2Request<'r> {
+    impl<'p> Apache2Request<'p> {
         pub fn create_with_tile_config(
-            record: &'r request_rec,
-        ) -> Result<&'r mut Self, Box<dyn Error>> {
-            Apache2Request::create(record)
+            record: &'p request_rec,
+        ) -> Result<&'p mut Self, Box<dyn Error>> {
+            Apache2Request::new(record)
         }
     }
 

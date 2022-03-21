@@ -16,6 +16,7 @@ mod schema {
         pub mod config;
         pub mod connection;
         pub mod error;
+        pub mod request;
         pub mod virtual_host;
     }
     pub mod slippy {
