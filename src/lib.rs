@@ -138,7 +138,7 @@ pub extern "C" fn load_config(
     let record = unsafe { command.server.as_mut().unwrap() };
     debug!(record, "tile_server::load_config - start");
     let path_str = unsafe { CStr::from_ptr(value).to_str().unwrap() };
-    let tile_server = TileProxy::find_or_create(record).unwrap();
+    let tile_server = TileProxy::find_or_allocate_new(record).unwrap();
     let mut file_path = PathBuf::new();
     file_path.push(path_str);
     match tile_server.load_config(file_path) {
@@ -176,7 +176,7 @@ pub extern "C" fn load_request_timeout(
         },
     };
     let duration = Duration::new(timeout_uint, 0);
-    let tile_server = TileProxy::find_or_create(record).unwrap();
+    let tile_server = TileProxy::find_or_allocate_new(record).unwrap();
     tile_server.set_render_timeout(&duration);
     info!(record, "tile_server::load_request_timeout - set threshold to {} seconds", timeout_uint);
     return ptr::null();
@@ -213,7 +213,7 @@ pub extern "C" fn initialise(
 ) -> () {
     if child_pool != ptr::null_mut() && record != ptr::null_mut() {
         info!(record, "initialise - start");
-        let server = TileProxy::find_or_create(unsafe { record.as_mut().unwrap() }).unwrap();
+        let server = TileProxy::find_or_allocate_new(unsafe { record.as_mut().unwrap() }).unwrap();
         if let Err(why) = server.initialise(unsafe { record.as_mut().unwrap() }) {
             error!(record, "initialise - failed to initialise TileServer: {}", why);
         } else {
@@ -236,7 +236,7 @@ pub extern "C" fn handle_request(
 
     debug!(record.server, "tile_server::handle_request - start");
     let server = unsafe { record.server.as_mut().unwrap() };
-    let tile_server = TileProxy::find_or_create(server).unwrap();
+    let tile_server = TileProxy::find_or_allocate_new(server).unwrap();
     match tile_server.handle_request(record) {
         Ok(result) => {
             debug!(record.server, "tile_server::handle_request - request handled");

@@ -39,7 +39,7 @@ impl RequestRecord for request_rec {
 pub trait ConnectionRecord {
     fn get_server_record<'s>(self: &'s Self) -> Result<&'s server_rec, InvalidRecordError>;
 
-    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t;
+    fn get_pool<'p>(&'p self) -> Result<&'p mut apr_pool_t, InvalidRecordError>;
 }
 
 impl ConnectionRecord for conn_rec {
@@ -54,15 +54,24 @@ impl ConnectionRecord for conn_rec {
         }
     }
 
-    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t {
-        unsafe { self.pool.as_mut().unwrap() }
+    fn get_pool<'p>(&'p self) -> Result<&'p mut apr_pool_t, InvalidRecordError> {
+        if self.pool == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                self.pool,
+                "conn_rec.pool field is a null pointer",
+            ))
+        } else {
+            Ok(unsafe { self.pool.as_mut().unwrap() })
+        }
     }
 }
 
 pub trait ServerRecord {
     fn get_host_name<'s>(&'s self) -> Option<&'s str>;
 
-    fn get_process_record<'s>(process: *mut process_rec) -> Result<&'s process_rec, InvalidRecordError>;
+    fn get_pool<'s>(&'s self) -> Result<&'s mut apr_pool_t, InvalidRecordError>;
+
+    fn get_process_record<'s>(&'s self) -> Result<&'s process_rec, InvalidRecordError>;
 }
 
 impl ServerRecord for server_rec {
@@ -74,14 +83,26 @@ impl ServerRecord for server_rec {
         }
     }
 
-    fn get_process_record<'s>(process: *mut process_rec) -> Result<&'s process_rec, InvalidRecordError> {
-        if process == ptr::null_mut() {
+    fn get_pool<'s>(&'s self) -> Result<&'s mut apr_pool_t, InvalidRecordError> {
+        let proc_record = self.get_process_record().unwrap();
+        if proc_record.pool == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                proc_record as *const process_rec,
+                "process_rec.pool field is null pointer",
+            ))
+        } else {
+            proc_record.get_pool()
+        }
+    }
+
+    fn get_process_record<'s>(&'s self) -> Result<&'s process_rec, InvalidRecordError> {
+        if self.process == ptr::null_mut() {
             return Err(InvalidRecordError::new(
-                process,
+                self.process,
                 "server_rec.process field is a null pointer",
             ));
         }
-        let proc_record = unsafe { process.as_mut().unwrap() };
+        let proc_record = unsafe { self.process.as_mut().unwrap() };
         if proc_record.pool == ptr::null_mut() {
             return Err(InvalidRecordError::new(
                 proc_record as *const process_rec,
@@ -93,12 +114,19 @@ impl ServerRecord for server_rec {
 }
 
 pub trait ProcessRecord {
-    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t;
+    fn get_pool<'p>(&'p self) -> Result<&'p mut apr_pool_t, InvalidRecordError>;
 }
 
 impl ProcessRecord for process_rec {
-    fn get_pool<'p>(&'p self) -> &'p mut apr_pool_t {
-        unsafe { self.pool.as_mut().unwrap() }
+    fn get_pool<'p>(&'p self) -> Result<&'p mut apr_pool_t, InvalidRecordError> {
+        if self.pool == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                self.pool,
+                "process_rec.pool field is a null pointer",
+            ))
+        } else {
+            Ok(unsafe { self.pool.as_mut().unwrap() })
+        }
     }
 }
 

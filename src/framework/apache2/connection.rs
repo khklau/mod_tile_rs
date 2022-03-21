@@ -30,7 +30,7 @@ impl<'p> PoolStored<'p> for Connection<'p> {
         debug!(server_record, "Connection::find_or_allocate_new - start");
         let connection_record = request.get_connection_record().unwrap();
         let connection = match retrieve(
-            connection_record.get_pool(),
+            connection_record.get_pool()?,
             &(Self::get_id(request))
         ) {
             Some(existing_connection) => existing_connection,
@@ -45,7 +45,7 @@ impl<'p> PoolStored<'p> for Connection<'p> {
         debug!(server_record, "Connection::new - start");
         let connection_record = request.get_connection_record().unwrap();
         let new_connection = alloc::<Connection<'p>>(
-            connection_record.get_pool(),
+            connection_record.get_pool()?,
             &(Self::get_id(request)),
             Some(drop_connection),
         )?.0;

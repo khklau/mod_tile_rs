@@ -1,12 +1,10 @@
 use crate::binding::apache2::{
-    apr_status_t, request_rec, server_rec,
+    apr_status_t, request_rec,
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, PoolStored, };
-use crate::framework::apache2::record::{
-    ProcessRecord, RequestRecord, ServerRecord,
-};
+use crate::framework::apache2::record::{ RequestRecord, ServerRecord, };
 
 use std::any::type_name;
 use std::boxed::Box;
@@ -30,9 +28,9 @@ impl<'p> PoolStored<'p> for VirtualHost<'p> {
     fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn Error>> {
         let server_record = request.get_server_record()?;
         info!(server_record, "VirtualHost::find_or_allocate_new - start");
-        let proc_record = server_rec::get_process_record(server_record.process)?;
+        let pool = server_record.get_pool()?;
         let host = match retrieve(
-            proc_record.get_pool(),
+            pool,
             &(Self::get_id(request))
         ) {
             Some(existing_host) => {
@@ -49,15 +47,16 @@ impl<'p> PoolStored<'p> for VirtualHost<'p> {
     }
 
     fn new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn Error>> {
-        debug!(request.get_server_record()?, "VirtualHost::new - start");
-        let proc_record = server_rec::get_process_record(request.get_server_record()?.process)?;
+        let server_record = request.get_server_record()?;
+        debug!(server_record, "VirtualHost::new - start");
+        let pool = server_record.get_pool()?;
         let new_host = alloc::<VirtualHost<'p>>(
-            proc_record.get_pool(),
+            pool,
             &(Self::get_id(request)),
             Some(drop_virtual_host),
         )?.0;
         new_host.record = request.get_server_record()?;
-        debug!(new_host.record, "VirtualHost::new - finish");
+        debug!(server_record, "VirtualHost::new - finish");
         return Ok(new_host);
     }
 }
