@@ -12,7 +12,7 @@ name = "mod_tile_rs"
 crate-type = ["dylib"]
 
 [build-dependencies]
-bindgen = "0.57.0"
+bindgen = "0.59.2"
 
 [dependencies]
 chrono = "0.4.19"
