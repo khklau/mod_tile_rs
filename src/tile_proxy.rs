@@ -184,9 +184,9 @@ impl<'p> TileProxy<'p> {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_allocate_new(record).unwrap(),
         };
-        let read_result = read(&context);
+        let request = Apache2Request::find_or_allocate_new(record).unwrap();
+        let read_result = read(&context, request);
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(read, &context, &read_result);
