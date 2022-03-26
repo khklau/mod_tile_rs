@@ -1,13 +1,16 @@
-use crate::binding::apache2::{
-    conn_rec, request_rec, server_rec,
-};
+use crate::binding::apache2::request_rec;
+use crate::schema::apache2::request::Apache2Request;
+use crate::schema::apache2::connection::Connection;
+use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
+use crate::framework::apache2::memory::PoolStored;
 
 use mime::Mime;
 use serde::Serialize;
 
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::string::String;
 use std::vec::Vec;
 
@@ -20,25 +23,21 @@ pub struct SlippyResponse {
 
 #[derive(Debug, PartialEq)]
 pub struct Header {
-    pub host_id: usize,
-    pub request_id: usize,
-    pub connection_id: i64,
+    pub host_key: CString,
+    pub connection_key: CString,
+    pub request_key: CString,
     pub mime_type: Mime,
 }
 
 impl Header {
     pub fn new(
         request: &request_rec,
-        connection: &conn_rec,
-        host: &server_rec,
         mime_type: &Mime,
     ) -> Header {
-        let host_ptr = host as *const server_rec;
-        let request_ptr = request as *const request_rec;
         Header {
-            host_id: host_ptr as usize,
-            request_id: request_ptr as usize,
-            connection_id: connection.id,
+            host_key: VirtualHost::search_pool_key(request),
+            connection_key: Connection::search_pool_key(request),
+            request_key: Apache2Request::search_pool_key(request),
             mime_type: mime_type.clone(),
         }
     }

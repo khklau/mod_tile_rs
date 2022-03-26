@@ -33,8 +33,6 @@ impl RequestHandler for DescriptionHandler {
         let response = response::SlippyResponse {
             header: response::Header::new(
                 context.request.record,
-                context.connection.record,
-                context.host.record,
                 &mime::APPLICATION_JSON,
             ),
             body: response::BodyVariant::Description(description),
@@ -164,8 +162,6 @@ mod tests {
                 let expected_response = response::SlippyResponse {
                     header: response::Header::new(
                         handle_context.request.record,
-                        handle_context.connection.record,
-                        handle_context.host.record,
                         &mime::APPLICATION_JSON,
                     ),
                     body: response::BodyVariant::Description(expected_data),

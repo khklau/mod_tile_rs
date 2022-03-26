@@ -372,8 +372,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -442,8 +440,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Description(
@@ -519,8 +515,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -591,8 +585,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -696,8 +688,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -775,8 +765,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -859,8 +847,6 @@ mod tests {
                                     response::SlippyResponse {
                                         header: response::Header::new(
                                             handle_context.request.record,
-                                            handle_context.connection.record,
-                                            handle_context.host.record,
                                             &mime::APPLICATION_JSON,
                                         ),
                                         body: response::BodyVariant::Tile(
@@ -939,8 +925,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(
@@ -1033,8 +1017,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Description(
@@ -1131,8 +1113,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     handle_context.request.record,
-                                    handle_context.connection.record,
-                                    handle_context.host.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Tile(

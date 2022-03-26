@@ -472,8 +472,6 @@ mod tests {
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     context.record,
-                                    connection.record,
-                                    proxy.record,
                                     &mime::APPLICATION_JSON,
                                 ),
                                 body: response::BodyVariant::Description(
