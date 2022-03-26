@@ -10,6 +10,8 @@ pub trait RequestRecord {
     fn get_connection_record<'s>(self: &'s Self) -> Result<&'s conn_rec, InvalidRecordError>;
 
     fn get_server_record<'s>(self: &'s Self) -> Result<&'s server_rec, InvalidRecordError>;
+
+    fn get_pool<'p>(&'p self) -> Result<&'p mut apr_pool_t, InvalidRecordError>;
 }
 
 impl RequestRecord for request_rec {
@@ -32,6 +34,17 @@ impl RequestRecord for request_rec {
             ))
         } else {
             Ok(unsafe { &(*self.server) } )
+        }
+    }
+
+    fn get_pool<'p>(&'p self) -> Result<&'p mut apr_pool_t, InvalidRecordError> {
+        if self.pool == ptr::null_mut() {
+            Err(InvalidRecordError::new(
+                self.pool,
+                "request_rec.pool field is a null pointer",
+            ))
+        } else {
+            Ok(unsafe { self.pool.as_mut().unwrap() })
         }
     }
 }

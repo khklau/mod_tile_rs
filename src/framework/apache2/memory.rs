@@ -31,17 +31,24 @@ impl fmt::Display for AllocError {
 pub type CleanUpFn = unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void) -> apr_status_t;
 
 pub trait PoolStored<'p> {
+    fn search_pool_key(request: &request_rec) -> CString;
 
-    fn get_id(request: &request_rec) -> CString;
-
-    fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>>;
+    fn find(request: &'p request_rec, pool_key: &CString) -> Result<Option<&'p mut Self>, Box<dyn Error>>;
 
     fn new(request: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>>;
+
+    fn find_or_allocate_new(request: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>> {
+        let id = Self::search_pool_key(request);
+        match Self::find(request, &id)? {
+            Some(existing) => Ok(existing),
+            None => Ok(Self::new(request)?),
+        }
+    }
 }
 
 pub fn alloc<'p, T>(
     pool: &'p mut apr_pool_t,
-    id: &CString,
+    key: &CString,
     cleanup: Option<CleanUpFn>,
 ) -> Result<(&'p mut T, &'p mut apr_pool_t), AllocError> {
     let layout = Layout::new::<T>();
@@ -53,7 +60,7 @@ pub fn alloc<'p, T>(
         let ptr_zeroed = memset(ptr_raw, 0, layout.size() as c_ulong) as *mut T;
         let set_result = apr_pool_userdata_set(
             ptr_zeroed as *mut _ as *mut c_void,
-            id.as_ptr(),
+            key.as_ptr(),
             cleanup,
             pool as *mut apr_pool_t,
         );

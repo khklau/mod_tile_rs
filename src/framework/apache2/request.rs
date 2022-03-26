@@ -20,66 +20,49 @@ use std::result::Result;
 
 impl<'p> PoolStored<'p> for Apache2Request<'p> {
 
-    fn get_id(record: &request_rec) -> CString {
-        let id = CString::new(format!(
+    fn search_pool_key(record: &request_rec) -> CString {
+        CString::new(format!(
             "{}@{:p}",
             type_name::<Self>(),
             record,
-        )).unwrap();
-        id
+        )).unwrap()
     }
 
-    fn find_or_allocate_new(record: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>> {
-        debug!(record.server, "Apache2Request::find_or_allocate_new - start");
-        if record.pool == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                record as *const request_rec,
-                "pool field is null pointer",
-            )));
-        } else if record.connection == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                record as *const request_rec,
-                "connection field is null pointer",
-            )));
-        }
-        let request = match retrieve(
-            unsafe { record.pool.as_mut().unwrap() },
-            &(Self::get_id(record))
-        ) {
-            Some(existing_request) => existing_request,
-            None => Self::new(record)?,
-        };
-        debug!(request.record.server, "Apache2Request::find_or_allocate_new - finish");
-        return Ok(request);
+    fn find(
+        request: &'p request_rec,
+        pool_key: &CString,
+    ) -> Result<Option<&'p mut Apache2Request<'p>>, Box<dyn Error>> {
+        let server_record = request.get_server_record()?;
+        debug!(server_record, "Apache2Request::find - start");
+        let pool = request.get_pool()?;
+        let existing_request = retrieve(pool, pool_key);
+        debug!(server_record, "Apache2Request::find - finish");
+        Ok(existing_request)
     }
 
-    fn new(record: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>> {
-        if record.pool == ptr::null_mut() {
+    fn new(request: &'p request_rec) -> Result<&'p mut Self, Box<dyn Error>> {
+        let server_record = request.get_server_record()?;
+        debug!(server_record, "Apache2Request::new - start");
+        if request.uri == ptr::null_mut() {
             return Err(Box::new(InvalidRecordError::new(
-                record as *const request_rec,
-                "pool field is null pointer",
-            )));
-        } else if record.uri == ptr::null_mut() {
-            return Err(Box::new(InvalidRecordError::new(
-                record as *const request_rec,
+                request as *const request_rec,
                 "uri field is null pointer",
             )));
         }
-        let record_pool = unsafe { record.pool.as_mut().unwrap() };
-        let uri = unsafe { CStr::from_ptr(record.uri).to_str()? };
-
-        info!(record.get_server_record().unwrap(), "Request::new - start");
+        let uri = unsafe { CStr::from_ptr(request.uri).to_str()? };
+        let pool = request.get_pool()?;
+        let key = Self::search_pool_key(request);
         let new_request = alloc::<Apache2Request<'p>>(
-            record_pool,
-            &(Self::get_id(record)),
+            pool,
+            &key,
             Some(drop_request),
         )?.0;
-        new_request.record = record;
+        new_request.record = request;
         let mut generator = SnowflakeIdGenerator::new(1, 1);
         new_request.request_id = generator.real_time_generate();
         new_request.uri = uri;
-        info!(record.get_server_record().unwrap(), "Request::new - finish");
-        return Ok(new_request);
+        debug!(server_record, "Apache2Request::new - finish");
+        Ok(new_request)
     }
 }
 
