@@ -33,6 +33,7 @@ mod schema {
     }
 }
 mod interface {
+    pub mod apache2;
     pub mod telemetry {
         pub mod metrics;
     }

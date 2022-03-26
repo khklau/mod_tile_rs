@@ -353,7 +353,7 @@ mod tests {
     use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
-    use crate::framework::apache2::memory::PoolStored;
+    use crate::interface::apache2::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use std::boxed::Box;
     use std::error::Error;

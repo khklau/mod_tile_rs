@@ -4,7 +4,7 @@ use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::framework::apache2::memory::PoolStored;
+use crate::interface::apache2::PoolStored;
 
 use mime::Mime;
 use serde::Serialize;

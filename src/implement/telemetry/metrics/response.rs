@@ -307,9 +307,9 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
+    use crate::interface::apache2::PoolStored;
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
-    use crate::framework::apache2::memory::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::framework::apache2::response::Apache2Response;
     use chrono::Utc;

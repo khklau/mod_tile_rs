@@ -3,7 +3,8 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS,
 };
 use crate::schema::apache2::connection::Connection;
-use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, PoolStored, };
+use crate::interface::apache2::PoolStored;
+use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::framework::apache2::record::{ ConnectionRecord, RequestRecord, };
 
 use std::any::type_name;
