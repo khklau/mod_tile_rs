@@ -1,7 +1,10 @@
-use crate::binding::apache2::{
-    conn_rec, request_rec, server_rec,
-};
+use crate::binding::apache2::request_rec;
+use crate::schema::apache2::request::Apache2Request;
+use crate::schema::apache2::connection::Connection;
+use crate::schema::apache2::virtual_host::VirtualHost;
+use crate::interface::apache2::PoolStored;
 
+use std::ffi::CString;
 use std::option::Option;
 use std::string::String;
 
@@ -16,34 +19,28 @@ pub struct SlippyRequest {
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub struct Header {
-    pub host_id: usize,
-    pub request_id: usize,
-    pub connection_id: i64,
+    pub host_key: CString,
+    pub request_key: CString,
+    pub connection_key: CString,
     pub layer: String,
 }
 
 impl Header {
     pub fn new(
         request: &request_rec,
-        connection: &conn_rec,
-        host: &server_rec,
     ) -> Header {
         let layer = String::new();
-        Self::new_with_layer(request, connection, host, &layer)
+        Self::new_with_layer(request, &layer)
     }
 
     pub fn new_with_layer(
         request: &request_rec,
-        connection: &conn_rec,
-        host: &server_rec,
         layer: &String,
     ) -> Header {
-        let host_ptr = host as *const server_rec;
-        let request_ptr = request as *const request_rec;
         Header {
-            host_id: host_ptr as usize,
-            request_id: request_ptr as usize,
-            connection_id: connection.id,
+            host_key: VirtualHost::search_pool_key(request),
+            connection_key: Connection::search_pool_key(request),
+            request_key: Apache2Request::search_pool_key(request),
             layer: layer.clone(),
         }
     }

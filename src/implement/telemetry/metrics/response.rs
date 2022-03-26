@@ -16,7 +16,6 @@ use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
 use crate::interface::telemetry::metrics::{
     CacheMetrics, RenderMetrics, ResponseMetrics
 };
-use crate::framework::apache2::record::RequestRecord;
 
 use chrono::Duration;
 use http::status::StatusCode;
@@ -109,7 +108,7 @@ impl ResponseAnalysis {
             self.tile_reponse_count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.response.record.get_server_record().unwrap(),
+                context.host.record,
                 "ResponseAnalysis::on_tile_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -135,7 +134,7 @@ impl ResponseAnalysis {
             count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.response.record.get_server_record().unwrap(),
+                context.host.record,
                 "ResponseAnalysis::on_http_response_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -346,8 +345,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -423,8 +420,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::DescribeLayer,
                         }
@@ -492,8 +487,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {
@@ -561,8 +554,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -662,8 +653,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -739,8 +728,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -816,8 +803,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV3(
                                 request::ServeTileRequestV3 {
@@ -902,8 +887,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {
@@ -1002,8 +985,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::DescribeLayer,
                         }
@@ -1090,8 +1071,6 @@ mod tests {
                         request::SlippyRequest {
                             header: request::Header::new(
                                 handle_context.request.record,
-                                handle_context.connection.record,
-                                handle_context.host.record,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {

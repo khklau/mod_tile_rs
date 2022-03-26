@@ -22,7 +22,7 @@ use crate::interface::slippy::{
 };
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
-use crate::framework::apache2::record::{ RequestRecord, ServerRecord, };
+use crate::framework::apache2::record::ServerRecord;
 use crate::framework::apache2::response::Apache2Response;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
@@ -273,7 +273,7 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in write_observers.iter_mut() {
             debug!(
-                context.response.record.get_server_record().unwrap(),
+                context.host.record,
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
             (*observer_iter).on_write(write, &context, &read_result, &handle_result, &write_result);
@@ -397,14 +397,11 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
-                let connection = Connection::find_or_allocate_new(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
-                                connection.record,
-                                proxy.record,
                             ),
                             body: request::BodyVariant::ReportStatistics,
                         }
@@ -451,14 +448,11 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
-                let connection = Connection::find_or_allocate_new(request)?;
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
-                                connection.record,
-                                proxy.record,
                             ),
                             body: request::BodyVariant::ReportStatistics,
                         }

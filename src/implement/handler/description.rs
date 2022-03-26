@@ -106,8 +106,6 @@ mod tests {
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
                         handle_context.request.record,
-                        handle_context.connection.record,
-                        handle_context.host.record,
                         &layer_name,
                     ),
                     body: request::BodyVariant::ReportStatistics,
@@ -141,8 +139,6 @@ mod tests {
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
                         handle_context.request.record,
-                        handle_context.connection.record,
-                        handle_context.host.record,
                         &layer_name,
                     ),
                     body: request::BodyVariant::DescribeLayer,

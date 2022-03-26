@@ -102,8 +102,6 @@ impl StatisticsRequestParser {
             return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                 ),
                 body: BodyVariant::ReportStatistics,
             }));
@@ -127,8 +125,6 @@ impl DescribeLayerRequestParser {
             return Ok(ReadOutcome::Matched(SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &(layer_config.name),
                 ),
                 body: BodyVariant::DescribeLayer
@@ -181,8 +177,6 @@ impl ServeTileV3RequestParser {
                     return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
                             request.record,
-                            context.connection.record,
-                            context.host.record,
                             &(layer_config.name),
                         ),
                         body: BodyVariant::ServeTileV3(
@@ -221,8 +215,6 @@ impl ServeTileV3RequestParser {
                     return Ok(ReadOutcome::Matched(SlippyRequest {
                         header: Header::new_with_layer(
                             request.record,
-                            context.connection.record,
-                            context.host.record,
                             &(layer_config.name),
                         ),
                         body: BodyVariant::ServeTileV3(
@@ -275,8 +267,6 @@ impl ServeTileV2RequestParser {
                 return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
                         request.record,
-                        context.connection.record,
-                        context.host.record,
                         &(layer_config.name),
                     ),
                     body: BodyVariant::ServeTileV2(
@@ -314,8 +304,6 @@ impl ServeTileV2RequestParser {
                 return Ok(ReadOutcome::Matched(SlippyRequest {
                     header: Header::new_with_layer(
                         request.record,
-                        context.connection.record,
-                        context.host.record,
                         &(layer_config.name),
                     ),
                     body: BodyVariant::ServeTileV2(
@@ -376,8 +364,6 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
             let expected_header = Header::new(
                 request.record,
-                context.connection.record,
-                context.host.record,
             );
             assert_eq!(expected_header, actual_request.header, "Wrong header generated");
             assert!(matches!(actual_request.body, BodyVariant::ReportStatistics));
@@ -406,8 +392,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::DescribeLayer,
@@ -439,8 +423,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -510,8 +492,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -552,8 +532,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV3(
@@ -593,8 +571,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
@@ -661,8 +637,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
@@ -701,8 +675,6 @@ mod tests {
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
-                    context.connection.record,
-                    context.host.record,
                     &expected_layer,
                 ),
                 body: BodyVariant::ServeTileV2(
