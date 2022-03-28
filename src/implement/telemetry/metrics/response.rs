@@ -312,7 +312,7 @@ mod tests {
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::framework::apache2::response::Apache2Response;
+    use crate::framework::apache2::response::ResponseWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -601,7 +601,7 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = ResponseWriter::from(unsafe { write_record.as_mut().unwrap() });
                 let mut context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request).unwrap(),
@@ -933,7 +933,7 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = ResponseWriter::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
@@ -1029,7 +1029,7 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = ResponseWriter::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
@@ -1117,7 +1117,7 @@ mod tests {
                 );
                 let mut analysis = ResponseAnalysis::new();
                 let write_record = request as *mut request_rec;
-                let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+                let mut response = ResponseWriter::from(unsafe { write_record.as_mut().unwrap() });
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,

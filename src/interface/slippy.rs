@@ -5,7 +5,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult };
-use crate::framework::apache2::response::Apache2Response;
+use crate::framework::apache2::response::ResponseWriter;
 
 
 pub struct ReadContext<'c> {
@@ -18,7 +18,7 @@ pub struct WriteContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
-    pub response: &'c mut Apache2Response<'c>,
+    pub response: &'c mut ResponseWriter<'c>,
 }
 
 pub type ReadRequestFunc = fn(&ReadContext, &Apache2Request) -> ReadRequestResult;

@@ -24,7 +24,7 @@ use crate::interface::slippy::{
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
-use crate::framework::apache2::response::Apache2Response;
+use crate::framework::apache2::response::ResponseWriter;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
@@ -256,7 +256,7 @@ impl<'p> TileProxy<'p> {
         let write = self.write_response;
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
-        let mut response = Apache2Response::from(unsafe { write_record.as_mut().unwrap() });
+        let mut response = ResponseWriter::from(unsafe { write_record.as_mut().unwrap() });
         let mut context = WriteContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
