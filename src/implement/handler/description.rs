@@ -1,9 +1,8 @@
 use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::interface::handler::RequestHandler;
+use crate::interface::handler::{ HandleContext, RequestHandler, };
 
 use chrono::Utc;
 use mime;

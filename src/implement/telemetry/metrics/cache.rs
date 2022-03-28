@@ -1,7 +1,8 @@
-use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
-use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::result::ReadRequestResult;
+use crate::interface::handler::{
+    HandleContext, HandleRequestObserver, RequestHandler,
+};
 
 
 pub struct CacheAnalysis {}

@@ -1,8 +1,9 @@
-use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
+use crate::interface::handler::{
+    HandleContext, HandleRequestObserver, RequestHandler,
+};
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
-use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, };
 use crate::interface::slippy::{ ReadContext, WriteContext, };

@@ -6,7 +6,6 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::error::{ ReadError, WriteError };
@@ -15,7 +14,9 @@ use crate::schema::slippy::result::{
     WriteOutcome, WriteResponseResult,
 };
 use crate::interface::apache2::PoolStored;
-use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
+use crate::interface::handler::{
+    HandleContext, HandleRequestObserver, RequestHandler,
+};
 use crate::interface::slippy::{
     ReadContext, ReadRequestFunc, ReadRequestObserver,
     WriteContext, WriteResponseFunc, WriteResponseObserver,
