@@ -4,8 +4,8 @@ use crate::interface::slippy::{
 };
 use crate::schema::handler::context::HandleContext;
 use crate::schema::handler::result::HandleRequestResult;
-use crate::schema::slippy::context::{ ReadContext, WriteContext };
 use crate::schema::slippy::result::{ ReadRequestResult, WriteResponseResult, };
+use crate::interface::slippy::{ ReadContext, WriteContext, };
 
 
 pub struct TransactionTrace {}

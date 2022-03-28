@@ -1,7 +1,7 @@
 use crate::schema::http::response::HttpResponse;
-use crate::schema::slippy::context::WriteContext;
 use crate::schema::slippy::response::{ BodyVariant, Header, Description, SlippyResponse };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult };
+use crate::interface::slippy::WriteContext;
 use crate::framework::apache2::record::RequestRecord;
 
 use chrono::{ TimeZone, Utc, };

@@ -1,6 +1,5 @@
 use crate::schema::apache2::config::MAX_ZOOM_SERVER;
 use crate::schema::handler::context::HandleContext;
-use crate::schema::slippy::context::WriteContext;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
@@ -12,7 +11,9 @@ use crate::schema::slippy::result::{
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler };
-use crate::interface::slippy::{ WriteResponseFunc, WriteResponseObserver, };
+use crate::interface::slippy::{
+    WriteContext, WriteResponseFunc, WriteResponseObserver,
+};
 use crate::interface::telemetry::metrics::{
     CacheMetrics, RenderMetrics, ResponseMetrics
 };

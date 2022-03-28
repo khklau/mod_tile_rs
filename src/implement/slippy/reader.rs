@@ -1,6 +1,5 @@
 use crate::binding::apache2::get_module_name;
 use crate::schema::apache2::request::Apache2Request;
-use crate::schema::slippy::context::ReadContext;
 use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
@@ -9,6 +8,7 @@ use crate::schema::slippy::request::{
 };
 use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::apache2::config::{ LayerConfig, MAX_ZOOM_SERVER };
+use crate::interface::slippy::ReadContext;
 
 use scan_fmt::scan_fmt;
 

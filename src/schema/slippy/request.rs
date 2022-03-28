@@ -20,8 +20,8 @@ pub struct SlippyRequest {
 #[derive(Debug)]
 pub struct Header {
     pub host_key: CString,
-    pub request_key: CString,
     pub connection_key: CString,
+    pub request_key: CString,
     pub layer: String,
 }
 
