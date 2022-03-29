@@ -6,6 +6,7 @@ use crate::binding::apache2::{
     apr_psprintf, apr_table_setn, apr_table_mergen,
 };
 use crate::schema::apache2::error::ResponseWriteError;
+use crate::interface::apache2::{ Apache2Writer, Writer, };
 use crate::framework::apache2::record::RequestRecord;
 
 use http::header::{ HeaderName, HeaderValue, ToStrError, };
@@ -14,27 +15,11 @@ use mime::Mime;
 #[cfg(not(test))]
 use std::ffi::{ CString, c_void };
 use std::mem::size_of;
-use std::option::Option;
 
 
-trait Writer {
-    type ElementType;
-
-    fn write(
-        &mut self,
-        buffer: *const Self::ElementType,
-        length: usize,
-    ) -> i32;
-}
-
-pub struct ResponseWriter<'r> {
-    pub record: &'r mut request_rec,
-    writer: Option<&'r mut dyn Writer<ElementType = u8>>,
-}
-
-impl<'r> ResponseWriter<'r> {
-    pub fn from(record: &'r mut request_rec) -> ResponseWriter<'r> {
-        ResponseWriter {
+impl<'r> Apache2Writer<'r> {
+    pub fn from(record: &'r mut request_rec) -> Apache2Writer<'r> {
+        Apache2Writer {
             record,
             writer: None,
         }
@@ -300,7 +285,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let mut context = ResponseWriter::from(request);
+            let mut context = Apache2Writer::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -321,7 +306,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let mut context = ResponseWriter::from(request);
+            let mut context = Apache2Writer::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -342,7 +327,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let mut context = ResponseWriter::from(request);
+            let mut context = Apache2Writer::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");
@@ -363,7 +348,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
-            let mut context = ResponseWriter::from(request);
+            let mut context = Apache2Writer::from(request);
             context.writer = Some(&mut writer);
             context.write_content(&expected_payload)?;
             assert_eq!((&expected_payload).as_ref(), writer.written_payload, "Unexpected payload written");

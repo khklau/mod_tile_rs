@@ -23,3 +23,18 @@ pub trait PoolStored<'p> {
         }
     }
 }
+
+pub trait Writer {
+    type ElementType;
+
+    fn write(
+        &mut self,
+        buffer: *const Self::ElementType,
+        length: usize,
+    ) -> i32;
+}
+
+pub struct Apache2Writer<'r> {
+    pub record: &'r mut request_rec,
+    pub writer: Option<&'r mut dyn Writer<ElementType = u8>>,
+}
