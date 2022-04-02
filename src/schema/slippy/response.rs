@@ -46,6 +46,7 @@ impl Header {
 #[derive(Debug, PartialEq, Serialize)]
 pub enum BodyVariant {
     Description(Description),
+    Statistics(Statistics),
     Tile(TileResponse),
 }
 

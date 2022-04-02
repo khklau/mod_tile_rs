@@ -11,6 +11,7 @@ use std::string::String;
 
 
 pub struct DescriptionHandler { }
+
 impl RequestHandler for DescriptionHandler {
     fn handle(
         &mut self,

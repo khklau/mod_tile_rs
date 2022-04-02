@@ -57,6 +57,7 @@ mod framework {
 mod implement {
     pub mod handler {
         pub mod description;
+        pub mod statistics;
     }
     pub mod slippy {
         pub mod reader;
