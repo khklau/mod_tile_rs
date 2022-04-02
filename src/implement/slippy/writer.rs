@@ -2,7 +2,6 @@ use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::response::{ BodyVariant, Header, Description, SlippyResponse };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult };
 use crate::interface::slippy::WriteContext;
-use crate::framework::apache2::record::RequestRecord;
 
 use chrono::{ TimeZone, Utc, };
 use http::header::{ CACHE_CONTROL, EXPIRES, ETAG, HeaderMap, HeaderValue };
@@ -41,12 +40,12 @@ impl DescriptionWriter {
         header: &Header,
         description: &Description,
     ) -> WriteResponseResult {
-        debug!(context.writer.record.get_server_record().unwrap(), "DescriptionWriter::write - start");
+        debug!(context.host.record, "DescriptionWriter::write - start");
         let mut http_headers = HeaderMap::new();
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
             (mime::APPLICATION, mime::JSON) => {
                 context.writer.set_content_type(&mime::APPLICATION_JSON);
-                debug!(context.writer.record.get_server_record().unwrap(), "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
+                debug!(context.host.record, "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
                 serde_json::to_string_pretty(&description).unwrap()
             },
             _ => String::from(""),
@@ -66,7 +65,7 @@ impl DescriptionWriter {
         context.writer.append_http_header(&cache_key, &cache_value).unwrap();
         http_headers.insert(cache_key, cache_value);
 
-        let request_time_in_epoch_secs = context.writer.record.request_time / 1000000;
+        let request_time_in_epoch_secs = context.request.record.request_time / 1000000;
         let expiry_in_epoch_secs = max_age + request_time_in_epoch_secs;
         let expiry_timestamp = Utc.timestamp(expiry_in_epoch_secs, 0);
         let expiry_string = expiry_timestamp.to_rfc2822();
@@ -78,7 +77,7 @@ impl DescriptionWriter {
         let written_length = context.writer.write_content(&text)?;
         context.writer.set_content_length(written_length);
         context.writer.flush_response()?;
-        debug!(context.writer.record.get_server_record().unwrap(), "DescriptionWriter::write - finish");
+        debug!(context.host.record, "DescriptionWriter::write - finish");
 
         Ok(
             WriteOutcome::Written(

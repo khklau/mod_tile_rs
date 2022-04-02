@@ -50,8 +50,8 @@ mod framework {
         pub mod memory;
         pub mod record;
         pub mod request;
-        pub mod response;
         pub mod virtual_host;
+        pub mod writer;
     }
 }
 mod implement {

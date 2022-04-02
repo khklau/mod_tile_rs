@@ -13,7 +13,7 @@ use crate::schema::slippy::result::{
     ReadOutcome, ReadRequestResult,
     WriteOutcome, WriteResponseResult,
 };
-use crate::interface::apache2::{ Apache2Writer, PoolStored };
+use crate::interface::apache2::{ PoolStored, Writer, };
 use crate::interface::handler::{
     HandleContext, HandleRequestObserver, RequestHandler,
 };
@@ -255,12 +255,13 @@ impl<'p> TileProxy<'p> {
         let write = self.write_response;
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
-        let mut response = Apache2Writer::from(unsafe { write_record.as_mut().unwrap() });
+        let writer: &mut dyn Writer = unsafe { write_record.as_mut().unwrap() };
         let mut context = WriteContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
-            writer: &mut response,
+            request: Apache2Request::find_or_allocate_new(record).unwrap(),
+            writer,
         };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {

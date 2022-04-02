@@ -1,4 +1,8 @@
 use crate::binding::apache2::request_rec;
+use crate::schema::apache2::error::ResponseWriteError;
+
+use http::header::{ HeaderName, HeaderValue, ToStrError, };
+use mime::Mime;
 
 use std::boxed::Box;
 use std::error::Error;
@@ -6,6 +10,7 @@ use std::option::Option;
 use std::result::Result;
 
 use std::ffi::CString;
+use std::mem::size_of;
 
 
 pub trait PoolStored<'p> {
@@ -25,16 +30,54 @@ pub trait PoolStored<'p> {
 }
 
 pub trait Writer {
-    type ElementType;
+
+    fn append_http_header(
+        &mut self,
+        key: &HeaderName,
+        value: &HeaderValue,
+    ) -> Result<(), ToStrError>;
+
+    fn set_http_header(
+        &mut self,
+        key: &HeaderName,
+        value: &HeaderValue,
+    ) -> Result<(), ToStrError>;
+
+    fn set_content_type(
+        &mut self,
+        mime: &Mime,
+    ) -> ();
+
+    fn set_content_length(
+        &mut self,
+        length: usize,
+    ) -> ();
+
+    fn write_content(
+        &mut self,
+        payload: &dyn AsRef<[u8]>,
+    ) -> Result<usize, ResponseWriteError> {
+        let mut payload_slice = payload.as_ref();
+        while payload_slice.len() > 0 {
+            let result = self.write(
+                payload_slice.as_ptr(),
+                payload_slice.len(),
+            );
+            if result >= 0 {
+                let elements_written = (result as usize) / size_of::<u8>();
+                payload_slice = payload_slice.split_at(elements_written).1;
+            } else {
+                return Err(ResponseWriteError { error_code: result });
+            }
+        }
+        Ok(payload.as_ref().len())
+    }
 
     fn write(
         &mut self,
-        buffer: *const Self::ElementType,
+        buffer: *const u8,
         length: usize,
     ) -> i32;
-}
 
-pub struct Apache2Writer<'r> {
-    pub record: &'r mut request_rec,
-    pub writer: Option<&'r mut dyn Writer<ElementType = u8>>,
+    fn flush_response(&mut self) -> Result<(), ResponseWriteError>;
 }

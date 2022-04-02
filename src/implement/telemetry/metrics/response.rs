@@ -298,7 +298,6 @@ impl<T: Default> TileMetricTable<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::binding::apache2::request_rec;
     use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::request::Apache2Request;
@@ -308,10 +307,11 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
-    use crate::interface::apache2::{ Apache2Writer, PoolStored };
+    use crate::interface::apache2::{ PoolStored, Writer, };
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::record::test_utils::with_request_rec;
+    use crate::framework::apache2::writer::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -599,13 +599,14 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let write_record = request as *mut request_rec;
-                let mut response = Apache2Writer::from(unsafe { write_record.as_mut().unwrap() });
+                let mut mock_writer = MockWriter::new();
+                let writer: &mut dyn Writer = &mut mock_writer;
                 let mut context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request).unwrap(),
                     connection: Connection::find_or_allocate_new(request).unwrap(),
-                    writer: &mut response,
+                    request: Apache2Request::find_or_allocate_new(request).unwrap(),
+                    writer,
                 };
                 analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -931,13 +932,14 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let write_record = request as *mut request_rec;
-                let mut response = Apache2Writer::from(unsafe { write_record.as_mut().unwrap() });
+                let mut mock_writer = MockWriter::new();
+                let writer: &mut dyn Writer = &mut mock_writer;
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
-                    writer: &mut response,
+                    request: Apache2Request::find_or_allocate_new(request).unwrap(),
+                    writer,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1027,13 +1029,14 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let write_record = request as *mut request_rec;
-                let mut response = Apache2Writer::from(unsafe { write_record.as_mut().unwrap() });
+                let mut mock_writer = MockWriter::new();
+                let writer: &mut dyn Writer = &mut mock_writer;
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
-                    writer: &mut response,
+                    request: Apache2Request::find_or_allocate_new(request).unwrap(),
+                    writer,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1115,13 +1118,14 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let write_record = request as *mut request_rec;
-                let mut response = Apache2Writer::from(unsafe { write_record.as_mut().unwrap() });
+                let mut mock_writer = MockWriter::new();
+                let writer: &mut dyn Writer = &mut mock_writer;
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
-                    writer: &mut response,
+                    request: Apache2Request::find_or_allocate_new(request)?,
+                    writer,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
