@@ -19,12 +19,11 @@ pub struct WriteContext<'c> {
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
     pub request: &'c Apache2Request<'c>,
-    pub writer: &'c mut dyn Writer,
 }
 
 pub type ReadRequestFunc = fn(&ReadContext, &Apache2Request) -> ReadRequestResult;
 
-pub type WriteResponseFunc = fn(&mut WriteContext, &SlippyResponse) -> WriteResponseResult;
+pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn Writer) -> WriteResponseResult;
 
 pub trait ReadRequestObserver {
     fn on_read(

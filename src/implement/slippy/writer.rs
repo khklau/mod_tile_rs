@@ -1,6 +1,7 @@
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::response::{ BodyVariant, Header, Description, SlippyResponse };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult };
+use crate::interface::apache2::Writer;
 use crate::interface::slippy::WriteContext;
 
 use chrono::{ TimeZone, Utc, };
@@ -12,12 +13,13 @@ use mime;
 pub struct SlippyResponseWriter { }
 impl SlippyResponseWriter {
     pub fn write(
-        context: &mut WriteContext,
-        response: &SlippyResponse
+        context: &WriteContext,
+        response: &SlippyResponse,
+        writer: &mut dyn Writer,
     ) -> WriteResponseResult {
         match &response.body {
             BodyVariant::Description(descr) => {
-                return DescriptionWriter::write(context, &response.header, descr);
+                return DescriptionWriter::write(context, &response.header, descr, writer);
             },
             BodyVariant::Statistics(_) => {
                 return Ok(
@@ -36,15 +38,16 @@ impl SlippyResponseWriter {
 struct DescriptionWriter { }
 impl DescriptionWriter {
     pub fn write(
-        context: &mut WriteContext,
+        context: &WriteContext,
         header: &Header,
         description: &Description,
+        writer: &mut dyn Writer,
     ) -> WriteResponseResult {
         debug!(context.host.record, "DescriptionWriter::write - start");
         let mut http_headers = HeaderMap::new();
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
             (mime::APPLICATION, mime::JSON) => {
-                context.writer.set_content_type(&mime::APPLICATION_JSON);
+                writer.set_content_type(&mime::APPLICATION_JSON);
                 debug!(context.host.record, "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
                 serde_json::to_string_pretty(&description).unwrap()
             },
@@ -55,14 +58,14 @@ impl DescriptionWriter {
         let digest = format!("\"{:x}\"", md5::compute(&text));
         let etag_key = ETAG.clone();
         let etag_value = HeaderValue::from_str(digest.as_str()).unwrap();
-        context.writer.set_http_header(&etag_key, &etag_value).unwrap();
+        writer.set_http_header(&etag_key, &etag_value).unwrap();
         http_headers.insert(etag_key, etag_value);
 
 
         let cache_age = format!("max-age={}", max_age);
         let cache_key = CACHE_CONTROL.clone();
         let cache_value = HeaderValue::from_str(cache_age.as_str()).unwrap();
-        context.writer.append_http_header(&cache_key, &cache_value).unwrap();
+        writer.append_http_header(&cache_key, &cache_value).unwrap();
         http_headers.insert(cache_key, cache_value);
 
         let request_time_in_epoch_secs = context.request.record.request_time / 1000000;
@@ -71,12 +74,12 @@ impl DescriptionWriter {
         let expiry_string = expiry_timestamp.to_rfc2822();
         let expiry_key = EXPIRES.clone();
         let expiry_value = HeaderValue::from_str(expiry_string.as_str()).unwrap();
-        context.writer.set_http_header(&expiry_key, &expiry_value).unwrap();
+        writer.set_http_header(&expiry_key, &expiry_value).unwrap();
         http_headers.insert(expiry_key, expiry_value);
 
-        let written_length = context.writer.write_content(&text)?;
-        context.writer.set_content_length(written_length);
-        context.writer.flush_response()?;
+        let written_length = writer.write_content(&text)?;
+        writer.set_content_length(written_length);
+        writer.flush_response()?;
         debug!(context.host.record, "DescriptionWriter::write - finish");
 
         Ok(

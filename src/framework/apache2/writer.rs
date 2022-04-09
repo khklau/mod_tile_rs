@@ -192,17 +192,6 @@ pub mod test_utils {
         pub written_lengths: Vec<usize>,
     }
 
-    impl MockWriter {
-        pub fn new() -> MockWriter {
-            MockWriter {
-                default_length: 1,
-                allowed_lengths: vec![2, 2, 2, 2].into_iter().collect(),
-                written_payload: Vec::new(),
-                written_lengths: Vec::new(),
-            }
-        }
-    }
-
     impl Writer for MockWriter {
 
         fn append_http_header(

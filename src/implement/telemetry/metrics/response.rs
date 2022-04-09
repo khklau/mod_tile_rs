@@ -311,7 +311,6 @@ mod tests {
     use crate::interface::handler::test_utils::MockRequestHandler;
     use crate::interface::telemetry::metrics::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::framework::apache2::writer::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -319,8 +318,9 @@ mod tests {
     use std::ffi::CString;
 
     fn mock_write(
-        _context: &mut WriteContext,
-        _response: &response::SlippyResponse
+        _context: &WriteContext,
+        _response: &response::SlippyResponse,
+        _writer: &mut dyn Writer,
     ) -> WriteResponseResult {
         return Ok(WriteOutcome::NotWritten)
     }
@@ -599,16 +599,13 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut mock_writer = MockWriter::new();
-                let writer: &mut dyn Writer = &mut mock_writer;
-                let mut context = WriteContext {
+                let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request).unwrap(),
                     connection: Connection::find_or_allocate_new(request).unwrap(),
                     request: Apache2Request::find_or_allocate_new(request).unwrap(),
-                    writer,
                 };
-                analysis.on_write(mock_write, &mut context, &read_result, &handle_result, &write_result);
+                analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
                     1,
                     analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -932,14 +929,11 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut mock_writer = MockWriter::new();
-                let writer: &mut dyn Writer = &mut mock_writer;
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::find_or_allocate_new(request).unwrap(),
-                    writer,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1029,14 +1023,11 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut mock_writer = MockWriter::new();
-                let writer: &mut dyn Writer = &mut mock_writer;
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::find_or_allocate_new(request).unwrap(),
-                    writer,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(
@@ -1118,14 +1109,11 @@ mod tests {
                     )
                 );
                 let mut analysis = ResponseAnalysis::new();
-                let mut mock_writer = MockWriter::new();
-                let writer: &mut dyn Writer = &mut mock_writer;
                 let context = WriteContext {
                     module_config: &module_config,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::find_or_allocate_new(request)?,
-                    writer,
                 };
                 analysis.on_write(mock_write, &context, &read_result, &handle_result, &write_result);
                 assert_eq!(

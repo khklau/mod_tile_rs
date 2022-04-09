@@ -256,17 +256,16 @@ impl<'p> TileProxy<'p> {
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
         let writer: &mut dyn Writer = unsafe { write_record.as_mut().unwrap() };
-        let mut context = WriteContext {
+        let context = WriteContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
-            writer,
         };
         let write_result = match &handle_result.result {
             Ok(outcome) => match outcome {
                 HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
-                HandleOutcome::Handled(response) => write(&mut context, &response),
+                HandleOutcome::Handled(response) => write(&context, &response, writer),
             },
             Err(_) => {
                 Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
