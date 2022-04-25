@@ -1,10 +1,10 @@
+use enum_iterator::IntoEnumIterator;
 use serde::Serialize;
-use variant_count::VariantCount;
 
 use std::marker::Copy;
 
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, VariantCount)]
+#[derive(Copy, Clone, Debug, Eq, Hash, IntoEnumIterator, PartialEq, Serialize)]
 pub enum TileSource {
     Render = 0,
     Cache,

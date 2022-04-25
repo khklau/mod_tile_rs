@@ -20,29 +20,39 @@ use crate::interface::telemetry::metrics::{
 };
 
 use chrono::Duration;
+use enum_iterator::IntoEnumIterator;
 use http::status::StatusCode;
 
+use std::boxed::Box;
 use std::collections::hash_map::HashMap;
+use std::collections::hash_set::HashSet;
+use std::ops::Range;
 use std::slice::Iter;
 use std::vec::Vec;
 use core::default::Default;
 
 
+const VALID_ZOOM_RANGE: Range<u32> = 0..(MAX_ZOOM_SERVER as u32 + 1);
+
 pub struct ResponseAnalysis {
-    response_count_by_status_and_zoom: HashMap<StatusCode, Vec<u64>>,
-    tile_reponse_count_by_zoom: Vec<u64>,
-    tile_handle_duration_by_zoom: Vec<Duration>,
-    tile_handle_count_by_source_and_age: TileMetricTable<u64>,
+    analysis_by_layer: HashMap<String, LayerResponseAnalysis>,
+    status_codes_responded: HashSet<StatusCode>,
 }
 
 impl ResponseAnalysis {
     pub fn new() -> ResponseAnalysis {
         ResponseAnalysis {
-            response_count_by_status_and_zoom: HashMap::new(),
-            tile_reponse_count_by_zoom: vec![0; MAX_ZOOM_SERVER + 1],
-            tile_handle_duration_by_zoom: vec![Duration::zero(); MAX_ZOOM_SERVER + 1],
-            tile_handle_count_by_source_and_age: TileMetricTable::new(),
+            analysis_by_layer: HashMap::new(),
+            status_codes_responded: HashSet::new(),
         }
+    }
+
+    fn mut_layer<'s>(
+        &'s mut self,
+        request: &request::SlippyRequest,
+    ) -> &'s mut LayerResponseAnalysis {
+        let layer = &request.header.layer;
+        self.analysis_by_layer.entry(layer.clone()).or_insert(LayerResponseAnalysis::new())
     }
 
     fn on_handled_tile(
@@ -53,7 +63,7 @@ impl ResponseAnalysis {
         handle_duration: &Duration,
     ) -> () {
         self.accrue_tile_handle_duration(context, request, handle_duration);
-        self.increment_tile_handle_count(context, response);
+        self.increment_tile_handle_count(context, request, response);
     }
 
     fn accrue_tile_handle_duration(
@@ -67,13 +77,16 @@ impl ResponseAnalysis {
             request::BodyVariant::ServeTileV3(v3_request) => v3_request.z as usize,
             _ => { return; },
         };
-        let zoom_limit = self.tile_reponse_count_by_zoom.len();
+        let zoom_limit = self.mut_layer(request).tile_response_count_by_zoom.len();
         if zoom_level < zoom_limit {
-            self.tile_handle_duration_by_zoom[zoom_level] = self.tile_handle_duration_by_zoom[zoom_level] + *handle_duration;
+            let counter = &mut(self.mut_layer(request).tile_handle_duration_by_zoom[zoom_level]);
+            *counter = *counter + *handle_duration;
         } else {
             warn!(
                 context.host.record,
-                "ResponseAnalysis::accrue_tile_handle_duration - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
+                "ResponseAnalysis::accrue_tile_handle_duration - requested zoom level {} exceeds limit {}",
+                zoom_level,
+                zoom_limit,
             );
         }
     }
@@ -81,9 +94,10 @@ impl ResponseAnalysis {
     fn increment_tile_handle_count(
         &mut self,
         context: &HandleContext,
+        request: &request::SlippyRequest,
         response: &response::TileResponse,
     ) -> () {
-        let counter = self.tile_handle_count_by_source_and_age.update(&response.source, &response.age);
+        let counter = self.mut_layer(request).tile_handle_count_by_source_and_age.update(&response.source, &response.age);
         *counter += 1;
         debug!(
             context.host.record,
@@ -105,9 +119,9 @@ impl ResponseAnalysis {
             request::BodyVariant::ServeTileV3(v3_request) => v3_request.z as usize,
             _ => { return; },
         };
-        let zoom_limit = self.tile_reponse_count_by_zoom.len();
+        let zoom_limit = self.mut_layer(request).tile_response_count_by_zoom.len();
         if zoom_level < zoom_limit {
-            self.tile_reponse_count_by_zoom[zoom_level] += 1;
+            self.mut_layer(request).tile_response_count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
                 context.host.record,
@@ -122,10 +136,13 @@ impl ResponseAnalysis {
         request: &request::SlippyRequest,
         http_response: &HttpResponse,
     ) -> () {
-        if !(self.response_count_by_status_and_zoom.contains_key(&http_response.status_code)) {
-            self.response_count_by_status_and_zoom.insert(http_response.status_code, vec![0; MAX_ZOOM_SERVER + 1]);
-        }
-        let count_by_zoom = self.response_count_by_status_and_zoom.get_mut(&http_response.status_code).unwrap();
+        self.mut_layer(request)
+            .response_count_by_status_and_zoom.entry(http_response.status_code.clone())
+            .or_insert(vec![0; MAX_ZOOM_SERVER + 1]);
+        self.status_codes_responded.insert(http_response.status_code.clone());
+        let count_by_zoom = self.mut_layer(request).response_count_by_status_and_zoom.get_mut(
+            &http_response.status_code
+        ).unwrap();
         let zoom_level = match &request.body {
             request::BodyVariant::ServeTileV2(v2_request) => v2_request.z as usize,
             request::BodyVariant::ServeTileV3(v3_request) => v3_request.z as usize,
@@ -139,6 +156,24 @@ impl ResponseAnalysis {
                 context.host.record,
                 "ResponseAnalysis::on_http_response_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
+        }
+    }
+}
+
+struct LayerResponseAnalysis {
+    response_count_by_status_and_zoom: HashMap<StatusCode, Vec<u64>>,
+    tile_response_count_by_zoom: Vec<u64>,
+    tile_handle_duration_by_zoom: Vec<Duration>,
+    tile_handle_count_by_source_and_age: TileMetricTable<u64>,
+}
+
+impl LayerResponseAnalysis {
+    pub fn new() -> LayerResponseAnalysis {
+        LayerResponseAnalysis {
+            response_count_by_status_and_zoom: HashMap::new(),
+            tile_response_count_by_zoom: vec![0; VALID_ZOOM_RANGE.end as usize],
+            tile_handle_duration_by_zoom: vec![Duration::zero(); VALID_ZOOM_RANGE.end as usize],
+            tile_handle_count_by_source_and_age: TileMetricTable::new(),
         }
     }
 }
@@ -195,72 +230,130 @@ impl HandleRequestObserver for ResponseAnalysis {
 }
 
 impl ResponseMetrics for ResponseAnalysis {
+    fn iterate_status_codes_responded(&self) -> Box<dyn Iterator<Item = &'_ StatusCode> + '_> {
+        Box::new(self.status_codes_responded.iter())
+    }
+
+    fn iterate_valid_zoom_levels(&self) -> Range<u32> {
+        VALID_ZOOM_RANGE.clone()
+    }
+
+    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ String> + '_> {
+        Box::new(self.analysis_by_layer.keys())
+    }
+
     fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64 {
-        if self.response_count_by_status_and_zoom.contains_key(status_code) {
-            self.response_count_by_status_and_zoom[status_code].iter().sum()
-        } else {
-            0
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            if layer_analysis.response_count_by_status_and_zoom.contains_key(status_code) {
+                let layer_count: u64 = layer_analysis.response_count_by_status_and_zoom[status_code].iter().sum();
+                total += layer_count;
+            }
         }
+        return total;
     }
 
     fn count_response_by_zoom_level(&self, zoom: u32) -> u64 {
         let mut total = 0;
-        for counts_by_zoom in self.response_count_by_status_and_zoom.values() {
-            if counts_by_zoom.len() > (zoom as usize) {
-                total += counts_by_zoom[zoom as usize];
+        for layer_analysis in self.analysis_by_layer.values() {
+            for counts_by_zoom in layer_analysis.response_count_by_status_and_zoom.values() {
+                if counts_by_zoom.len() > (zoom as usize) {
+                    total += counts_by_zoom[zoom as usize];
+                }
             }
         }
         return total;
     }
 
     fn count_response_by_status_code_and_zoom_level(&self, status_code: &StatusCode, zoom: u32) -> u64 {
-        if self.response_count_by_status_and_zoom.contains_key(status_code) {
-            let counts_by_zoom = &(self.response_count_by_status_and_zoom[status_code]);
-            if counts_by_zoom.len() > (zoom as usize) {
-                return counts_by_zoom[zoom as usize];
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            if layer_analysis.response_count_by_status_and_zoom.contains_key(status_code) {
+                let counts_by_zoom = &(layer_analysis.response_count_by_status_and_zoom[status_code]);
+                if counts_by_zoom.len() > (zoom as usize) {
+                    total += counts_by_zoom[zoom as usize];
+                }
             }
         }
-        return 0;
+        return total;
     }
 
     fn count_total_tile_response(&self) -> u64 {
-        self.tile_handle_count_by_source_and_age.iter().sum()
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            let count: u64 = layer_analysis.tile_handle_count_by_source_and_age.iter().sum();
+            total += count;
+        }
+        return total;
     }
 
     fn tally_total_tile_response_duration(&self) -> u64 {
-        let total_duration = self.tile_handle_duration_by_zoom.iter().fold(
-            Duration::zero(),
-            |acc, duration| acc + *duration
-        );
+        let mut total_duration = Duration::zero();
+        for layer_analysis in self.analysis_by_layer.values() {
+            let duration = layer_analysis.tile_handle_duration_by_zoom.iter().fold(
+                Duration::zero(),
+                |acc, duration| acc + *duration
+            );
+            total_duration = total_duration + duration;
+        }
         return total_duration.num_seconds() as u64
     }
 
     fn count_tile_response_by_zoom_level(&self, zoom: u32) -> u64 {
-        if self.tile_reponse_count_by_zoom.len() > (zoom as usize) {
-            self.tile_reponse_count_by_zoom[zoom as usize]
-        } else {
-            0
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            if layer_analysis.tile_response_count_by_zoom.len() > (zoom as usize) {
+                total += layer_analysis.tile_response_count_by_zoom[zoom as usize]
+            }
         }
+        return total;
     }
 
     fn tally_tile_response_duration_by_zoom_level(&self, zoom: u32) -> u64 {
-        if self.tile_handle_duration_by_zoom.len() > (zoom as usize) {
-            self.tile_handle_duration_by_zoom[zoom as usize].num_seconds() as u64
-        } else {
-            0
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            if layer_analysis.tile_handle_duration_by_zoom.len() > (zoom as usize) {
+                total += layer_analysis.tile_handle_duration_by_zoom[zoom as usize].num_seconds() as u64
+            }
+        }
+        return total;
+    }
+
+    fn count_response_by_layer_and_status_code(&self, layer: &String, status_code: &StatusCode) -> u64 {
+        match self.analysis_by_layer.get(layer) {
+            Some(layer_analysis) => {
+                layer_analysis.response_count_by_status_and_zoom[status_code].iter().sum()
+            },
+            None => 0
         }
     }
 }
 
 impl CacheMetrics for ResponseAnalysis {
+    fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
+        Box::new(TileAge::into_enum_iter())
+    }
+
     fn count_tile_cache_hit_by_age(&self, age: &TileAge) -> u64 {
-        *(self.tile_handle_count_by_source_and_age.read(&TileSource::Cache, age))
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            total += *(layer_analysis.tile_handle_count_by_source_and_age.read(&TileSource::Cache, age))
+        }
+        return total;
     }
 }
 
 impl RenderMetrics for ResponseAnalysis {
+    fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
+        Box::new(TileAge::into_enum_iter())
+    }
+
     fn count_tile_renders_by_age(&self, age: &TileAge) -> u64 {
-        *(self.tile_handle_count_by_source_and_age.read(&TileSource::Render, age))
+        let mut total = 0;
+        for layer_analysis in self.analysis_by_layer.values() {
+            total += *(layer_analysis.tile_handle_count_by_source_and_age.read(&TileSource::Render, age))
+        }
+        return total;
     }
 }
 
@@ -881,11 +974,13 @@ mod tests {
                     render_metrics,
                     response_metrics,
                 };
+                let layer = String::from("default");
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
                         request::SlippyRequest {
-                            header: request::Header::new(
+                            header: request::Header::new_with_layer(
                                 handle_context.request.record,
+                                &layer,
                             ),
                             body: request::BodyVariant::ServeTileV2(
                                 request::ServeTileRequestV2 {
@@ -948,6 +1043,11 @@ mod tests {
                 );
                 assert_eq!(
                     1,
+                    analysis.count_response_by_layer_and_status_code(&layer, &StatusCode::OK),
+                    "Response count not updated"
+                );
+                assert_eq!(
+                    1,
                     analysis.count_tile_response_by_zoom_level(3),
                     "Tile count not updated"
                 );
@@ -955,6 +1055,16 @@ mod tests {
                     0,
                     analysis.count_tile_response_by_zoom_level(2),
                     "Tile count does not default to 0"
+                );
+                assert_eq!(
+                    1,
+                    analysis.count_response_by_zoom_level(3),
+                    "Response count not updated"
+                );
+                assert_eq!(
+                    0,
+                    analysis.count_response_by_zoom_level(2),
+                    "Response count does not default to 0"
                 );
                 Ok(())
             })
@@ -1046,7 +1156,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reponse_count_increment_on_invalid_zoom_level() -> Result<(), Box<dyn Error>> {
+    fn test_response_count_increment_on_invalid_zoom_level() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
             with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;

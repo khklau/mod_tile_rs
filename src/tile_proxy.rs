@@ -114,7 +114,7 @@ impl<'p> TileProxy<'p> {
         new_server.read_request = SlippyRequestReader::read;
         new_server.layer_handler = DescriptionHandler { };
         new_server.write_response = SlippyResponseWriter::write;
-        new_server.cache_analysis = CacheAnalysis { };
+        new_server.cache_analysis = CacheAnalysis::new();
         new_server.render_analysis = RenderAnalysis { };
         new_server.response_analysis = ResponseAnalysis::new();
         new_server.trans_trace = TransactionTrace { };

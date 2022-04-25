@@ -76,13 +76,39 @@ pub struct Statistics {
     pub number_fresh_render: u64,
     pub number_old_render: u64,
     pub number_very_old_render: u64,
-    pub number_response_zoom: Vec<u64>,
-    pub number_tile_buffer_reads: u64,
-    pub duration_tile_buffer_reads: u64,
-    pub number_tile_buffer_read_zoom: Vec<u64>,
-    pub duration_tile_buffer_read_zoom: Vec<u64>,
+    pub number_successful_response_by_zoom: Vec<u64>,
+    pub total_number_tile_response: u64,
+    pub total_duration_tile_response: u64,
+    pub number_tile_response_by_zoom: Vec<u64>,
+    pub duration_tile_response_by_zoom: Vec<u64>,
     pub number_response_200_by_layer: HashMap<String, u64>,
-    pub number_response_400_by_layer: HashMap<String, u64>,
+    pub number_response_404_by_layer: HashMap<String, u64>,
+}
+
+impl Statistics {
+    pub fn new() -> Statistics {
+        Statistics {
+            number_response_200: 0,
+            number_response_304: 0,
+            number_response_404: 0,
+            number_response_503: 0,
+            number_response_5xx: 0,
+            number_response_other: 0,
+            number_fresh_cache: 0,
+            number_old_cache: 0,
+            number_very_old_cache: 0,
+            number_fresh_render: 0,
+            number_old_render: 0,
+            number_very_old_render: 0,
+            number_successful_response_by_zoom: Vec::new(),
+            total_number_tile_response: 0,
+            total_duration_tile_response: 0,
+            number_tile_response_by_zoom: Vec::new(),
+            duration_tile_response_by_zoom: Vec::new(),
+            number_response_200_by_layer: HashMap::new(),
+            number_response_404_by_layer:  HashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize)]
