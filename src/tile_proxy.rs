@@ -64,8 +64,8 @@ pub struct TileProxy<'p> {
     response_analysis: ResponseAnalysis,
     trans_trace: TransactionTrace,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
-    handle_observers: Option<[&'p mut dyn HandleRequestObserver; 3]>,
-    write_observers: Option<[&'p mut dyn WriteResponseObserver; 2]>,
+    handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
+    write_observers: Option<[&'p mut dyn WriteResponseObserver; 4]>,
 }
 
 impl<'p> TileProxy<'p> {
@@ -115,7 +115,7 @@ impl<'p> TileProxy<'p> {
         new_server.layer_handler = DescriptionHandler { };
         new_server.write_response = SlippyResponseWriter::write;
         new_server.cache_analysis = CacheAnalysis::new();
-        new_server.render_analysis = RenderAnalysis { };
+        new_server.render_analysis = RenderAnalysis::new();
         new_server.response_analysis = ResponseAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
         new_server.read_observers = None;
@@ -174,11 +174,6 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> (ReadRequestResult, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
-        let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
-            // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
-            Some([observer_0]) => [*observer_0],
-            None => [&mut self.trans_trace],
-        };
         let read = self.read_request;
         let context = ReadContext {
             module_config: &self.config,
@@ -187,6 +182,11 @@ impl<'p> TileProxy<'p> {
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_result = read(&context, request);
+        let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
+            // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
+            Some([observer_0]) => [*observer_0],
+            None => [&mut self.trans_trace],
+        };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(read, &context, &read_result);
@@ -202,19 +202,14 @@ impl<'p> TileProxy<'p> {
     ) -> (HandleRequestResult, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
         // TODO: combine the handlers using combinators
-        let mut handle_observers: [&mut dyn HandleRequestObserver; 3] = match &mut self.handle_observers {
-            // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
-            Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-            None => [&mut self.trans_trace, &mut self.cache_analysis, &mut self.render_analysis],
-        };
         let handler: &mut dyn RequestHandler = &mut self.layer_handler;
         let context = HandleContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
-            cache_metrics: &self.response_analysis,
-            render_metrics: &self.response_analysis,
+            cache_metrics: &self.cache_analysis,
+            render_metrics: &self.render_analysis,
             response_metrics: &self.response_analysis,
         };
         let handle_result = match read_result {
@@ -232,6 +227,11 @@ impl<'p> TileProxy<'p> {
                 result: Err(HandleError::RequestNotRead((*err).clone())),
             },
         };
+        let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
+            // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
+            Some([observer_0]) => [*observer_0],
+            None => [&mut self.trans_trace],
+        };
         for observer_iter in handle_observers.iter_mut() {
             debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
             (*observer_iter).on_handle(handler, &context, &read_result, &handle_result);
@@ -247,11 +247,6 @@ impl<'p> TileProxy<'p> {
         handle_result: &HandleRequestResult,
     ) -> (WriteResponseResult, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
-        let mut write_observers: [&mut dyn WriteResponseObserver; 2] = match &mut self.write_observers {
-            // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
-            Some([observer_0, observer_1]) => [*observer_0, *observer_1],
-            None => [&mut self.trans_trace, &mut self.response_analysis],
-        };
         let write = self.write_response;
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
@@ -270,6 +265,11 @@ impl<'p> TileProxy<'p> {
             Err(_) => {
                 Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
             },
+        };
+        let mut write_observers: [&mut dyn WriteResponseObserver; 4] = match &mut self.write_observers {
+            // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
+            Some([observer_0, observer_1, observer_2, observer_3]) => [*observer_0, *observer_1, *observer_2, *observer_3],
+            None => [&mut self.trans_trace, &mut self.cache_analysis, &mut self.render_analysis, &mut self.response_analysis],
         };
         for observer_iter in write_observers.iter_mut() {
             debug!(
@@ -385,15 +385,9 @@ mod tests {
                 let mut mock1 = MockHandleObserver {
                     count: 0,
                 };
-                let mut mock2 = MockHandleObserver {
-                    count: 0,
-                };
-                let mut mock3 = MockHandleObserver {
-                    count: 0,
-                };
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config).unwrap();
-                proxy.handle_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
+                proxy.handle_observers = Some([&mut mock1]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
@@ -442,9 +436,15 @@ mod tests {
                 let mut mock2 = MockWriteObserver {
                     count: 0,
                 };
+                let mut mock3 = MockWriteObserver {
+                    count: 0,
+                };
+                let mut mock4 = MockWriteObserver {
+                    count: 0,
+                };
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config).unwrap();
-                proxy.write_observers = Some([&mut mock1, &mut mock2]);
+                proxy.write_observers = Some([&mut mock1, &mut mock2, &mut mock3, &mut mock4]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
