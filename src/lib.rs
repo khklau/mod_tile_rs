@@ -68,9 +68,8 @@ mod implement {
     }
     pub mod telemetry{
         pub mod metrics {
-            pub mod cache;
-            pub mod render;
             pub mod response;
+            pub mod tile_handling;
         }
         pub mod tracing {
             pub mod transaction;

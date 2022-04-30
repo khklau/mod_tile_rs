@@ -31,6 +31,16 @@ pub trait ResponseMetrics {
     fn count_response_by_layer_and_status_code(&self, layer: &String, status_code: &StatusCode) -> u64;
 }
 
+pub trait TileHandlingMetrics {
+    fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
+
+    fn count_tile_cache_hit_by_age(&self, age: &TileAge) -> u64;
+
+    fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
+
+    fn count_tile_renders_by_age(&self, age: &TileAge) -> u64;
+}
+
 pub trait CacheMetrics {
     fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
 
@@ -102,19 +112,15 @@ pub mod test_utils {
         fn count_response_by_layer_and_status_code(&self, _layer: &String, _status_code: &StatusCode) -> u64 { 0 }
     }
 
-    pub struct MockZeroCacheMetrics { }
+    pub struct MockZeroTileHandlingMetrics { }
 
-    impl CacheMetrics for MockZeroCacheMetrics {
+    impl TileHandlingMetrics for MockZeroTileHandlingMetrics {
         fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
             Box::new(TileAge::into_enum_iter())
         }
 
         fn count_tile_cache_hit_by_age(&self, _age: &TileAge) -> u64 { 0 }
-    }
 
-    pub struct MockZeroRenderMetrics { }
-
-    impl RenderMetrics for MockZeroRenderMetrics {
         fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
             Box::new(TileAge::into_enum_iter())
         }
@@ -123,10 +129,9 @@ pub mod test_utils {
     }
 
     pub fn with_mock_zero_metrics<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&dyn CacheMetrics, &dyn RenderMetrics, &dyn ResponseMetrics) -> Result<(), Box<dyn Error>> {
-        let cache = MockZeroCacheMetrics { };
-        let render = MockZeroRenderMetrics { };
+    where F: FnOnce(&dyn ResponseMetrics, &dyn TileHandlingMetrics) -> Result<(), Box<dyn Error>> {
         let response = MockZeroResponseMetrics::new();
-        return func(&cache, &render, &response);
+        let tile = MockZeroTileHandlingMetrics { };
+        return func(&response, &tile);
     }
 }

@@ -58,16 +58,16 @@ fn report(context: &HandleContext) -> response::Statistics {
             _ => { result.number_response_other += count; }
         }
     }
-    for cache_age in context.cache_metrics.iterate_valid_cache_ages() {
-        let count = context.cache_metrics.count_tile_cache_hit_by_age(&cache_age);
+    for cache_age in context.tile_handling_metrics.iterate_valid_cache_ages() {
+        let count = context.tile_handling_metrics.count_tile_cache_hit_by_age(&cache_age);
         match &cache_age {
             &TileAge::Fresh => { result.number_fresh_cache += count; }
             &TileAge::Old => { result.number_old_cache += count; }
             &TileAge::VeryOld => { result.number_very_old_cache += count; }
         }
     }
-    for render_age in context.render_metrics.iterate_valid_render_ages() {
-        let count = context.render_metrics.count_tile_renders_by_age(&render_age);
+    for render_age in context.tile_handling_metrics.iterate_valid_render_ages() {
+        let count = context.tile_handling_metrics.count_tile_renders_by_age(&render_age);
         match &render_age {
             &TileAge::Fresh => { result.number_fresh_render += count; }
             &TileAge::Old => { result.number_old_render += count; }

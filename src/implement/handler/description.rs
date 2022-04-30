@@ -91,7 +91,7 @@ mod tests {
         let module_config = ModuleConfig::new();
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
@@ -99,9 +99,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(
@@ -124,7 +123,7 @@ mod tests {
         let module_config = ModuleConfig::new();
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
                 request.uri = uri.into_raw();
                 let handle_context = HandleContext {
@@ -132,9 +131,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let request = request::SlippyRequest {
                     header: request::Header::new_with_layer(

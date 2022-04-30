@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn test_tile_handle_duration_accural_on_serve_tile_handle() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -430,9 +430,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -496,7 +495,7 @@ mod tests {
     #[test]
     fn test_tile_handle_duration_accural_on_description_handle() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -505,9 +504,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -563,7 +561,7 @@ mod tests {
     #[test]
     fn test_tile_handle_duration_accural_on_invalid_zoom_level() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -572,9 +570,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -630,7 +627,7 @@ mod tests {
     #[test]
     fn test_count_increment_on_serve_tile_v3_write() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -639,9 +636,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -727,7 +723,7 @@ mod tests {
     #[test]
     fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -736,9 +732,8 @@ mod tests {
                     connection: Connection::find_or_allocate_new(request)?,
                     host: VirtualHost::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -802,7 +797,7 @@ mod tests {
     #[test]
     fn test_count_increment_on_tile_cache() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -811,9 +806,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -877,7 +871,7 @@ mod tests {
     #[test]
     fn test_count_increment_on_tile_response_combinations() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -886,9 +880,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -961,7 +954,7 @@ mod tests {
     #[test]
     fn test_count_increment_on_serve_tile_v2_write() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -970,9 +963,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let layer = String::from("default");
                 let read_result: ReadRequestResult = Ok(
@@ -1074,7 +1066,7 @@ mod tests {
     #[test]
     fn test_no_increment_on_description_write() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -1083,9 +1075,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(
@@ -1158,7 +1149,7 @@ mod tests {
     #[test]
     fn test_response_count_increment_on_invalid_zoom_level() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
-            with_mock_zero_metrics(|cache_metrics, render_metrics, response_metrics| {
+            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let module_config = ModuleConfig::new();
@@ -1167,9 +1158,8 @@ mod tests {
                     host: VirtualHost::find_or_allocate_new(request)?,
                     connection: Connection::find_or_allocate_new(request)?,
                     request: Apache2Request::create_with_tile_config(request)?,
-                    cache_metrics,
-                    render_metrics,
                     response_metrics,
+                    tile_handling_metrics,
                 };
                 let read_result: ReadRequestResult = Ok(
                     ReadOutcome::Matched(

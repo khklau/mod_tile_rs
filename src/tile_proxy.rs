@@ -28,9 +28,8 @@ use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::storage::file_system;
-use crate::implement::telemetry::metrics::cache::CacheAnalysis;
-use crate::implement::telemetry::metrics::render::RenderAnalysis;
 use crate::implement::telemetry::metrics::response::ResponseAnalysis;
+use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
 
 use chrono::Utc;
@@ -59,13 +58,12 @@ pub struct TileProxy<'p> {
     read_request: ReadRequestFunc,
     layer_handler: DescriptionHandler,
     write_response: WriteResponseFunc,
-    cache_analysis: CacheAnalysis,
-    render_analysis: RenderAnalysis,
     response_analysis: ResponseAnalysis,
+    tile_handling_analysis: TileHandlingAnalysis,
     trans_trace: TransactionTrace,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
-    write_observers: Option<[&'p mut dyn WriteResponseObserver; 4]>,
+    write_observers: Option<[&'p mut dyn WriteResponseObserver; 3]>,
 }
 
 impl<'p> TileProxy<'p> {
@@ -114,9 +112,8 @@ impl<'p> TileProxy<'p> {
         new_server.read_request = SlippyRequestReader::read;
         new_server.layer_handler = DescriptionHandler { };
         new_server.write_response = SlippyResponseWriter::write;
-        new_server.cache_analysis = CacheAnalysis::new();
-        new_server.render_analysis = RenderAnalysis::new();
         new_server.response_analysis = ResponseAnalysis::new();
+        new_server.tile_handling_analysis = TileHandlingAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
@@ -208,9 +205,8 @@ impl<'p> TileProxy<'p> {
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
-            cache_metrics: &self.cache_analysis,
-            render_metrics: &self.render_analysis,
             response_metrics: &self.response_analysis,
+            tile_handling_metrics: &self.tile_handling_analysis,
         };
         let handle_result = match read_result {
             Ok(outcome) => match outcome {
@@ -266,10 +262,10 @@ impl<'p> TileProxy<'p> {
                 Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
             },
         };
-        let mut write_observers: [&mut dyn WriteResponseObserver; 4] = match &mut self.write_observers {
+        let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
             // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
-            Some([observer_0, observer_1, observer_2, observer_3]) => [*observer_0, *observer_1, *observer_2, *observer_3],
-            None => [&mut self.trans_trace, &mut self.cache_analysis, &mut self.render_analysis, &mut self.response_analysis],
+            Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
+            None => [&mut self.trans_trace, &mut self.response_analysis, &mut self.tile_handling_analysis],
         };
         for observer_iter in write_observers.iter_mut() {
             debug!(
@@ -439,12 +435,9 @@ mod tests {
                 let mut mock3 = MockWriteObserver {
                     count: 0,
                 };
-                let mut mock4 = MockWriteObserver {
-                    count: 0,
-                };
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config).unwrap();
-                proxy.write_observers = Some([&mut mock1, &mut mock2, &mut mock3, &mut mock4]);
+                proxy.write_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
