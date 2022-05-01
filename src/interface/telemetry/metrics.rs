@@ -1,4 +1,5 @@
 use crate::schema::tile::age::TileAge;
+use crate::schema::tile::source::TileSource;
 
 use http::status::StatusCode;
 
@@ -34,23 +35,11 @@ pub trait ResponseMetrics {
 pub trait TileHandlingMetrics {
     fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
 
-    fn count_tile_cache_hit_by_age(&self, age: &TileAge) -> u64;
-
     fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
 
-    fn count_tile_renders_by_age(&self, age: &TileAge) -> u64;
-}
+    fn count_handled_tile_by_source_and_age(&self, source: &TileSource, age: &TileAge) -> u64;
 
-pub trait CacheMetrics {
-    fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
-
-    fn count_tile_cache_hit_by_age(&self, age: &TileAge) -> u64;
-}
-
-pub trait RenderMetrics {
-    fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
-
-    fn count_tile_renders_by_age(&self, age: &TileAge) -> u64;
+    fn tally_tile_handle_duration_by_source_and_age(&self, source: &TileSource, age: &TileAge) -> u64;
 }
 
 
@@ -119,13 +108,13 @@ pub mod test_utils {
             Box::new(TileAge::into_enum_iter())
         }
 
-        fn count_tile_cache_hit_by_age(&self, _age: &TileAge) -> u64 { 0 }
-
         fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
             Box::new(TileAge::into_enum_iter())
         }
 
-        fn count_tile_renders_by_age(&self, _age: &TileAge) -> u64 { 0 }
+        fn count_handled_tile_by_source_and_age(&self, _source: &TileSource, _age: &TileAge) -> u64 { 0 }
+
+        fn tally_tile_handle_duration_by_source_and_age(&self, _source: &TileSource, _age: &TileAge) -> u64 { 0 }
     }
 
     pub fn with_mock_zero_metrics<F>(func: F) -> Result<(), Box<dyn Error>>

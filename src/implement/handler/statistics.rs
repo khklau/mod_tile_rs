@@ -2,6 +2,7 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
+use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{ HandleContext, RequestHandler, };
 
 use chrono::Utc;
@@ -50,30 +51,38 @@ fn report(context: &HandleContext) -> response::Statistics {
     for status_code in context.response_metrics.iterate_status_codes_responded() {
         let count = context.response_metrics.count_response_by_status_code(status_code);
         match status_code {
-            &StatusCode::OK => { result.number_response_200 += count; },
-            &StatusCode::NOT_MODIFIED => { result.number_response_304 += count; },
-            &StatusCode::NOT_FOUND => { result.number_response_404 += count; },
-            &StatusCode::SERVICE_UNAVAILABLE => { result.number_response_503 += count; },
-            &StatusCode::INTERNAL_SERVER_ERROR => { result.number_response_5xx += count; },
+            &StatusCode::OK => { result.number_response_200 = count; },
+            &StatusCode::NOT_MODIFIED => { result.number_response_304 = count; },
+            &StatusCode::NOT_FOUND => { result.number_response_404 = count; },
+            &StatusCode::SERVICE_UNAVAILABLE => { result.number_response_503 = count; },
+            &StatusCode::INTERNAL_SERVER_ERROR => { result.number_response_5xx = count; },
             _ => { result.number_response_other += count; }
         }
     }
-    for cache_age in context.tile_handling_metrics.iterate_valid_cache_ages() {
-        let count = context.tile_handling_metrics.count_tile_cache_hit_by_age(&cache_age);
-        match &cache_age {
-            &TileAge::Fresh => { result.number_fresh_cache += count; }
-            &TileAge::Old => { result.number_old_cache += count; }
-            &TileAge::VeryOld => { result.number_very_old_cache += count; }
-        }
-    }
-    for render_age in context.tile_handling_metrics.iterate_valid_render_ages() {
-        let count = context.tile_handling_metrics.count_tile_renders_by_age(&render_age);
-        match &render_age {
-            &TileAge::Fresh => { result.number_fresh_render += count; }
-            &TileAge::Old => { result.number_old_render += count; }
-            &TileAge::VeryOld => { result.number_very_old_render += count; }
-        }
-    }
+    result.number_fresh_cache = context.tile_handling_metrics.count_handled_tile_by_source_and_age(
+        &TileSource::Cache,
+        &TileAge::Fresh,
+    );
+    result.number_old_cache = context.tile_handling_metrics.count_handled_tile_by_source_and_age(
+        &TileSource::Cache,
+        &TileAge::Old,
+    );
+    result.number_very_old_cache = context.tile_handling_metrics.count_handled_tile_by_source_and_age(
+        &TileSource::Cache,
+        &TileAge::VeryOld,
+    );
+    result.number_fresh_render = context.tile_handling_metrics.count_handled_tile_by_source_and_age(
+        &TileSource::Render,
+        &TileAge::Fresh,
+    );
+    result.number_old_render = context.tile_handling_metrics.count_handled_tile_by_source_and_age(
+        &TileSource::Render,
+        &TileAge::Old,
+    );
+    result.number_very_old_render = context.tile_handling_metrics.count_handled_tile_by_source_and_age(
+        &TileSource::Render,
+        &TileAge::VeryOld,
+    );
     for zoom_level in context.response_metrics.iterate_valid_zoom_levels() {
         let any_count = context.response_metrics.count_response_by_zoom_level(zoom_level);
         result.number_successful_response_by_zoom[zoom_level as usize] = any_count;
