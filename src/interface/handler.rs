@@ -5,7 +5,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadRequestResult;
-use crate::interface::telemetry::metrics::{
+use crate::interface::telemetry::{
     ResponseMetrics, TileHandlingMetrics,
 };
 

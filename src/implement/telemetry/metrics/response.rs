@@ -10,7 +10,7 @@ use crate::schema::slippy::result::{
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
-use crate::interface::telemetry::metrics::ResponseMetrics;
+use crate::interface::telemetry::ResponseMetrics;
 
 use chrono::Duration;
 use http::status::StatusCode;

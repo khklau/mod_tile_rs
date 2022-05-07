@@ -9,13 +9,12 @@ use crate::schema::tile::source::TileSource;
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
-use crate::interface::telemetry::metrics::TileHandlingMetrics;
+use crate::interface::telemetry::TileHandlingMetrics;
 
 use chrono::Duration;
 use enum_iterator::IntoEnumIterator;
 
 use std::collections::hash_map::HashMap;
-use std::slice::Iter;
 use std::marker::Copy;
 
 
@@ -188,10 +187,6 @@ impl<T: DefaultMetric + Copy> TileMetricTable<T> {
 
     fn read(&self, source: &TileSource, age: &TileAge) -> &T {
         &(self.table[Self::index(source, age)])
-    }
-
-    fn iter(&self) -> Iter<'_, T> {
-        self.table.iter()
     }
 
     fn update(&mut self, source: &TileSource, age: &TileAge) -> &mut T {
