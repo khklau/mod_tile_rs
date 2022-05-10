@@ -1,4 +1,5 @@
 use crate::binding::apache2::request_rec;
+use crate::schema::apache2::config::MAX_ZOOM_SERVER;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::virtual_host::VirtualHost;
@@ -10,6 +11,7 @@ use mime::Mime;
 use serde::Serialize;
 
 use std::collections::HashMap;
+use std::default::Default;
 use std::ffi::CString;
 use std::string::String;
 use std::vec::Vec;
@@ -100,11 +102,11 @@ impl Statistics {
             number_fresh_render: 0,
             number_old_render: 0,
             number_very_old_render: 0,
-            number_successful_response_by_zoom: Vec::new(),
+            number_successful_response_by_zoom: vec![Default::default(); MAX_ZOOM_SERVER + 1],
             total_number_tile_response: 0,
             total_duration_tile_response: 0,
-            number_tile_response_by_zoom: Vec::new(),
-            duration_tile_response_by_zoom: Vec::new(),
+            number_tile_response_by_zoom: vec![Default::default(); MAX_ZOOM_SERVER + 1],
+            duration_tile_response_by_zoom: vec![Default::default(); MAX_ZOOM_SERVER + 1],
             number_response_200_by_layer: HashMap::new(),
             number_response_404_by_layer:  HashMap::new(),
         }

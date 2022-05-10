@@ -21,10 +21,12 @@ use crate::interface::slippy::{
     ReadContext, ReadRequestFunc, ReadRequestObserver,
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
+use crate::interface::telemetry::MetricsInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::handler::description::DescriptionHandler;
+use crate::implement::handler::statistics::StatisticsHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::storage::file_system;
@@ -42,6 +44,7 @@ use std::option::Option;
 use std::os::raw::{ c_int, c_void, };
 use std::path::PathBuf;
 use std::result::Result;
+use std::string::String;
 use std::time::Duration;
 
 
@@ -49,6 +52,7 @@ pub enum HandleRequestError {
     Read(ReadError),
     Handle(HandleError),
     Write(WriteError),
+    Inventory(String),
 }
 
 pub struct TileProxy<'p> {
@@ -56,8 +60,8 @@ pub struct TileProxy<'p> {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
     read_request: ReadRequestFunc,
-    layer_handler: DescriptionHandler,
     write_response: WriteResponseFunc,
+    description_handler: DescriptionHandler,
     response_analysis: ResponseAnalysis,
     tile_handling_analysis: TileHandlingAnalysis,
     trans_trace: TransactionTrace,
@@ -67,15 +71,6 @@ pub struct TileProxy<'p> {
 }
 
 impl<'p> TileProxy<'p> {
-    pub fn get_id(record: &server_rec) -> CString {
-        let id = CString::new(format!(
-            "{}@{:p}",
-            type_name::<Self>(),
-            record,
-        )).unwrap();
-        id
-    }
-
     pub fn find_or_allocate_new(record: &'p mut server_rec) -> Result<&'p mut Self, Box<dyn Error>> {
         info!(record, "TileServer::find_or_create - start");
         let proxy = match retrieve(
@@ -96,6 +91,15 @@ impl<'p> TileProxy<'p> {
         return Ok(proxy);
     }
 
+    pub fn get_id(record: &server_rec) -> CString {
+        let id = CString::new(format!(
+            "{}@{:p}",
+            type_name::<Self>(),
+            record,
+        )).unwrap();
+        id
+    }
+
     pub fn new(
         record: &'p server_rec,
         module_config: ModuleConfig,
@@ -110,8 +114,8 @@ impl<'p> TileProxy<'p> {
         new_server.config = module_config;
         new_server.config_file_path = None;
         new_server.read_request = SlippyRequestReader::read;
-        new_server.layer_handler = DescriptionHandler { };
         new_server.write_response = SlippyResponseWriter::write;
+        new_server.description_handler = DescriptionHandler { };
         new_server.response_analysis = ResponseAnalysis::new();
         new_server.tile_handling_analysis = TileHandlingAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
@@ -198,8 +202,16 @@ impl<'p> TileProxy<'p> {
         read_result: &ReadRequestResult,
     ) -> (HandleRequestResult, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
+        let before_timestamp = Utc::now();
         // TODO: combine the handlers using combinators
-        let handler: &mut dyn RequestHandler = &mut self.layer_handler;
+        let metrics = MetricsInventory {
+            response_metrics: &(self.response_analysis),
+            tile_handling_metrics: &(self.tile_handling_analysis),
+        };
+        let mut statistics = StatisticsHandler::new(&metrics);
+        let mut handlers: Vec<&mut dyn RequestHandler> = Vec::new();
+        handlers.push(&mut self.description_handler);
+        handlers.push(&mut statistics);
         let context = HandleContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
@@ -211,27 +223,45 @@ impl<'p> TileProxy<'p> {
         let handle_result = match read_result {
             Ok(outcome) => match outcome {
                 ReadOutcome::NotMatched => HandleRequestResult {
-                    before_timestamp: Utc::now(),
+                    before_timestamp,
                     after_timestamp: Utc::now(),
                     result: Ok(HandleOutcome::NotHandled),
                 },
-                ReadOutcome::Matched(request) => handler.handle(&context, &request),
+                ReadOutcome::Matched(request) => {
+                    for handler in handlers.iter_mut() {
+                        let result = (*handler).handle(&context, request);
+                        match &result.result {
+                            Ok(outcome) => match outcome {
+                                HandleOutcome::Handled(_) => {
+                                    let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
+                                        // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
+                                        Some([observer_0]) => [*observer_0],
+                                        None => [&mut self.trans_trace],
+                                    };
+                                    for observer_iter in handle_observers.iter_mut() {
+                                        debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                                        (*observer_iter).on_handle(*handler, &context, &read_result, &result);
+                                    }
+                                    return (result, self)
+                                },
+                                HandleOutcome::NotHandled => (),
+                            },
+                            Err(_) => return (result, self),
+                        }
+                    };
+                    HandleRequestResult {
+                        before_timestamp,
+                        after_timestamp: Utc::now(),
+                        result: Ok(HandleOutcome::NotHandled),
+                    }
+                }
             },
             Err(err) => HandleRequestResult {
-                before_timestamp: Utc::now(),
+                before_timestamp,
                 after_timestamp: Utc::now(),
                 result: Err(HandleError::RequestNotRead((*err).clone())),
             },
         };
-        let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
-            // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
-            Some([observer_0]) => [*observer_0],
-            None => [&mut self.trans_trace],
-        };
-        for observer_iter in handle_observers.iter_mut() {
-            debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_handle(handler, &context, &read_result, &handle_result);
-        }
         debug!(record.server, "TileServer::call_handlers - finish");
         return (handle_result, self);
     }
