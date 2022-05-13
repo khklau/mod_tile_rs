@@ -10,8 +10,7 @@ use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::result::{
-    ReadOutcome, ReadRequestResult,
-    WriteOutcome, WriteResponseResult,
+    ReadOutcome, WriteOutcome, WriteResponseResult,
 };
 use crate::interface::apache2::{ PoolStored, Writer, };
 use crate::interface::handler::{
@@ -163,9 +162,9 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> Result<c_int, ReadError> {
         debug!(record.server, "TileServer::handle_request - start");
-        let (read_result, self2) = self.read_request(record);
-        let (handle_result, self3) = self2.call_handlers(record, &read_result);
-        let (write_result, _) = self3.write_response(record, &read_result, &handle_result);
+        let (read_outcome, self2) = self.read_request(record);
+        let (handle_result, self3) = self2.call_handlers(record, &read_outcome);
+        let (write_result, _) = self3.write_response(record, &read_outcome, &handle_result);
         debug!(record.server, "TileServer::handle_request - finish");
         return Ok(OK as c_int);
     }
@@ -173,7 +172,7 @@ impl<'p> TileProxy<'p> {
     fn read_request(
         &mut self,
         record: &mut request_rec,
-    ) -> (ReadRequestResult, &mut Self) {
+    ) -> (ReadOutcome, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
         let read = self.read_request;
         let context = ReadContext {
@@ -182,7 +181,7 @@ impl<'p> TileProxy<'p> {
             connection: Connection::find_or_allocate_new(record).unwrap(),
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
-        let read_result = read(&context, request);
+        let read_outcome = read(&context, request);
         let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
             Some([observer_0]) => [*observer_0],
@@ -190,16 +189,16 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(read, &context, &read_result);
+            (*observer_iter).on_read(read, &context, &read_outcome);
         }
         debug!(record.server, "TileServer::read_request - finish");
-        return (read_result, self);
+        return (read_outcome, self);
     }
 
     fn call_handlers(
         &mut self,
         record: &mut request_rec,
-        read_result: &ReadRequestResult,
+        read_outcome: &ReadOutcome,
     ) -> (HandleRequestResult, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
         let before_timestamp = Utc::now();
@@ -220,14 +219,14 @@ impl<'p> TileProxy<'p> {
             response_metrics: &self.response_analysis,
             tile_handling_metrics: &self.tile_handling_analysis,
         };
-        let handle_result = match read_result {
-            Ok(outcome) => match outcome {
-                ReadOutcome::NotMatched => HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp: Utc::now(),
-                    result: Ok(HandleOutcome::NotHandled),
-                },
-                ReadOutcome::Matched(request) => {
+        let handle_result = match read_outcome {
+            ReadOutcome::Ignored => HandleRequestResult {
+                before_timestamp,
+                after_timestamp: Utc::now(),
+                result: Ok(HandleOutcome::NotHandled),
+            },
+            ReadOutcome::Processed(result) => match result {
+                Ok(request) => {
                     for handler in handlers.iter_mut() {
                         let result = (*handler).handle(&context, request);
                         match &result.result {
@@ -240,7 +239,7 @@ impl<'p> TileProxy<'p> {
                                     };
                                     for observer_iter in handle_observers.iter_mut() {
                                         debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                        (*observer_iter).on_handle(*handler, &context, &read_result, &result);
+                                        (*observer_iter).on_handle(*handler, &context, &read_outcome, &result);
                                     }
                                     return (result, self)
                                 },
@@ -254,13 +253,14 @@ impl<'p> TileProxy<'p> {
                         after_timestamp: Utc::now(),
                         result: Ok(HandleOutcome::NotHandled),
                     }
-                }
-            },
-            Err(err) => HandleRequestResult {
-                before_timestamp,
-                after_timestamp: Utc::now(),
-                result: Err(HandleError::RequestNotRead((*err).clone())),
-            },
+                },
+                Err(err) => HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp: Utc::now(),
+                    result: Err(HandleError::RequestNotRead((*err).clone())),
+                },
+
+            }
         };
         debug!(record.server, "TileServer::call_handlers - finish");
         return (handle_result, self);
@@ -269,7 +269,7 @@ impl<'p> TileProxy<'p> {
     fn write_response(
         &mut self,
         record: &mut request_rec,
-        read_result: &ReadRequestResult,
+        read_outcome: &ReadOutcome,
         handle_result: &HandleRequestResult,
     ) -> (WriteResponseResult, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
@@ -302,7 +302,7 @@ impl<'p> TileProxy<'p> {
                 context.host.record,
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
-            (*observer_iter).on_write(write, &context, &read_result, &handle_result, &write_result);
+            (*observer_iter).on_write(write, &context, &read_outcome, &handle_result, &write_result);
         }
         debug!(record.server, "TileServer::write_response - finish");
         return (write_result, self);
@@ -362,7 +362,7 @@ mod tests {
             &mut self,
             _func: ReadRequestFunc,
             _context: &ReadContext,
-            _result: &ReadRequestResult
+            _outcome: &ReadOutcome,
         ) -> () {
             self.count += 1;
         }
@@ -380,8 +380,8 @@ mod tests {
                 proxy.read_observers = Some([&mut mock1]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let (result, _) = proxy.read_request(request);
-                result.unwrap();
+                let (outcome, _) = proxy.read_request(request);
+                outcome.expect_processed().unwrap();
                 assert_eq!(1, mock1.count, "Read observer not called");
                 Ok(())
             })
@@ -397,7 +397,7 @@ mod tests {
             &mut self,
             _obj: &dyn RequestHandler,
             _context: &HandleContext,
-            _read_result: &ReadRequestResult,
+            _read_outcome: &ReadOutcome,
             _handle_result: &HandleRequestResult
         ) -> () {
             self.count += 1;
@@ -417,8 +417,8 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
-                let read_result: ReadRequestResult = Ok(
-                    ReadOutcome::Matched(
+                let read_outcome = ReadOutcome::Processed(
+                    Ok(
                         request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
@@ -427,7 +427,7 @@ mod tests {
                         }
                     )
                 );
-                let (handle_result, _) = proxy.call_handlers(request, &read_result);
+                let (handle_result, _) = proxy.call_handlers(request, &read_outcome);
                 handle_result.result.unwrap();
                 assert_eq!(1, mock1.count, "Handle observer not called");
                 Ok(())
@@ -444,7 +444,7 @@ mod tests {
             &mut self,
             _func: WriteResponseFunc,
             _context: &WriteContext,
-            _read_result: &ReadRequestResult,
+            _read_outcome: &ReadOutcome,
             _handle_result: &HandleRequestResult,
             _write_result: &WriteResponseResult,
         ) -> () {
@@ -471,8 +471,8 @@ mod tests {
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
-                let read_result: ReadRequestResult = Ok(
-                    ReadOutcome::Matched(
+                let read_outcome = ReadOutcome::Processed(
+                    Ok(
                         request::SlippyRequest {
                             header: request::Header::new(
                                 context.record,
@@ -507,7 +507,7 @@ mod tests {
                         )
                     ),
                 };
-                let (result, _) = proxy.write_response(request, &read_result, &handle_result);
+                let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
                 result.unwrap();
                 assert_eq!(1, mock1.count, "Write observer not called");
                 Ok(())

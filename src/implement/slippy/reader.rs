@@ -1,4 +1,5 @@
 use crate::binding::apache2::get_module_name;
+use crate::schema::core::processed::ProcessOutcome;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
@@ -12,7 +13,6 @@ use crate::interface::slippy::ReadContext;
 
 use scan_fmt::scan_fmt;
 
-use std::result::Result;
 use std::string::String;
 
 
@@ -21,7 +21,7 @@ impl SlippyRequestReader {
     pub fn read(
         context: &ReadContext,
         request: &Apache2Request,
-    ) -> Result<ReadOutcome, ReadError> {
+    ) -> ReadOutcome {
         let request_url= request.uri;
         SlippyRequestParser::parse(&context, request, request_url)
     }
@@ -33,15 +33,16 @@ impl SlippyRequestParser {
         context: &ReadContext,
         request: &Apache2Request,
         request_url: &str,
-    ) -> Result<ReadOutcome, ReadError> {
+    ) -> ReadOutcome {
         debug!(context.host.record, "SlippyRequestParser::parse - start");
         // try match stats request
-        if let ReadOutcome::Matched(request) = StatisticsRequestParser::parse(&context, request, request_url)? {
-            return Ok(ReadOutcome::Matched(request));
+        let stat_outcome = StatisticsRequestParser::parse(&context, request, request_url);
+        if stat_outcome.is_processed() {
+            return stat_outcome;
         }
-        let parse_layer_request = LayerParserCombinator::or_else(
+        let parse_layer_request = LayerParserCombinator::try_else(
             DescribeLayerRequestParser::parse,
-            LayerParserCombinator::or_else(
+            LayerParserCombinator::try_else(
                 ServeTileV3RequestParser::parse,
                 ServeTileV2RequestParser::parse,
             )
@@ -56,33 +57,35 @@ impl SlippyRequestParser {
             if let Some(found) = request_url.find(&config.base_url) {
                 let after_base = found + config.base_url.len();
                 if let Some(layer_url) = request_url.get(after_base..) {
-                    if let ReadOutcome::Matched(request) = parse_layer_request(context, config, request, layer_url)? {
-                        return Ok(ReadOutcome::Matched(request));
+                    let layer_outcome = parse_layer_request(context, config, request, layer_url);
+                    if layer_outcome.is_processed() {
+                        return layer_outcome;
                     }
                 }
             };
         }
         info!(context.host.record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
-        return Ok(ReadOutcome::NotMatched);
+        return ProcessOutcome::Ignored;
     }
 }
 
 struct LayerParserCombinator;
 impl LayerParserCombinator {
     // TODO: remove the repeated trait bound once trait aliases is stable
-    fn or_else<F, G>(
+    fn try_else<F, G>(
         func1: F,
         func2: G,
-    ) -> impl Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> Result<ReadOutcome, ReadError>
+    ) -> impl Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome
     where
-        F: Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> Result<ReadOutcome, ReadError>,
-        G: Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> Result<ReadOutcome, ReadError>,
+        F: Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
+        G: Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
     {
         move |context, config, request, request_url| {
-            if let ReadOutcome::Matched(request) = func1(context, config, request, request_url)? {
-                return Ok(ReadOutcome::Matched(request));
+            let outcome = func1(context, config, request, request_url);
+            if outcome.is_processed() {
+                outcome
             } else {
-                return func2(context, config, request, request_url);
+                func2(context, config, request, request_url)
             }
         }
     }
@@ -94,20 +97,24 @@ impl StatisticsRequestParser {
         context: &ReadContext,
         request: &Apache2Request,
         request_url: &str,
-    ) -> Result<ReadOutcome, ReadError> {
+    ) -> ReadOutcome {
         let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
         if request_url.eq(&stats_uri) {
             info!(context.host.record, "StatisticsRequestParser::parse - matched ReportStatistics");
-            return Ok(ReadOutcome::Matched(SlippyRequest {
-                header: Header::new(
-                    request.record,
-                ),
-                body: BodyVariant::ReportStatistics,
-            }));
+            ProcessOutcome::Processed(
+                Ok(
+                    SlippyRequest {
+                        header: Header::new(
+                            request.record,
+                        ),
+                        body: BodyVariant::ReportStatistics,
+                    }
+                )
+            )
         } else {
             info!(context.host.record, "StatisticsRequestParser::parse - no match");
-            return Ok(ReadOutcome::NotMatched);
+            ProcessOutcome::Ignored
         }
     }
 }
@@ -119,19 +126,23 @@ impl DescribeLayerRequestParser {
         layer_config: &LayerConfig,
         request: &Apache2Request,
         request_url: &str,
-    ) -> Result<ReadOutcome, ReadError> {
+    ) -> ReadOutcome {
         if request_url.eq_ignore_ascii_case("/tile-layer.json") {
             info!(context.host.record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
-            return Ok(ReadOutcome::Matched(SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &(layer_config.name),
-                ),
-                body: BodyVariant::DescribeLayer
-            }));
+            ProcessOutcome::Processed(
+                Ok(
+                    SlippyRequest {
+                        header: Header::new_with_layer(
+                            request.record,
+                            &(layer_config.name),
+                        ),
+                        body: BodyVariant::DescribeLayer
+                    }
+                )
+            )
         } else {
             info!(context.host.record, "DescribeLayerRequestParser::parse - no match");
-            return Ok(ReadOutcome::NotMatched);
+            ProcessOutcome::Ignored
         }
     }
 }
@@ -143,7 +154,7 @@ impl ServeTileV3RequestParser {
         layer_config: &LayerConfig,
         request: &Apache2Request,
         request_url: &str,
-    ) -> Result<ReadOutcome, ReadError> {
+    ) -> ReadOutcome {
         // TODO: replace with a more modular parser that better handles with option and no option
         let has_parameter = match scan_fmt!(
             request_url,
@@ -154,15 +165,19 @@ impl ServeTileV3RequestParser {
             Err(_) => false,
         };
         if !has_parameter {
-            return Ok(ReadOutcome::NotMatched);
+            return ProcessOutcome::Ignored;
         } else if has_parameter && !(layer_config.parameters_allowed) {
-            return Err(ReadError::Param(
-                InvalidParameterError {
-                    param: String::from("uri"),
-                    value: request_url.to_string(),
-                    reason: "Request has parameter but parameterize_style not set in config".to_string(),
-                }
-            ));
+            return ProcessOutcome::Processed(
+                Err(
+                    ReadError::Param(
+                        InvalidParameterError {
+                            param: String::from("uri"),
+                            value: request_url.to_string(),
+                            reason: "Request has parameter but parameterize_style not set in config".to_string(),
+                        }
+                    )
+                )
+            );
         }
 
         // try match with option
@@ -174,30 +189,38 @@ impl ServeTileV3RequestParser {
             Ok((parameter, x, y, z, extension, option)) => {
                 info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
                 if z <= MAX_ZOOM_SERVER as u32 {
-                    return Ok(ReadOutcome::Matched(SlippyRequest {
-                        header: Header::new_with_layer(
-                            request.record,
-                            &(layer_config.name),
-                        ),
-                        body: BodyVariant::ServeTileV3(
-                            ServeTileRequestV3 {
-                                parameter,
-                                x,
-                                y,
-                                z,
-                                extension,
-                                option: Some(option)
+                    return ProcessOutcome::Processed(
+                        Ok(
+                            SlippyRequest {
+                                header: Header::new_with_layer(
+                                    request.record,
+                                    &(layer_config.name),
+                                ),
+                                body: BodyVariant::ServeTileV3(
+                                    ServeTileRequestV3 {
+                                        parameter,
+                                        x,
+                                        y,
+                                        z,
+                                        extension,
+                                        option: Some(option)
+                                    }
+                                ),
                             }
-                        ),
-                    }));
+                        )
+                    );
                 } else {
-                    return Err(ReadError::Param(
-                        InvalidParameterError {
-                            param: String::from("z"),
-                            value: request_url.to_string(),
-                            reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
-                        }
-                    ));
+                    return ProcessOutcome::Processed(
+                        Err(
+                            ReadError::Param(
+                                InvalidParameterError {
+                                    param: String::from("z"),
+                                    value: request_url.to_string(),
+                                    reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
+                                }
+                            )
+                        )
+                    );
                 }
             },
             Err(_) => ()
@@ -212,37 +235,45 @@ impl ServeTileV3RequestParser {
             Ok((parameter, x, y, z, extension)) => {
                 info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
                 if z <= MAX_ZOOM_SERVER as u32 {
-                    return Ok(ReadOutcome::Matched(SlippyRequest {
-                        header: Header::new_with_layer(
-                            request.record,
-                            &(layer_config.name),
-                        ),
-                        body: BodyVariant::ServeTileV3(
-                            ServeTileRequestV3 {
-                                parameter,
-                                x,
-                                y,
-                                z,
-                                extension,
-                                option: None,
+                    return ProcessOutcome::Processed(
+                        Ok(
+                            SlippyRequest {
+                                header: Header::new_with_layer(
+                                    request.record,
+                                    &(layer_config.name),
+                                ),
+                                body: BodyVariant::ServeTileV3(
+                                    ServeTileRequestV3 {
+                                        parameter,
+                                        x,
+                                        y,
+                                        z,
+                                        extension,
+                                        option: None,
+                                    }
+                                ),
                             }
-                        ),
-                    }));
+                        )
+                    );
                 } else {
-                    return Err(ReadError::Param(
-                        InvalidParameterError {
-                            param: String::from("z"),
-                            value: request_url.to_string(),
-                            reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
-                        }
-                    ));
+                    return ProcessOutcome::Processed(
+                        Err(
+                            ReadError::Param(
+                            InvalidParameterError {
+                                param: String::from("z"),
+                                value: request_url.to_string(),
+                                reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
+                            }
+                            )
+                        )
+                    );
                 }
             },
             Err(_) => ()
         }
 
         info!(context.host.record, "ServeTileV3RequestParser::parse - no match");
-        return Ok(ReadOutcome::NotMatched);
+        return ProcessOutcome::Ignored;
     }
 }
 
@@ -253,7 +284,7 @@ impl ServeTileV2RequestParser {
         layer_config: &LayerConfig,
         request: &Apache2Request,
         request_url: &str,
-    ) -> Result<ReadOutcome, ReadError> {
+    ) -> ReadOutcome {
     // TODO: replace with a more modular parser that better handles with option and no option
     // try match with option
     match scan_fmt!(
@@ -264,29 +295,37 @@ impl ServeTileV2RequestParser {
         Ok((x, y, z, extension, option)) => {
             if z <= MAX_ZOOM_SERVER as u32 {
                 info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
-                return Ok(ReadOutcome::Matched(SlippyRequest {
-                    header: Header::new_with_layer(
-                        request.record,
-                        &(layer_config.name),
-                    ),
-                    body: BodyVariant::ServeTileV2(
-                        ServeTileRequestV2 {
-                            x,
-                            y,
-                            z,
-                            extension,
-                            option: Some(option),
+                return ProcessOutcome::Processed(
+                    Ok(
+                        SlippyRequest {
+                            header: Header::new_with_layer(
+                                request.record,
+                                &(layer_config.name),
+                            ),
+                            body: BodyVariant::ServeTileV2(
+                                ServeTileRequestV2 {
+                                    x,
+                                    y,
+                                    z,
+                                    extension,
+                                    option: Some(option),
+                                }
+                            ),
                         }
-                    ),
-                }));
+                    )
+                );
             } else {
-                return Err(ReadError::Param(
-                    InvalidParameterError {
-                        param: String::from("z"),
-                        value: request_url.to_string(),
-                        reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
-                    }
-                ));
+                return ProcessOutcome::Processed(
+                    Err(
+                        ReadError::Param(
+                            InvalidParameterError {
+                                param: String::from("z"),
+                                value: request_url.to_string(),
+                                reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
+                            }
+                        )
+                    )
+                );
             }
         },
         Err(_) => ()
@@ -301,35 +340,43 @@ impl ServeTileV2RequestParser {
         Ok((x, y, z, extension)) => {
             if z <= MAX_ZOOM_SERVER as u32 {
                 info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
-                return Ok(ReadOutcome::Matched(SlippyRequest {
-                    header: Header::new_with_layer(
-                        request.record,
-                        &(layer_config.name),
-                    ),
-                    body: BodyVariant::ServeTileV2(
-                        ServeTileRequestV2 {
-                            x,
-                            y,
-                            z,
-                            extension,
-                            option: None,
+                return ProcessOutcome::Processed(
+                    Ok(
+                        SlippyRequest {
+                            header: Header::new_with_layer(
+                                request.record,
+                                &(layer_config.name),
+                            ),
+                            body: BodyVariant::ServeTileV2(
+                                ServeTileRequestV2 {
+                                    x,
+                                    y,
+                                    z,
+                                    extension,
+                                    option: None,
+                                }
+                            )
                         }
                     )
-                }));
+                );
             } else {
-                return Err(ReadError::Param(
-                    InvalidParameterError {
-                        param: String::from("z"),
-                        value: request_url.to_string(),
-                        reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
-                    }
-                ));
+                return ProcessOutcome::Processed(
+                    Err(
+                        ReadError::Param(
+                            InvalidParameterError {
+                                param: String::from("z"),
+                                value: request_url.to_string(),
+                                reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
+                            }
+                        )
+                    )
+                );
             }
         },
         Err(_) => ()
     }
         info!(context.host.record, "ServeTileV2RequestParser::parse - no match");
-        return Ok(ReadOutcome::NotMatched)
+        return ProcessOutcome::Ignored;
     }
 }
 
@@ -361,7 +408,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_header = Header::new(
                 request.record,
             );
@@ -387,7 +434,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
@@ -418,7 +465,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
@@ -458,7 +505,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            match SlippyRequestParser::parse(&context, request, request_url).unwrap_err() {
+            match SlippyRequestParser::parse(&context, request, request_url).expect_processed().unwrap_err() {
                 ReadError::Param(err) => {
                     assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
                 },
@@ -487,7 +534,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
@@ -527,7 +574,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
@@ -566,7 +613,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
@@ -604,7 +651,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            match SlippyRequestParser::parse(&context, request, request_url).unwrap_err() {
+            match SlippyRequestParser::parse(&context, request, request_url).expect_processed().unwrap_err() {
                 ReadError::Param(err) => {
                     assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
                 },
@@ -632,7 +679,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
@@ -670,7 +717,7 @@ mod tests {
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url)?.expect_matched();
+            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = String::from(layer_name);
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(

@@ -2,7 +2,7 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response::{ self, TileResponse };
 use crate::schema::slippy::result::{
-    ReadRequestResult, ReadOutcome, WriteResponseResult,
+    ReadOutcome, WriteResponseResult,
 };
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
@@ -81,14 +81,14 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         &mut self,
         _func: WriteResponseFunc,
         context: &WriteContext,
-        read_result: &ReadRequestResult,
+        read_outcome: &ReadOutcome,
         handle_result: &HandleRequestResult,
         _write_result: &WriteResponseResult,
     ) -> () {
         let handle_duration = handle_result.after_timestamp - handle_result.before_timestamp;
-        match (read_result, &handle_result.result) {
-            (Ok(read_outcome), Ok(handle_outcome)) => match (read_outcome, handle_outcome) {
-                (ReadOutcome::Matched(request), HandleOutcome::Handled(response)) => match &response.body {
+        match (read_outcome, &handle_result.result) {
+            (ReadOutcome::Processed(read_result), Ok(handle_outcome)) => match (read_result, handle_outcome) {
+                (Ok(request), HandleOutcome::Handled(response)) => match &response.body {
                     response::BodyVariant::Tile(response) => self.on_handled_tile(
                         context,
                         request,
@@ -206,7 +206,7 @@ mod tests {
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
-    use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome };
+    use crate::schema::slippy::result::WriteOutcome;
     use crate::interface::apache2::{ PoolStored, Writer, };
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use chrono::Utc;
@@ -235,8 +235,8 @@ mod tests {
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
+            let read_outcome = ReadOutcome::Processed(
+                Ok(
                     request::SlippyRequest {
                         header: request::Header::new(
                             write_context.request.record,
@@ -286,7 +286,7 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_result, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -313,8 +313,8 @@ mod tests {
                 connection: Connection::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
+            let read_outcome = ReadOutcome::Processed(
+                Ok(
                     request::SlippyRequest {
                         header: request::Header::new(
                             write_context.request.record,
@@ -364,7 +364,7 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_result, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -391,8 +391,8 @@ mod tests {
                 connection: Connection::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
-            let read_result: ReadRequestResult = Ok(
-                ReadOutcome::Matched(
+            let read_outcome = ReadOutcome::Processed(
+                Ok(
                     request::SlippyRequest {
                         header: request::Header::new(
                             write_context.request.record,
@@ -446,8 +446,8 @@ mod tests {
                             )
                         ),
                     };
-                    analysis.on_write(mock_write, &write_context, &read_result, &handle_result, &write_result);
-                    analysis.on_write(mock_write, &write_context, &read_result, &handle_result, &write_result);
+                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
                 }
             }
             for age in &all_ages {

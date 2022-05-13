@@ -4,6 +4,9 @@ mod binding {
     pub mod apache2;
 }
 mod schema {
+    pub mod core {
+        pub mod processed;
+    }
     pub mod http {
         pub mod response;
     }
