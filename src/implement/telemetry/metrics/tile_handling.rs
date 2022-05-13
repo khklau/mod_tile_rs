@@ -1,9 +1,7 @@
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response::{ self, TileResponse };
-use crate::schema::slippy::result::{
-    ReadOutcome, WriteResponseResult,
-};
+use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::interface::slippy::{
@@ -83,7 +81,7 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         context: &WriteContext,
         read_outcome: &ReadOutcome,
         handle_result: &HandleRequestResult,
-        _write_result: &WriteResponseResult,
+        _write_outcome: &WriteOutcome,
     ) -> () {
         let handle_duration = handle_result.after_timestamp - handle_result.before_timestamp;
         match (read_outcome, &handle_result.result) {
@@ -219,8 +217,8 @@ mod tests {
         _context: &WriteContext,
         _response: &response::SlippyResponse,
         _writer: &mut dyn Writer,
-    ) -> WriteResponseResult {
-        return Ok(WriteOutcome::NotWritten)
+    ) -> WriteOutcome {
+        WriteOutcome::Ignored
     }
 
     #[test]
@@ -276,8 +274,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 508,
@@ -286,7 +284,7 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -354,8 +352,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 508,
@@ -364,7 +362,7 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -410,8 +408,8 @@ mod tests {
                     }
                 )
             );
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 508,
@@ -446,8 +444,8 @@ mod tests {
                             )
                         ),
                     };
-                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
-                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
                 }
             }
             for age in &all_ages {

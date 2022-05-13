@@ -1,6 +1,6 @@
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::response::{ BodyVariant, Header, Description, SlippyResponse };
-use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult };
+use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::interface::apache2::Writer;
 use crate::interface::slippy::WriteContext;
 
@@ -16,20 +16,18 @@ impl SlippyResponseWriter {
         context: &WriteContext,
         response: &SlippyResponse,
         writer: &mut dyn Writer,
-    ) -> WriteResponseResult {
+    ) -> WriteOutcome {
         match &response.body {
             BodyVariant::Description(descr) => {
-                return DescriptionWriter::write(context, &response.header, descr, writer);
+                WriteOutcome::Processed(
+                    DescriptionWriter::write(context, &response.header, descr, writer)
+                )
             },
             BodyVariant::Statistics(_) => {
-                return Ok(
-                    WriteOutcome::NotWritten
-                )
+                WriteOutcome::Ignored
             },
             BodyVariant::Tile(_) => {
-                return Ok(
-                    WriteOutcome::NotWritten
-                )
+                WriteOutcome::Ignored
             },
         }
     }
@@ -83,13 +81,11 @@ impl DescriptionWriter {
         debug!(context.host.record, "DescriptionWriter::write - finish");
 
         Ok(
-            WriteOutcome::Written(
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    bytes_written: written_length,
-                    http_headers,
-                }
-            )
+            HttpResponse {
+                status_code: StatusCode::OK,
+                bytes_written: written_length,
+                http_headers,
+            }
         )
     }
 }

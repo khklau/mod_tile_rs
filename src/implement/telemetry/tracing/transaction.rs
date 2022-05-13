@@ -5,7 +5,7 @@ use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
 use crate::schema::handler::result::HandleRequestResult;
-use crate::schema::slippy::result::{ ReadOutcome, WriteResponseResult, };
+use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::slippy::{ ReadContext, WriteContext, };
 
 
@@ -40,7 +40,7 @@ impl WriteResponseObserver for TransactionTrace {
         _context: &WriteContext,
         _read_outcome: &ReadOutcome,
         _handle_result: &HandleRequestResult,
-        _write_result: &WriteResponseResult,
+        _write_outcome: &WriteOutcome,
     ) -> () {
     }
 }

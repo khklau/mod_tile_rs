@@ -3,9 +3,7 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::slippy::result::{
-    ReadOutcome, WriteResponseResult, WriteOutcome,
-};
+use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
@@ -158,7 +156,7 @@ impl WriteResponseObserver for ResponseAnalysis {
         context: &WriteContext,
         read_outcome: &ReadOutcome,
         handle_result: &HandleRequestResult,
-        write_result: &WriteResponseResult,
+        write_outcome: &WriteOutcome,
     ) -> () {
         let response_duration = handle_result.after_timestamp - handle_result.before_timestamp; // FIXME
         match (read_outcome, &handle_result.result) {
@@ -171,9 +169,9 @@ impl WriteResponseObserver for ResponseAnalysis {
             },
             _ => ()
         }
-        match (read_outcome, write_result) {
-            (ReadOutcome::Processed(read_result), Ok(write_outcome)) => match (read_result, write_outcome) {
-                (Ok(request), WriteOutcome::Written(http_response)) => self.on_http_response_write(context, request, http_response),
+        match (read_outcome, write_outcome) {
+            (ReadOutcome::Processed(read_result), WriteOutcome::Processed(write_outcome)) => match (read_result, write_outcome) {
+                (Ok(request), Ok(http_response)) => self.on_http_response_write(context, request, http_response),
                 _ => (),
             },
             _ => ()
@@ -308,8 +306,8 @@ mod tests {
         _context: &WriteContext,
         _response: &response::SlippyResponse,
         _writer: &mut dyn Writer,
-    ) -> WriteResponseResult {
-        return Ok(WriteOutcome::NotWritten)
+    ) -> WriteOutcome {
+        WriteOutcome::Ignored
     }
 
     #[test]
@@ -365,8 +363,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 508,
@@ -375,7 +373,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 Duration::seconds(2).num_seconds() as u64,
                 analysis.tally_tile_response_duration_by_zoom_level(3),
@@ -440,8 +438,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 508,
@@ -450,7 +448,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -510,8 +508,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 508,
@@ -520,7 +518,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -581,8 +579,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 8,
@@ -591,7 +589,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -668,8 +666,8 @@ mod tests {
                     )
                 )
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 8,
@@ -678,7 +676,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -766,8 +764,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 8,
@@ -776,7 +774,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code(&StatusCode::OK),
@@ -841,8 +839,8 @@ mod tests {
                     )
                 ),
             };
-            let write_result: WriteResponseResult = Ok(
-                WriteOutcome::Written(
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
                     HttpResponse {
                         status_code: StatusCode::OK,
                         bytes_written: 8,
@@ -851,7 +849,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_result);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_total_tile_response(),

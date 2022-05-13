@@ -9,9 +9,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::error::{ ReadError, WriteError };
-use crate::schema::slippy::result::{
-    ReadOutcome, WriteOutcome, WriteResponseResult,
-};
+use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::apache2::{ PoolStored, Writer, };
 use crate::interface::handler::{
     HandleContext, HandleRequestObserver, RequestHandler,
@@ -271,7 +269,7 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
         read_outcome: &ReadOutcome,
         handle_result: &HandleRequestResult,
-    ) -> (WriteResponseResult, &mut Self) {
+    ) -> (WriteOutcome, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
         let write = self.write_response;
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
@@ -283,13 +281,17 @@ impl<'p> TileProxy<'p> {
             connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
         };
-        let write_result = match &handle_result.result {
+        let write_outcome = match &handle_result.result {
             Ok(outcome) => match outcome {
-                HandleOutcome::NotHandled => Ok(WriteOutcome::NotWritten),
+                HandleOutcome::NotHandled => WriteOutcome::Ignored,
                 HandleOutcome::Handled(response) => write(&context, &response, writer),
             },
             Err(_) => {
-                Err(WriteError::RequestNotHandled) // FIXME: propagate the HandleError properly
+                WriteOutcome::Processed(
+                    Err(
+                        WriteError::RequestNotHandled
+                    ) // FIXME: propagate the HandleError properly
+                )
             },
         };
         let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
@@ -302,10 +304,10 @@ impl<'p> TileProxy<'p> {
                 context.host.record,
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
-            (*observer_iter).on_write(write, &context, &read_outcome, &handle_result, &write_result);
+            (*observer_iter).on_write(write, &context, &read_outcome, &handle_result, &write_outcome);
         }
         debug!(record.server, "TileServer::write_response - finish");
-        return (write_result, self);
+        return (write_outcome, self);
     }
 }
 
@@ -446,7 +448,7 @@ mod tests {
             _context: &WriteContext,
             _read_outcome: &ReadOutcome,
             _handle_result: &HandleRequestResult,
-            _write_result: &WriteResponseResult,
+            _write_result: &WriteOutcome,
         ) -> () {
             self.count += 1;
         }
@@ -508,7 +510,7 @@ mod tests {
                     ),
                 };
                 let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
-                result.unwrap();
+                result.expect_processed().unwrap();
                 assert_eq!(1, mock1.count, "Write observer not called");
                 Ok(())
             })

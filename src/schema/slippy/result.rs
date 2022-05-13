@@ -11,10 +11,6 @@ pub type ReadRequestResult = Result<SlippyRequest, ReadError>;
 pub type ReadOutcome = ProcessOutcome<ReadRequestResult>;
 
 
-#[derive(Debug)]
-pub enum WriteOutcome {
-    Written(HttpResponse),
-    NotWritten,
-}
+pub type WriteResponseResult = Result<HttpResponse, WriteError>;
 
-pub type WriteResponseResult = Result<WriteOutcome, WriteError>;
+pub type WriteOutcome = ProcessOutcome<WriteResponseResult>;
