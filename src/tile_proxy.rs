@@ -232,7 +232,7 @@ impl<'p> TileProxy<'p> {
                             };
                             for observer_iter in handle_observers.iter_mut() {
                                 debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                (*observer_iter).on_handle(*handler, &context, &read_outcome, &handle_outcome);
+                                (*observer_iter).on_handle(*handler, &context, request, &handle_outcome);
                             }
                             handle_outcome = processed_outcome;
                         };
@@ -389,7 +389,7 @@ mod tests {
             &mut self,
             _obj: &dyn RequestHandler,
             _context: &HandleContext,
-            _read_outcome: &ReadOutcome,
+            _request: &request::SlippyRequest,
             _handle_outcome: &HandleOutcome,
         ) -> () {
             self.count += 1;
