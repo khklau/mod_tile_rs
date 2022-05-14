@@ -87,16 +87,12 @@ impl<'h> RequestHandler for StatisticsHandler<'h> {
         &mut self,
         context: &HandleContext,
         request: &request::SlippyRequest,
-    ) -> HandleRequestResult {
+    ) -> HandleOutcome {
         let before_timestamp = Utc::now();
         match request.body {
             request::BodyVariant::ReportStatistics => (),
             _ => {
-                return HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp: Utc::now(),
-                    result: Ok(HandleOutcome::NotHandled),
-                }
+                return HandleOutcome::Ignored;
             },
         };
         let statistics = self.report(context);
@@ -108,10 +104,12 @@ impl<'h> RequestHandler for StatisticsHandler<'h> {
             body: response::BodyVariant::Statistics(statistics),
         };
         let after_timestamp = Utc::now();
-        return HandleRequestResult {
-            before_timestamp,
-            after_timestamp,
-            result: Ok(HandleOutcome::Handled(response)),
-        };
+        return HandleOutcome::Processed(
+            HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response),
+            }
+        );
     }
 }

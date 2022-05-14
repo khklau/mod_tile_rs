@@ -1,4 +1,4 @@
-use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
+use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response::{ self, TileResponse };
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
@@ -80,22 +80,24 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         _func: WriteResponseFunc,
         context: &WriteContext,
         read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        handle_outcome: &HandleOutcome,
         _write_outcome: &WriteOutcome,
     ) -> () {
-        let handle_duration = handle_result.after_timestamp - handle_result.before_timestamp;
-        match (read_outcome, &handle_result.result) {
-            (ReadOutcome::Processed(read_result), Ok(handle_outcome)) => match (read_result, handle_outcome) {
-                (Ok(request), HandleOutcome::Handled(response)) => match &response.body {
-                    response::BodyVariant::Tile(response) => self.on_handled_tile(
-                        context,
-                        request,
-                        response,
-                        &handle_duration,
-                    ),
+        match (&read_outcome, &handle_outcome) {
+            (ReadOutcome::Processed(read_result), HandleOutcome::Processed(handle_result)) => {
+                let handle_duration = handle_result.after_timestamp - handle_result.before_timestamp;
+                match (read_result, &handle_result.result) {
+                    (Ok(request), Ok(response)) => match &response.body {
+                        response::BodyVariant::Tile(response) => self.on_handled_tile(
+                            context,
+                            request,
+                            response,
+                            &handle_duration,
+                        ),
+                        _ => (),
+                    },
                     _ => (),
-                },
-                _ => (),
+                }
             },
             _ => ()
         }
@@ -200,7 +202,7 @@ mod tests {
     use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
-    use crate::schema::handler::result::HandleOutcome;
+    use crate::schema::handler::result::HandleRequestResult;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
@@ -254,11 +256,11 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -271,9 +273,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -284,7 +286,7 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -332,11 +334,11 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -349,9 +351,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -362,7 +364,7 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -424,11 +426,11 @@ mod tests {
                 for age in &all_ages {
                     let before_timestamp = Utc::now();
                     let after_timestamp = before_timestamp + Duration::seconds(2);
-                    let handle_result = HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp,
-                        result: Ok(
-                            HandleOutcome::Handled(
+                    let handle_outcome = HandleOutcome::Processed(
+                        HandleRequestResult {
+                            before_timestamp,
+                            after_timestamp,
+                            result: Ok(
                                 response::SlippyResponse {
                                     header: response::Header::new(
                                         write_context.request.record,
@@ -441,11 +443,11 @@ mod tests {
                                         }
                                     ),
                                 }
-                            )
-                        ),
-                    };
-                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
-                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+                            ),
+                        }
+                    );
+                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
                 }
             }
             for age in &all_ages {

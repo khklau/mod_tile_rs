@@ -15,6 +15,14 @@ impl<R> ProcessOutcome<R> {
     }
 
     #[cfg(test)]
+    pub fn is_ignored(&self) -> bool {
+        match self {
+            ProcessOutcome::Processed(_) => false,
+            ProcessOutcome::Ignored => true,
+        }
+    }
+
+    #[cfg(test)]
     pub fn expect_processed(self) -> R {
         if let ProcessOutcome::Processed(result) = self {
             return result;

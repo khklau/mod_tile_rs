@@ -1,5 +1,5 @@
 use crate::schema::apache2::config::MAX_ZOOM_SERVER;
-use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
+use crate::schema::handler::result::HandleOutcome;
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
@@ -155,17 +155,19 @@ impl WriteResponseObserver for ResponseAnalysis {
         _func: WriteResponseFunc,
         context: &WriteContext,
         read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        handle_outcome: &HandleOutcome,
         write_outcome: &WriteOutcome,
     ) -> () {
-        let response_duration = handle_result.after_timestamp - handle_result.before_timestamp; // FIXME
-        match (read_outcome, &handle_result.result) {
-            (ReadOutcome::Processed(read_result), Ok(handle_outcome)) => match (read_result, handle_outcome) {
-                (Ok(request), HandleOutcome::Handled(response)) => match response.body {
-                    response::BodyVariant::Tile(_) => self.on_tile_write(context, request, response, &response_duration),
+        match (&read_outcome, &handle_outcome) {
+            (ReadOutcome::Processed(read_result), HandleOutcome::Processed(handle_result)) => {
+                let response_duration = handle_result.after_timestamp - handle_result.before_timestamp; // FIXME does not include read duration
+                match (read_result, &handle_result.result) {
+                    (Ok(request), Ok(response)) => match response.body {
+                        response::BodyVariant::Tile(_) => self.on_tile_write(context, request, response, &response_duration),
+                        _ => (),
+                    },
                     _ => (),
-                },
-                _ => (),
+                }
             },
             _ => ()
         }
@@ -287,7 +289,7 @@ mod tests {
     use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
-    use crate::schema::handler::result::HandleOutcome;
+    use crate::schema::handler::result::HandleRequestResult;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
@@ -343,11 +345,11 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -360,9 +362,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -373,7 +375,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 Duration::seconds(2).num_seconds() as u64,
                 analysis.tally_tile_response_duration_by_zoom_level(3),
@@ -412,11 +414,11 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(3);
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -435,9 +437,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -448,7 +450,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -488,11 +490,11 @@ mod tests {
                     }
                 )
             );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -505,9 +507,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -518,7 +520,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -559,11 +561,11 @@ mod tests {
                     }
                 )
             );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -576,9 +578,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -589,7 +591,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -646,11 +648,11 @@ mod tests {
                     }
                 )
             );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -664,8 +666,8 @@ mod tests {
                             ),
                         }
                     )
-                )
-            };
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -676,7 +678,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -738,11 +740,11 @@ mod tests {
                     }
                 )
             );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -761,9 +763,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -774,7 +776,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code(&StatusCode::OK),
@@ -819,11 +821,11 @@ mod tests {
                     }
                 )
             );
-            let handle_result = HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(
-                    HandleOutcome::Handled(
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp: Utc::now(),
+                    after_timestamp: Utc::now(),
+                    result: Ok(
                         response::SlippyResponse {
                             header: response::Header::new(
                                 write_context.request.record,
@@ -836,9 +838,9 @@ mod tests {
                                 }
                             ),
                         }
-                    )
-                ),
-            };
+                    ),
+                }
+            );
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {
@@ -849,7 +851,7 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_result, &write_outcome);
+            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
             assert_eq!(
                 0,
                 analysis.count_total_tile_response(),

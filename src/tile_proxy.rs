@@ -161,8 +161,8 @@ impl<'p> TileProxy<'p> {
     ) -> Result<c_int, ReadError> {
         debug!(record.server, "TileServer::handle_request - start");
         let (read_outcome, self2) = self.read_request(record);
-        let (handle_result, self3) = self2.call_handlers(record, &read_outcome);
-        let (write_result, _) = self3.write_response(record, &read_outcome, &handle_result);
+        let (handle_outcome, self3) = self2.call_handlers(record, &read_outcome);
+        let (write_outcome, _) = self3.write_response(record, &read_outcome, &handle_outcome);
         debug!(record.server, "TileServer::handle_request - finish");
         return Ok(OK as c_int);
     }
@@ -197,7 +197,7 @@ impl<'p> TileProxy<'p> {
         &mut self,
         record: &mut request_rec,
         read_outcome: &ReadOutcome,
-    ) -> (HandleRequestResult, &mut Self) {
+    ) -> (HandleOutcome, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
         let before_timestamp = Utc::now();
         // TODO: combine the handlers using combinators
@@ -217,58 +217,50 @@ impl<'p> TileProxy<'p> {
             response_metrics: &self.response_analysis,
             tile_handling_metrics: &self.tile_handling_analysis,
         };
-        let handle_result = match read_outcome {
-            ReadOutcome::Ignored => HandleRequestResult {
-                before_timestamp,
-                after_timestamp: Utc::now(),
-                result: Ok(HandleOutcome::NotHandled),
-            },
+        let outcome = match read_outcome {
+            ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
+                    let mut handle_outcome = HandleOutcome::Ignored;
                     for handler in handlers.iter_mut() {
-                        let result = (*handler).handle(&context, request);
-                        match &result.result {
-                            Ok(outcome) => match outcome {
-                                HandleOutcome::Handled(_) => {
-                                    let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
-                                        // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
-                                        Some([observer_0]) => [*observer_0],
-                                        None => [&mut self.trans_trace],
-                                    };
-                                    for observer_iter in handle_observers.iter_mut() {
-                                        debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                        (*observer_iter).on_handle(*handler, &context, &read_outcome, &result);
-                                    }
-                                    return (result, self)
-                                },
-                                HandleOutcome::NotHandled => (),
-                            },
-                            Err(_) => return (result, self),
-                        }
+                        let processed_outcome = (*handler).handle(&context, request);
+                        if let HandleOutcome::Processed(_) = &processed_outcome {
+                            let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
+                                // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
+                                Some([observer_0]) => [*observer_0],
+                                None => [&mut self.trans_trace],
+                            };
+                            for observer_iter in handle_observers.iter_mut() {
+                                debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                                (*observer_iter).on_handle(*handler, &context, &read_outcome, &handle_outcome);
+                            }
+                            handle_outcome = processed_outcome;
+                        };
                     };
-                    HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp: Utc::now(),
-                        result: Ok(HandleOutcome::NotHandled),
-                    }
+                    handle_outcome
                 },
-                Err(err) => HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp: Utc::now(),
-                    result: Err(HandleError::RequestNotRead((*err).clone())),
+                Err(err) => {
+                    HandleOutcome::Processed(
+                        HandleRequestResult {
+                            before_timestamp,
+                            after_timestamp: Utc::now(),
+                            result: Err(
+                                HandleError::RequestNotRead((*err).clone())
+                            ),
+                        }
+                    )
                 },
-
             }
         };
         debug!(record.server, "TileServer::call_handlers - finish");
-        return (handle_result, self);
+        return (outcome, self);
     }
 
     fn write_response(
         &mut self,
         record: &mut request_rec,
         read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        handle_outcome: &HandleOutcome,
     ) -> (WriteOutcome, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
         let write = self.write_response;
@@ -281,18 +273,16 @@ impl<'p> TileProxy<'p> {
             connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
         };
-        let write_outcome = match &handle_result.result {
-            Ok(outcome) => match outcome {
-                HandleOutcome::NotHandled => WriteOutcome::Ignored,
-                HandleOutcome::Handled(response) => write(&context, &response, writer),
-            },
-            Err(_) => {
-                WriteOutcome::Processed(
+        let write_outcome = match handle_outcome {
+            HandleOutcome::Processed(result) => match &result.result {
+                Ok(response) => write(&context, &response, writer),
+                Err(_) => WriteOutcome::Processed(
                     Err(
                         WriteError::RequestNotHandled
                     ) // FIXME: propagate the HandleError properly
                 )
             },
+            HandleOutcome::Ignored => WriteOutcome::Ignored,
         };
         let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
             // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
@@ -304,7 +294,7 @@ impl<'p> TileProxy<'p> {
                 context.host.record,
                 "TileServer::write_response - calling observer {:p}", *observer_iter
             );
-            (*observer_iter).on_write(write, &context, &read_outcome, &handle_result, &write_outcome);
+            (*observer_iter).on_write(write, &context, &read_outcome, &handle_outcome, &write_outcome);
         }
         debug!(record.server, "TileServer::write_response - finish");
         return (write_outcome, self);
@@ -400,7 +390,7 @@ mod tests {
             _obj: &dyn RequestHandler,
             _context: &HandleContext,
             _read_outcome: &ReadOutcome,
-            _handle_result: &HandleRequestResult
+            _handle_outcome: &HandleOutcome,
         ) -> () {
             self.count += 1;
         }
@@ -429,8 +419,8 @@ mod tests {
                         }
                     )
                 );
-                let (handle_result, _) = proxy.call_handlers(request, &read_outcome);
-                handle_result.result.unwrap();
+                let (handle_outcome, _) = proxy.call_handlers(request, &read_outcome);
+                handle_outcome.expect_processed().result?;
                 assert_eq!(1, mock1.count, "Handle observer not called");
                 Ok(())
             })
@@ -447,7 +437,7 @@ mod tests {
             _func: WriteResponseFunc,
             _context: &WriteContext,
             _read_outcome: &ReadOutcome,
-            _handle_result: &HandleRequestResult,
+            _handle_outcome: &HandleOutcome,
             _write_result: &WriteOutcome,
         ) -> () {
             self.count += 1;
@@ -483,11 +473,11 @@ mod tests {
                         }
                     )
                 );
-                let handle_result = HandleRequestResult {
-                    before_timestamp: Utc::now(),
-                    after_timestamp: Utc::now(),
-                    result: Ok(
-                        HandleOutcome::Handled(
+                let handle_result = HandleOutcome::Processed(
+                    HandleRequestResult {
+                        before_timestamp: Utc::now(),
+                        after_timestamp: Utc::now(),
+                        result: Ok(
                             response::SlippyResponse {
                                 header: response::Header::new(
                                     context.record,
@@ -506,9 +496,9 @@ mod tests {
                                     }
                                 ),
                             }
-                        )
-                    ),
-                };
+                        ),
+                    }
+                );
                 let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
                 result.expect_processed().unwrap();
                 assert_eq!(1, mock1.count, "Write observer not called");

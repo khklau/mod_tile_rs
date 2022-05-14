@@ -2,7 +2,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::telemetry::{
@@ -24,7 +24,7 @@ pub trait RequestHandler {
         &mut self,
         context: &HandleContext,
         request: &SlippyRequest,
-    ) -> HandleRequestResult;
+    ) -> HandleOutcome;
 }
 
 pub trait HandleRequestObserver {
@@ -33,7 +33,7 @@ pub trait HandleRequestObserver {
         obj: &dyn RequestHandler,
         context: &HandleContext,
         read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        handle_outcome: &HandleOutcome,
     ) -> ();
 }
 
@@ -41,9 +41,7 @@ pub trait HandleRequestObserver {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
-    use crate::schema::handler::result::HandleOutcome;
     use crate::schema::slippy::request;
-    use chrono::Utc;
 
 
     pub struct MockRequestHandler { }
@@ -53,12 +51,8 @@ pub mod test_utils {
             &mut self,
             _context: &HandleContext,
             _request: &request::SlippyRequest,
-        ) -> HandleRequestResult {
-            return HandleRequestResult {
-                before_timestamp: Utc::now(),
-                after_timestamp: Utc::now(),
-                result: Ok(HandleOutcome::NotHandled),
-            };
+        ) -> HandleOutcome {
+            HandleOutcome::Ignored
         }
     }
 }

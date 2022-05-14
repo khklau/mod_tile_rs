@@ -17,16 +17,12 @@ impl RequestHandler for DescriptionHandler {
         &mut self,
         context: &HandleContext,
         request: &request::SlippyRequest,
-    ) -> HandleRequestResult {
+    ) -> HandleOutcome {
         let before_timestamp = Utc::now();
         let layer = match request.body {
             request::BodyVariant::DescribeLayer => &request.header.layer,
             _ => {
-                return HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp: Utc::now(),
-                    result: Ok(HandleOutcome::NotHandled),
-                }
+                return HandleOutcome::Ignored;
             },
         };
         let description = describe(context.module_config, layer);
@@ -38,11 +34,13 @@ impl RequestHandler for DescriptionHandler {
             body: response::BodyVariant::Description(description),
         };
         let after_timestamp = Utc::now();
-        return HandleRequestResult {
-            before_timestamp,
-            after_timestamp,
-            result: Ok(HandleOutcome::Handled(response)),
-        };
+        return HandleOutcome::Processed(
+            HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response),
+            }
+        );
     }
 }
 
@@ -110,7 +108,7 @@ mod tests {
                     body: request::BodyVariant::ReportStatistics,
                 };
 
-                assert!(layer_handler.handle(&handle_context, &request).result?.is_not_handled(), "Expected to not handle");
+                assert!(layer_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
                 Ok(())
             })
         })
@@ -142,7 +140,7 @@ mod tests {
                     body: request::BodyVariant::DescribeLayer,
                 };
 
-                let actual_response = layer_handler.handle(&handle_context, &request).result?.expect_handled();
+                let actual_response = layer_handler.handle(&handle_context, &request).expect_processed().result?;
                 let expected_data = response::Description {
                     tilejson: "2.0.0",
                     schema: "xyz",
