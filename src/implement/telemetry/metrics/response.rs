@@ -4,6 +4,7 @@ use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
+use crate::interface::apache2::Writer;
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
@@ -152,11 +153,13 @@ impl LayerResponseAnalysis {
 impl WriteResponseObserver for ResponseAnalysis {
     fn on_write(
         &mut self,
-        _func: WriteResponseFunc,
         context: &WriteContext,
+        _response: &response::SlippyResponse,
+        _writer: &dyn Writer,
+        write_outcome: &WriteOutcome,
+        _func: WriteResponseFunc,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
-        write_outcome: &WriteOutcome,
     ) -> () {
         match (&read_outcome, &handle_outcome) {
             (ReadOutcome::Processed(read_result), HandleOutcome::Processed(handle_result)) => {
@@ -298,6 +301,7 @@ mod tests {
     use crate::schema::tile::source::TileSource;
     use crate::interface::apache2::{ PoolStored, Writer, };
     use crate::framework::apache2::record::test_utils::with_request_rec;
+    use crate::framework::apache2::writer::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -345,24 +349,23 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp,
                     after_timestamp,
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -375,7 +378,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 Duration::seconds(2).num_seconds() as u64,
                 analysis.tally_tile_response_duration_by_zoom_level(3),
@@ -414,30 +418,29 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(3);
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Description(
+                    response::Description {
+                        tilejson: "2.0.0",
+                        schema: "xyz",
+                        name: String::new(),
+                        description: String::new(),
+                        attribution: String::new(),
+                        minzoom: 0,
+                        maxzoom: 1,
+                        tiles: Vec::new(),
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp,
                     after_timestamp,
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Description(
-                                response::Description {
-                                    tilejson: "2.0.0",
-                                    schema: "xyz",
-                                    name: String::new(),
-                                    description: String::new(),
-                                    attribution: String::new(),
-                                    minzoom: 0,
-                                    maxzoom: 1,
-                                    tiles: Vec::new(),
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -450,7 +453,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -490,24 +494,23 @@ mod tests {
                     }
                 )
             );
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp: Utc::now(),
                     after_timestamp: Utc::now(),
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -520,7 +523,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -561,24 +565,23 @@ mod tests {
                     }
                 )
             );
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp: Utc::now(),
                     after_timestamp: Utc::now(),
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -591,7 +594,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -648,24 +652,23 @@ mod tests {
                     }
                 )
             );
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp: Utc::now(),
                     after_timestamp: Utc::now(),
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
-                                }
-                            ),
-                        }
-                    )
+                    result: Ok(response.clone())
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -678,7 +681,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -740,30 +744,29 @@ mod tests {
                     }
                 )
             );
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Description(
+                    response::Description {
+                        tilejson: "2.0.0",
+                        schema: "xyz",
+                        name: String::new(),
+                        description: String::new(),
+                        attribution: String::new(),
+                        minzoom: 0,
+                        maxzoom: 1,
+                        tiles: Vec::new(),
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp: Utc::now(),
                     after_timestamp: Utc::now(),
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Description(
-                                response::Description {
-                                    tilejson: "2.0.0",
-                                    schema: "xyz",
-                                    name: String::new(),
-                                    description: String::new(),
-                                    attribution: String::new(),
-                                    minzoom: 0,
-                                    maxzoom: 1,
-                                    tiles: Vec::new(),
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -776,7 +779,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code(&StatusCode::OK),
@@ -821,24 +825,23 @@ mod tests {
                     }
                 )
             );
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp: Utc::now(),
                     after_timestamp: Utc::now(),
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -851,7 +854,8 @@ mod tests {
                 )
             );
             let mut analysis = ResponseAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_total_tile_response(),

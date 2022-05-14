@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::option::Option;
 
 #[derive(Debug)]
 pub enum ProcessOutcome<R> {
@@ -11,6 +12,13 @@ impl<R> ProcessOutcome<R> {
         match self {
             ProcessOutcome::Processed(_) => true,
             ProcessOutcome::Ignored => false,
+        }
+    }
+
+    pub fn processed<T>(self, other: T) -> Option<(R, T)> {
+        match self {
+            ProcessOutcome::Processed(result) => Some((result, other)),
+            ProcessOutcome::Ignored => None,
         }
     }
 

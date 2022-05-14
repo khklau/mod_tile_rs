@@ -38,10 +38,12 @@ pub trait ReadRequestObserver {
 pub trait WriteResponseObserver {
     fn on_write(
         &mut self,
-        func: WriteResponseFunc,
         context: &WriteContext,
+        response: &SlippyResponse,
+        writer: &dyn Writer,
+        write_outcome: &WriteOutcome,
+        func: WriteResponseFunc,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
-        write_outcome: &WriteOutcome,
     ) -> ();
 }

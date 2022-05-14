@@ -11,19 +11,20 @@ use mime::Mime;
 use serde::Serialize;
 
 use std::collections::HashMap;
+use std::clone::Clone;
 use std::default::Default;
 use std::ffi::CString;
 use std::string::String;
 use std::vec::Vec;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SlippyResponse {
     pub header: Header,
     pub body: BodyVariant,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Header {
     pub host_key: CString,
     pub connection_key: CString,
@@ -45,14 +46,14 @@ impl Header {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum BodyVariant {
     Description(Description),
     Statistics(Statistics),
     Tile(TileResponse),
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Description {
     pub tilejson: &'static str,
     pub schema: &'static str,
@@ -64,7 +65,7 @@ pub struct Description {
     pub tiles: Vec<String>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Statistics {
     pub number_response_200: u64,
     pub number_response_304: u64,
@@ -113,7 +114,7 @@ impl Statistics {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct TileResponse {
     pub source: TileSource,
     pub age: TileAge,

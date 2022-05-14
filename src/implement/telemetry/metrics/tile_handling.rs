@@ -4,6 +4,7 @@ use crate::schema::slippy::response::{ self, TileResponse };
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
+use crate::interface::apache2::Writer;
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
@@ -77,11 +78,13 @@ impl TileHandlingAnalysis {
 impl WriteResponseObserver for TileHandlingAnalysis {
     fn on_write(
         &mut self,
-        _func: WriteResponseFunc,
         context: &WriteContext,
+        _response: &response::SlippyResponse,
+        _writer: &dyn Writer,
+        _write_outcome: &WriteOutcome,
+        _func: WriteResponseFunc,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
-        _write_outcome: &WriteOutcome,
     ) -> () {
         match (&read_outcome, &handle_outcome) {
             (ReadOutcome::Processed(read_result), HandleOutcome::Processed(handle_result)) => {
@@ -209,6 +212,7 @@ mod tests {
     use crate::schema::slippy::result::WriteOutcome;
     use crate::interface::apache2::{ PoolStored, Writer, };
     use crate::framework::apache2::record::test_utils::with_request_rec;
+    use crate::framework::apache2::writer::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
@@ -256,24 +260,23 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp,
                     after_timestamp,
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Render,
-                                    age: TileAge::Fresh,
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -286,7 +289,8 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -334,24 +338,23 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Cache,
+                        age: TileAge::VeryOld,
+                    }
+                ),
+            };
             let handle_outcome = HandleOutcome::Processed(
                 HandleRequestResult {
                     before_timestamp,
                     after_timestamp,
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header::new(
-                                write_context.request.record,
-                                &mime::APPLICATION_JSON,
-                            ),
-                            body: response::BodyVariant::Tile(
-                                response::TileResponse {
-                                    source: TileSource::Cache,
-                                    age: TileAge::VeryOld,
-                                }
-                            ),
-                        }
-                    ),
+                    result: Ok(response.clone()),
                 }
             );
             let write_outcome = WriteOutcome::Processed(
@@ -364,7 +367,8 @@ mod tests {
                 )
             );
             let mut analysis = TileHandlingAnalysis::new();
-            analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -426,28 +430,28 @@ mod tests {
                 for age in &all_ages {
                     let before_timestamp = Utc::now();
                     let after_timestamp = before_timestamp + Duration::seconds(2);
+                    let response = response::SlippyResponse {
+                        header: response::Header::new(
+                            write_context.request.record,
+                            &mime::APPLICATION_JSON,
+                        ),
+                        body: response::BodyVariant::Tile(
+                            response::TileResponse {
+                                source: source.clone(),
+                                age: age.clone(),
+                            }
+                        ),
+                    };
                     let handle_outcome = HandleOutcome::Processed(
                         HandleRequestResult {
                             before_timestamp,
                             after_timestamp,
-                            result: Ok(
-                                response::SlippyResponse {
-                                    header: response::Header::new(
-                                        write_context.request.record,
-                                        &mime::APPLICATION_JSON,
-                                    ),
-                                    body: response::BodyVariant::Tile(
-                                        response::TileResponse {
-                                            source: source.clone(),
-                                            age: age.clone(),
-                                        }
-                                    ),
-                                }
-                            ),
+                            result: Ok(response.clone()),
                         }
                     );
-                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
-                    analysis.on_write(mock_write, &write_context, &read_outcome, &handle_outcome, &write_outcome);
+                    let writer = MockWriter::new();
+                    analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+                    analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
                 }
             }
             for age in &all_ages {

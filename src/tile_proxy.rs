@@ -275,7 +275,22 @@ impl<'p> TileProxy<'p> {
         };
         let write_outcome = match handle_outcome {
             HandleOutcome::Processed(result) => match &result.result {
-                Ok(response) => write(&context, &response, writer),
+                Ok(response) => {
+                    let outcome = write(&context, &response, writer);
+                    let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
+                        // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
+                        Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
+                        None => [&mut self.trans_trace, &mut self.response_analysis, &mut self.tile_handling_analysis],
+                    };
+                    for observer_iter in write_observers.iter_mut() {
+                        debug!(
+                            context.host.record,
+                            "TileServer::write_response - calling observer {:p}", *observer_iter
+                        );
+                        (*observer_iter).on_write(&context, response, writer, &outcome, write, &read_outcome, &handle_outcome);
+                    }
+                    outcome
+                }
                 Err(_) => WriteOutcome::Processed(
                     Err(
                         WriteError::RequestNotHandled
@@ -284,18 +299,6 @@ impl<'p> TileProxy<'p> {
             },
             HandleOutcome::Ignored => WriteOutcome::Ignored,
         };
-        let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
-            // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
-            Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-            None => [&mut self.trans_trace, &mut self.response_analysis, &mut self.tile_handling_analysis],
-        };
-        for observer_iter in write_observers.iter_mut() {
-            debug!(
-                context.host.record,
-                "TileServer::write_response - calling observer {:p}", *observer_iter
-            );
-            (*observer_iter).on_write(write, &context, &read_outcome, &handle_outcome, &write_outcome);
-        }
         debug!(record.server, "TileServer::write_response - finish");
         return (write_outcome, self);
     }
@@ -435,11 +438,13 @@ mod tests {
     impl WriteResponseObserver for MockWriteObserver {
         fn on_write(
             &mut self,
-            _func: WriteResponseFunc,
             _context: &WriteContext,
+            _response: &response::SlippyResponse,
+            _writer: &dyn Writer,
+            _write_result: &WriteOutcome,
+            _func: WriteResponseFunc,
             _read_outcome: &ReadOutcome,
             _handle_outcome: &HandleOutcome,
-            _write_result: &WriteOutcome,
         ) -> () {
             self.count += 1;
         }
