@@ -30,7 +30,8 @@ pub trait ReadRequestObserver {
         &mut self,
         func: ReadRequestFunc,
         context: &ReadContext,
-        result: &ReadOutcome,
+        request: &Apache2Request,
+        read_outcome: &ReadOutcome,
     ) -> ();
 }
 

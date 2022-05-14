@@ -187,7 +187,7 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(read, &context, &read_outcome);
+            (*observer_iter).on_read(read, &context, request, &read_outcome);
         }
         debug!(record.server, "TileServer::read_request - finish");
         return (read_outcome, self);
@@ -354,6 +354,7 @@ mod tests {
             &mut self,
             _func: ReadRequestFunc,
             _context: &ReadContext,
+            _request: &Apache2Request,
             _outcome: &ReadOutcome,
         ) -> () {
             self.count += 1;

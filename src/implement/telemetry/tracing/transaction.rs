@@ -4,6 +4,7 @@ use crate::interface::handler::{
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
+use crate::schema::apache2::request::Apache2Request;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
@@ -17,7 +18,8 @@ impl ReadRequestObserver for TransactionTrace {
         &mut self,
         _func: ReadRequestFunc,
         _context: &ReadContext,
-        _outcome: &ReadOutcome,
+        _request: &Apache2Request,
+        _read_outcome: &ReadOutcome,
     ) -> () {
     }
 }
