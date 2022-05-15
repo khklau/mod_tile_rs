@@ -53,7 +53,6 @@ pub enum HandleRequestError {
 }
 
 pub struct TileProxy<'p> {
-    record: &'p server_rec,
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
     read_request: ReadRequestFunc,
@@ -107,7 +106,6 @@ impl<'p> TileProxy<'p> {
             &(Self::get_id(record)),
             Some(drop_tile_server),
         )?.0;
-        new_server.record = record;
         new_server.config = module_config;
         new_server.config_file_path = None;
         new_server.read_request = SlippyRequestReader::read;
@@ -119,16 +117,16 @@ impl<'p> TileProxy<'p> {
         new_server.read_observers = None;
         new_server.handle_observers = None;
         new_server.write_observers = None;
-        info!(new_server.record, "TileServer::create - finish");
+        info!(record, "TileServer::create - finish");
         return Ok(new_server);
     }
 
     pub fn load_config(
         &mut self,
         file_path: PathBuf,
+        server_name: Option<&str>,
     ) -> Result<(), Box<dyn Error>> {
         let original_request_timeout = self.config.renderd.render_timeout.clone();
-        let server_name = self.record.get_host_name();
         let module_config = ModuleConfig::load(file_path.as_path(), server_name)?;
         self.config = module_config;
         self.config.renderd.render_timeout = original_request_timeout;
@@ -145,11 +143,11 @@ impl<'p> TileProxy<'p> {
 
     pub fn initialise(
         &mut self,
-        _record: &mut server_rec,
+        record: &mut server_rec,
     ) -> Result<(), Box<dyn Error>> {
         if let Some(original_path) = &self.config_file_path {
             let copied_path = original_path.clone();
-            self.load_config(copied_path)?;
+            self.load_config(copied_path, record.get_host_name())?;
         }
         file_system::initialise()?;
         return Ok(());
@@ -312,7 +310,6 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
         },
         Some(server) => server,
     };
-    info!(server_ref.record, "drop_tile_server - dropping");
     drop(server_ref);
     return APR_SUCCESS as apr_status_t;
 }
@@ -336,7 +333,7 @@ mod tests {
             proxy.set_render_timeout(&expected_timeout);
             let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             expected_path.push("resources/test/tile/basic_valid.conf");
-            proxy.load_config(expected_path.clone())?;
+            proxy.load_config(expected_path.clone(), record.get_host_name())?;
 
             let actual_timeout = proxy.config.renderd.render_timeout.clone();
             assert_eq!(expected_timeout, actual_timeout, "Failed to preserve request timeout during reload");

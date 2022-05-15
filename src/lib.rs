@@ -88,6 +88,7 @@ use crate::binding::apache2::{
 #[cfg(not(test))]
 use crate::binding::apache2::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
 
+use crate::framework::apache2::record::ServerRecord;
 use crate::tile_proxy::TileProxy;
 
 use scan_fmt::scan_fmt;
@@ -142,7 +143,8 @@ pub extern "C" fn load_config(
     let tile_server = TileProxy::find_or_allocate_new(record).unwrap();
     let mut file_path = PathBuf::new();
     file_path.push(path_str);
-    match tile_server.load_config(file_path) {
+    let host_name = unsafe { command.server.as_mut().unwrap().get_host_name() };
+    match tile_server.load_config(file_path, host_name) {
         Ok(_) => {
             info!(record, "tile_server::load_config - loaded config from {}", path_str);
             return ptr::null();
