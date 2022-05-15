@@ -18,10 +18,10 @@ pub struct TransactionTrace {}
 impl ReadRequestObserver for TransactionTrace {
     fn on_read(
         &mut self,
-        _func: ReadRequestFunc,
         _context: &ReadContext,
         _request: &Apache2Request,
         _read_outcome: &ReadOutcome,
+        _func: ReadRequestFunc,
     ) -> () {
     }
 }
@@ -29,10 +29,11 @@ impl ReadRequestObserver for TransactionTrace {
 impl HandleRequestObserver for TransactionTrace {
     fn on_handle(
         &mut self,
-        _obj: &dyn RequestHandler,
         _context: &HandleContext,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,
+        _obj: &dyn RequestHandler,
+        _read_outcome: &ReadOutcome,
     ) -> () {
     }
 

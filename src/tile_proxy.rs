@@ -187,7 +187,7 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(read, &context, request, &read_outcome);
+            (*observer_iter).on_read(&context, request, &read_outcome, read);
         }
         debug!(record.server, "TileServer::read_request - finish");
         return (read_outcome, self);
@@ -232,7 +232,7 @@ impl<'p> TileProxy<'p> {
                             };
                             for observer_iter in handle_observers.iter_mut() {
                                 debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                (*observer_iter).on_handle(*handler, &context, request, &handle_outcome);
+                                (*observer_iter).on_handle(&context, request, &handle_outcome, *handler, read_outcome);
                             }
                             handle_outcome = processed_outcome;
                         };
@@ -355,10 +355,10 @@ mod tests {
     impl ReadRequestObserver for MockReadObserver {
         fn on_read(
             &mut self,
-            _func: ReadRequestFunc,
             _context: &ReadContext,
             _request: &Apache2Request,
             _outcome: &ReadOutcome,
+            _func: ReadRequestFunc,
         ) -> () {
             self.count += 1;
         }
@@ -391,10 +391,11 @@ mod tests {
     impl HandleRequestObserver for MockHandleObserver {
         fn on_handle(
             &mut self,
-            _obj: &dyn RequestHandler,
             _context: &HandleContext,
             _request: &request::SlippyRequest,
             _handle_outcome: &HandleOutcome,
+            _obj: &dyn RequestHandler,
+            _read_outcome: &ReadOutcome,
         ) -> () {
             self.count += 1;
         }

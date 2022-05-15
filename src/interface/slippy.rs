@@ -28,10 +28,10 @@ pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn Writer)
 pub trait ReadRequestObserver {
     fn on_read(
         &mut self,
-        func: ReadRequestFunc,
         context: &ReadContext,
         request: &Apache2Request,
         read_outcome: &ReadOutcome,
+        func: ReadRequestFunc,
     ) -> ();
 }
 

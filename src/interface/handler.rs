@@ -4,6 +4,7 @@ use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
+use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::telemetry::{
     ResponseMetrics, TileHandlingMetrics,
 };
@@ -29,10 +30,11 @@ pub trait RequestHandler {
 pub trait HandleRequestObserver {
     fn on_handle(
         &mut self,
-        obj: &dyn RequestHandler,
         context: &HandleContext,
         request: &SlippyRequest,
         handle_outcome: &HandleOutcome,
+        obj: &dyn RequestHandler,
+        read_outcome: &ReadOutcome,
     ) -> ();
 }
 
