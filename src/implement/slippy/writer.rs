@@ -1,5 +1,7 @@
 use crate::schema::http::response::HttpResponse;
-use crate::schema::slippy::response::{ BodyVariant, Header, Description, SlippyResponse };
+use crate::schema::slippy::response::{
+    BodyVariant, Header, Description, SlippyResponse, Statistics,
+};
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::interface::apache2::Writer;
 use crate::interface::slippy::WriteContext;
@@ -18,13 +20,15 @@ impl SlippyResponseWriter {
         writer: &mut dyn Writer,
     ) -> WriteOutcome {
         match &response.body {
-            BodyVariant::Description(descr) => {
+            BodyVariant::Description(description) => {
                 WriteOutcome::Processed(
-                    DescriptionWriter::write(context, &response.header, descr, writer)
+                    DescriptionWriter::write(context, &response.header, description, writer)
                 )
             },
-            BodyVariant::Statistics(_) => {
-                WriteOutcome::Ignored
+            BodyVariant::Statistics(statistics) => {
+                WriteOutcome::Processed(
+                    StatisticsWriter::write(context, &response.header, statistics, writer)
+                )
             },
             BodyVariant::Tile(_) => {
                 WriteOutcome::Ignored
@@ -47,7 +51,7 @@ impl DescriptionWriter {
             (mime::APPLICATION, mime::JSON) => {
                 writer.set_content_type(&mime::APPLICATION_JSON);
                 debug!(context.host.record, "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
-                serde_json::to_string_pretty(&description).unwrap()
+                serde_json::to_string_pretty(description).unwrap()
             },
             _ => String::from(""),
         };
@@ -79,6 +83,45 @@ impl DescriptionWriter {
         writer.set_content_length(written_length);
         writer.flush_response()?;
         debug!(context.host.record, "DescriptionWriter::write - finish");
+
+        Ok(
+            HttpResponse {
+                status_code: StatusCode::OK,
+                bytes_written: written_length,
+                http_headers,
+            }
+        )
+    }
+}
+struct StatisticsWriter { }
+impl StatisticsWriter {
+    pub fn write(
+        context: &WriteContext,
+        header: &Header,
+        statistics: &Statistics,
+        writer: &mut dyn Writer,
+    ) -> WriteResponseResult {
+        debug!(context.host.record, "StatisticsWriter::write - start");
+        let mut http_headers = HeaderMap::new();
+        let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
+            (mime::APPLICATION, mime::JSON) => {
+                writer.set_content_type(&mime::APPLICATION_JSON);
+                debug!(context.host.record, "StatisticsWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
+                serde_json::to_string_pretty(statistics).unwrap()
+            },
+            _ => String::from(""),
+        };
+
+        let digest = format!("\"{:x}\"", md5::compute(&text));
+        let etag_key = ETAG.clone();
+        let etag_value = HeaderValue::from_str(digest.as_str()).unwrap();
+        writer.set_http_header(&etag_key, &etag_value).unwrap();
+        http_headers.insert(etag_key, etag_value);
+
+        let written_length = writer.write_content(&text)?;
+        writer.set_content_length(written_length);
+        writer.flush_response()?;
+        debug!(context.host.record, "StatisticsWriter::write - finish");
 
         Ok(
             HttpResponse {
