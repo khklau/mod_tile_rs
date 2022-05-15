@@ -15,9 +15,9 @@ impl<R> ProcessOutcome<R> {
         }
     }
 
-    pub fn processed<T>(self, other: T) -> Option<(R, T)> {
-        match self {
-            ProcessOutcome::Processed(result) => Some((result, other)),
+    pub fn as_some_when_processed<T>(self, other: T) -> Option<(Self, T)> {
+        match &self {
+            ProcessOutcome::Processed(_) => Some((self, other)),
             ProcessOutcome::Ignored => None,
         }
     }

@@ -217,27 +217,27 @@ impl<'p> TileProxy<'p> {
             response_metrics: &self.response_analysis,
             tile_handling_metrics: &self.tile_handling_analysis,
         };
+        let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
+            // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
+            Some([observer_0]) => [*observer_0],
+            None => [&mut self.trans_trace],
+        };
         let outcome = match read_outcome {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let mut handle_outcome = HandleOutcome::Ignored;
-                    for handler in handlers.iter_mut() {
-                        let processed_outcome = (*handler).handle(&context, request);
-                        if let HandleOutcome::Processed(_) = &processed_outcome {
-                            let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
-                                // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
-                                Some([observer_0]) => [*observer_0],
-                                None => [&mut self.trans_trace],
-                            };
-                            for observer_iter in handle_observers.iter_mut() {
-                                debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                (*observer_iter).on_handle(&context, request, &handle_outcome, *handler, read_outcome);
-                            }
-                            handle_outcome = processed_outcome;
-                        };
-                    };
-                    handle_outcome
+                    let outcome_option = handlers.iter_mut().find_map(|handler| {
+                        (*handler).handle(&context, request).as_some_when_processed(handler)
+                    });
+                    if let Some((handle_outcome, handler)) = outcome_option {
+                        for observer_iter in handle_observers.iter_mut() {
+                            debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                            (*observer_iter).on_handle(&context, request, &handle_outcome, *handler, read_outcome);
+                        }
+                        handle_outcome
+                    } else {
+                        HandleOutcome::Ignored
+                    }
                 },
                 Err(err) => {
                     HandleOutcome::Processed(
