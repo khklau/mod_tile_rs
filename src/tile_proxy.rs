@@ -18,7 +18,9 @@ use crate::interface::slippy::{
     ReadContext, ReadRequestFunc, ReadRequestObserver,
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
-use crate::interface::telemetry::MetricsInventory;
+use crate::interface::telemetry::{
+    MetricsInventory, ResponseMetrics, TileHandlingMetrics,
+};
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -55,8 +57,12 @@ pub enum HandleRequestError {
 pub struct TileProxy<'p> {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
+    metrics_state: MetricsState,
+    tracing_state: TracingState,
     read_request: ReadRequestFunc,
     write_response: WriteResponseFunc,
+    metrics_factory: MetricsFactory<'p>,
+    handler_factory: HandlerFactory<'p>,
     description_handler: DescriptionHandler,
     response_analysis: ResponseAnalysis,
     tile_handling_analysis: TileHandlingAnalysis,
@@ -108,8 +114,12 @@ impl<'p> TileProxy<'p> {
         )?.0;
         new_server.config = module_config;
         new_server.config_file_path = None;
+        new_server.metrics_state = MetricsState::new();
+        new_server.tracing_state = TracingState::new();
         new_server.read_request = SlippyRequestReader::read;
         new_server.write_response = SlippyResponseWriter::write;
+        new_server.metrics_factory = MetricsFactory::new();
+        new_server.handler_factory = HandlerFactory::new();
         new_server.description_handler = DescriptionHandler { };
         new_server.response_analysis = ResponseAnalysis::new();
         new_server.tile_handling_analysis = TileHandlingAnalysis::new();
@@ -198,44 +208,39 @@ impl<'p> TileProxy<'p> {
     ) -> (HandleOutcome, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
         let before_timestamp = Utc::now();
-        // TODO: combine the handlers using combinators
-        let metrics = MetricsInventory {
-            response_metrics: &(self.response_analysis),
-            tile_handling_metrics: &(self.tile_handling_analysis),
-        };
-        let mut statistics = StatisticsHandler::new(&metrics);
-        let mut handlers: Vec<&mut dyn RequestHandler> = Vec::new();
-        handlers.push(&mut self.description_handler);
-        handlers.push(&mut statistics);
-        let context = HandleContext {
-            module_config: &self.config,
-            host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_allocate_new(record).unwrap(),
-            response_metrics: &self.response_analysis,
-            tile_handling_metrics: &self.tile_handling_analysis,
-        };
-        let mut handle_observers: [&mut dyn HandleRequestObserver; 1] = match &mut self.handle_observers {
-            // TODO: find a nicer way to copy self.handle_observers, clone method doesn't work with trait object elements
-            Some([observer_0]) => [*observer_0],
-            None => [&mut self.trans_trace],
-        };
         let outcome = match read_outcome {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let outcome_option = handlers.iter_mut().find_map(|handler| {
-                        (*handler).handle(&context, request).as_some_when_processed(handler)
-                    });
-                    if let Some((handle_outcome, handler)) = outcome_option {
-                        for observer_iter in handle_observers.iter_mut() {
-                            debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                            (*observer_iter).on_handle(&context, request, &handle_outcome, *handler, read_outcome);
-                        }
-                        handle_outcome
-                    } else {
-                        HandleOutcome::Ignored
-                    }
+                    let (module_config, metrics_state, metrics_factory, tracing_state, handler_factory) = (
+                        &self.config,
+                        &self.metrics_state,
+                        &self.metrics_factory,
+                        &mut self.tracing_state,
+                        &mut self.handler_factory,
+                    );
+                    let context = HandleContext {
+                        module_config,
+                        host: VirtualHost::find_or_allocate_new(record).unwrap(),
+                        connection: Connection::find_or_allocate_new(record).unwrap(),
+                        request: Apache2Request::find_or_allocate_new(record).unwrap(),
+                    };
+                    metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
+                        handler_factory.with_handler_inventory(tracing_state, metrics_inventory, |handler_inventory| {
+                            let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
+                                (*handler).handle(&context, request).as_some_when_processed(handler)
+                            });
+                            if let Some((handle_outcome, handler)) = outcome_option {
+                                for observer_iter in handler_inventory.handle_observers.iter_mut() {
+                                    debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                                    (*observer_iter).on_handle(&context, request, &handle_outcome, *handler, read_outcome);
+                                }
+                                handle_outcome
+                            } else {
+                                HandleOutcome::Ignored
+                            }
+                        })
+                    })
                 },
                 Err(err) => {
                     HandleOutcome::Processed(
@@ -313,6 +318,116 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
     drop(server_ref);
     return APR_SUCCESS as apr_status_t;
 }
+
+struct MetricsState {
+    response_analysis: ResponseAnalysis,
+    tile_handling_analysis: TileHandlingAnalysis,
+}
+
+impl MetricsState {
+    fn new() -> MetricsState {
+        MetricsState {
+            response_analysis: ResponseAnalysis::new(),
+            tile_handling_analysis: TileHandlingAnalysis::new(),
+        }
+    }
+}
+
+
+struct MetricsFactory<'f> {
+    response_metrics: Option<&'f dyn ResponseMetrics>,
+    tile_handling_metrics: Option<&'f dyn TileHandlingMetrics>,
+}
+
+impl<'f> MetricsFactory<'f> {
+    fn new() -> MetricsFactory<'f> {
+        MetricsFactory {
+            response_metrics: None,
+            tile_handling_metrics: None,
+        }
+    }
+
+    fn with_metrics_inventory<F, R>(
+        &self,
+        metrics_state: &MetricsState,
+        func: F,
+    ) -> R
+    where
+        F: FnOnce(&MetricsInventory) -> R {
+        let response_metrics = if let Some(obj) = self.response_metrics {
+            obj
+        } else {
+            &metrics_state.response_analysis
+        };
+        let tile_handling_metrics = if let Some(obj) = self.tile_handling_metrics {
+            obj
+        } else {
+            &metrics_state.tile_handling_analysis
+        };
+        let metrics_inventory = MetricsInventory {
+            response_metrics,
+            tile_handling_metrics,
+        };
+        func(&metrics_inventory)
+    }
+}
+
+struct TracingState {
+    trans_trace: TransactionTrace,
+}
+
+impl TracingState {
+    fn new() -> TracingState {
+        TracingState {
+            trans_trace: TransactionTrace { },
+        }
+    }
+}
+
+struct HandlerInventory<'i> {
+    handlers: [&'i mut dyn RequestHandler; 2],
+    handle_observers: [&'i mut dyn HandleRequestObserver; 1],
+}
+
+struct HandlerFactory<'f> {
+    handlers: Option<[&'f mut dyn RequestHandler; 2]>,
+    handle_observers: Option<[&'f mut dyn HandleRequestObserver; 1]>,
+}
+
+impl<'f> HandlerFactory<'f> {
+    fn new() -> HandlerFactory<'f> {
+        HandlerFactory {
+            handlers: None,
+            handle_observers: None,
+        }
+    }
+
+    fn with_handler_inventory<F, R>(
+        &mut self,
+        tracing_state: &mut TracingState,
+        metrics_inventory: &MetricsInventory,
+        func: F,
+    ) -> R
+    where
+        F: FnOnce(&mut HandlerInventory) -> R {
+        let mut description_handler = DescriptionHandler { };
+        let mut statistics_handler = StatisticsHandler::new(&metrics_inventory);
+        let mut handler_inventory = HandlerInventory {
+            handlers: match &mut self.handlers {
+                // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
+                Some([handler_0, handler_1]) => [*handler_0, *handler_1],
+                None => [&mut description_handler, &mut statistics_handler],
+            },
+            handle_observers: match &mut self.handle_observers {
+                // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
+                Some([observer_0]) => [*observer_0],
+                None => [&mut tracing_state.trans_trace],
+            }
+        };
+        func(&mut handler_inventory)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -407,7 +522,7 @@ mod tests {
                 };
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config).unwrap();
-                proxy.handle_observers = Some([&mut mock1]);
+                proxy.handler_factory.handle_observers = Some([&mut mock1]);
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;

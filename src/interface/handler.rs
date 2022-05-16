@@ -5,9 +5,6 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
-use crate::interface::telemetry::{
-    ResponseMetrics, TileHandlingMetrics,
-};
 
 
 pub struct HandleContext<'c> {
@@ -15,8 +12,6 @@ pub struct HandleContext<'c> {
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
     pub request: &'c mut Apache2Request<'c>,
-    pub response_metrics: &'c dyn ResponseMetrics,
-    pub tile_handling_metrics: &'c dyn TileHandlingMetrics,
 }
 
 pub trait RequestHandler {

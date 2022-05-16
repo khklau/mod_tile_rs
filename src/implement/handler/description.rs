@@ -76,7 +76,6 @@ mod tests {
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::interface::apache2::PoolStored;
-    use crate::interface::telemetry::test_utils::with_mock_zero_metrics;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use std::error::Error;
@@ -89,28 +88,24 @@ mod tests {
         let module_config = ModuleConfig::new();
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
-            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
-                let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-                request.uri = uri.into_raw();
-                let handle_context = HandleContext {
-                    module_config: &module_config,
-                    host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_allocate_new(request)?,
-                    request: Apache2Request::create_with_tile_config(request)?,
-                    response_metrics,
-                    tile_handling_metrics,
-                };
-                let request = request::SlippyRequest {
-                    header: request::Header::new_with_layer(
-                        handle_context.request.record,
-                        &layer_name,
-                    ),
-                    body: request::BodyVariant::ReportStatistics,
-                };
+            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+            request.uri = uri.into_raw();
+            let handle_context = HandleContext {
+                module_config: &module_config,
+                host: VirtualHost::find_or_allocate_new(request)?,
+                connection: Connection::find_or_allocate_new(request)?,
+                request: Apache2Request::create_with_tile_config(request)?,
+            };
+            let request = request::SlippyRequest {
+                header: request::Header::new_with_layer(
+                    handle_context.request.record,
+                    &layer_name,
+                ),
+                body: request::BodyVariant::ReportStatistics,
+            };
 
-                assert!(layer_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
-                Ok(())
-            })
+            assert!(layer_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
+            Ok(())
         })
     }
 
@@ -121,46 +116,42 @@ mod tests {
         let module_config = ModuleConfig::new();
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
-            with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
-                let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-                request.uri = uri.into_raw();
-                let handle_context = HandleContext {
-                    module_config: &module_config,
-                    host: VirtualHost::find_or_allocate_new(request)?,
-                    connection: Connection::find_or_allocate_new(request)?,
-                    request: Apache2Request::create_with_tile_config(request)?,
-                    response_metrics,
-                    tile_handling_metrics,
-                };
-                let request = request::SlippyRequest {
-                    header: request::Header::new_with_layer(
-                        handle_context.request.record,
-                        &layer_name,
-                    ),
-                    body: request::BodyVariant::DescribeLayer,
-                };
+            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+            request.uri = uri.into_raw();
+            let handle_context = HandleContext {
+                module_config: &module_config,
+                host: VirtualHost::find_or_allocate_new(request)?,
+                connection: Connection::find_or_allocate_new(request)?,
+                request: Apache2Request::create_with_tile_config(request)?,
+            };
+            let request = request::SlippyRequest {
+                header: request::Header::new_with_layer(
+                    handle_context.request.record,
+                    &layer_name,
+                ),
+                body: request::BodyVariant::DescribeLayer,
+            };
 
-                let actual_response = layer_handler.handle(&handle_context, &request).expect_processed().result?;
-                let expected_data = response::Description {
-                    tilejson: "2.0.0",
-                    schema: "xyz",
-                    name: layer_name.clone(),
-                    description: layer_config.description.clone(),
-                    attribution: layer_config.attribution.clone(),
-                    minzoom: layer_config.min_zoom,
-                    maxzoom: layer_config.max_zoom,
-                    tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
-                };
-                let expected_response = response::SlippyResponse {
-                    header: response::Header::new(
-                        handle_context.request.record,
-                        &mime::APPLICATION_JSON,
-                    ),
-                    body: response::BodyVariant::Description(expected_data),
-                };
-                assert_eq!(expected_response, actual_response, "Incorrect handling");
-                Ok(())
-            })
+            let actual_response = layer_handler.handle(&handle_context, &request).expect_processed().result?;
+            let expected_data = response::Description {
+                tilejson: "2.0.0",
+                schema: "xyz",
+                name: layer_name.clone(),
+                description: layer_config.description.clone(),
+                attribution: layer_config.attribution.clone(),
+                minzoom: layer_config.min_zoom,
+                maxzoom: layer_config.max_zoom,
+                tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
+            };
+            let expected_response = response::SlippyResponse {
+                header: response::Header::new(
+                    handle_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Description(expected_data),
+            };
+            assert_eq!(expected_response, actual_response, "Incorrect handling");
+            Ok(())
         })
     }
 }
