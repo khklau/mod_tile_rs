@@ -219,12 +219,7 @@ impl<'p> TileProxy<'p> {
                         &mut self.tracing_state,
                         &mut self.handler_factory,
                     );
-                    let context = HandleContext {
-                        module_config,
-                        host: VirtualHost::find_or_allocate_new(record).unwrap(),
-                        connection: Connection::find_or_allocate_new(record).unwrap(),
-                        request: Apache2Request::find_or_allocate_new(record).unwrap(),
-                    };
+                    let context = HandleContext::new(record, module_config) ;
                     metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
                         handler_factory.with_handler_inventory(tracing_state, metrics_inventory, |handler_inventory| {
                             let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
