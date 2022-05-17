@@ -2,6 +2,7 @@
 mod binding {
     #[macro_use]
     pub mod apache2;
+    pub mod renderd_protocol;
 }
 mod schema {
     pub mod core {
@@ -35,9 +36,9 @@ mod schema {
 }
 mod interface {
     pub mod apache2;
-    pub mod telemetry;
     pub mod handler;
     pub mod slippy;
+    pub mod telemetry;
 }
 #[macro_use]
 mod utility {

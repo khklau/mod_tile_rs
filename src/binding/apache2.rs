@@ -5,7 +5,7 @@
 #![allow(deref_nullptr)]
 #![allow(improper_ctypes)]
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+include!(concat!(env!("OUT_DIR"), "/apache2_bindings.rs"));
 
 #[macro_export]
 macro_rules! cstr {
