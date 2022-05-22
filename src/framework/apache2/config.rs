@@ -1,4 +1,5 @@
 use crate::schema::apache2::config::{ ModuleConfig, RenderdConfig, LayerConfig };
+use crate::schema::tile::identity::{ LayerName, max_layer_name_char_len };
 
 use configparser::ini::Ini;
 
@@ -42,8 +43,22 @@ fn parse(
                 config.renderd = parse_renderd(ini, section_name)?;
             },
             _ => {
-                let layer = parse_layer(ini, section_name, server_name)?;
-                config.layers.insert(section_name.clone(), layer);
+                let layer_name = match LayerName::try_make(section_name.as_str()) {
+                    Ok(name) => name,
+                    Err(_) => {
+                        return Err(
+                            ParseError{
+                                reason: format!(
+                                    "Layer name {} exceeds length limit of {}",
+                                    section_name,
+                                    max_layer_name_char_len(),
+                                ),
+                            }
+                        );
+                    },
+                };
+                let layer = parse_layer(ini, &layer_name, server_name)?;
+                config.layers.insert(layer_name, layer);
             },
         };
     }
@@ -63,11 +78,11 @@ fn parse_renderd(ini: &Ini, section_name: &String) -> Result<RenderdConfig, Pars
 
 fn parse_layer(
     ini: &Ini,
-    section_name: &String,
+    section_name: &LayerName,
     server_name: Option<&str>,
 ) -> Result<LayerConfig, ParseError> {
     let mut config = LayerConfig::new();
-    config.name = section_name.to_string();
+    config.name = section_name.clone();
     if let Some(description) = ini.get(section_name.as_str(), "description") {
         config.description = description;
     }
@@ -125,25 +140,25 @@ mod tests {
         let mut file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         file_path.push("resources/test/tile/basic_valid.conf");
         let actual_config = ModuleConfig::load(file_path.as_path(), None)?;
-        let layer = "basic";
+        let layer = LayerName::from("basic");
         assert_eq!(
             "basic",
-            actual_config.layers.get(layer).unwrap().name,
+            actual_config.layers.get(&layer).unwrap().name,
             "Failed to load name"
         );
         assert_eq!(
             "/test",
-            actual_config.layers.get(layer).unwrap().base_url,
+            actual_config.layers.get(&layer).unwrap().base_url,
             "Failed to load base_url"
         );
         assert_eq!(
             "png",
-            actual_config.layers.get(layer).unwrap().file_extension,
+            actual_config.layers.get(&layer).unwrap().file_extension,
             "Failed to load file_extension"
         );
         assert_eq!(
             "http://localhost",
-            actual_config.layers.get(layer).unwrap().host_name,
+            actual_config.layers.get(&layer).unwrap().host_name,
             "Failed to load default hostname"
         );
         assert_eq!(
@@ -169,15 +184,15 @@ mod tests {
 
     #[test]
     fn test_parse_config_name() -> Result<(), Box<dyn Error>> {
-        let layer = "foobar";
+        let layer = LayerName::from("foobar");
         let mut ini = Ini::new();
         ini.set("renderd", "socketname", Some(String::from("/var/run/renderd/renderd.sock")));
         ini.set("MAPNIK", "font_dir", Some(String::from("/usr/share/fonts/")));
-        ini.set(layer, "uri", Some(String::from("/foo/")));
+        ini.set(layer.as_str(), "uri", Some(String::from("/foo/")));
         let actual_config = parse(&ini, None)?;
         assert_eq!(
             layer,
-            actual_config.layers.get(layer).unwrap().name,
+            actual_config.layers.get(&layer).unwrap().name,
             "Failed to parse config name from section"
         );
         Ok(())
@@ -197,63 +212,63 @@ mod tests {
     #[test]
     fn test_parse_uri_with_trailing_slash() -> Result<(), Box<dyn Error>> {
         let mut ini = Ini::new();
-        let layer = "basic";
-        ini.set(layer, "uri", Some(String::from("/foo/")));
+        let layer = LayerName::from("basic");
+        ini.set(layer.as_str(), "uri", Some(String::from("/foo/")));
         let actual_config = parse(&ini, None)?;
         assert_eq!(
             "/foo",
-            actual_config.layers.get(layer).unwrap().base_url,
+            actual_config.layers.get(&layer).unwrap().base_url,
             "Failed to trim trailing slash from URI");
         Ok(())
     }
 
     #[test]
     fn test_parse_parameterize_style_as_bool() -> Result<(), Box<dyn Error>> {
-        let layer1 = "basic";
+        let layer1 = LayerName::from("basic");
         let mut ini1 = Ini::new();
-        ini1.set(layer1, "parameterize_style", Some(String::from("TRUE")));
+        ini1.set(layer1.as_str(), "parameterize_style", Some(String::from("TRUE")));
         let actual_config1 = parse(&ini1, None)?;
         assert!(
-            actual_config1.layers.get(layer1).unwrap().parameters_allowed,
+            actual_config1.layers.get(&layer1).unwrap().parameters_allowed,
             "Failed to parse parameterize_style");
 
-        let layer2 = "directory";
+        let layer2 = LayerName::from("directory");
         let mut ini2 = Ini::new();
-        ini2.set(layer2, "parameterize_style", Some(String::from("false")));
+        ini2.set(layer2.as_str(), "parameterize_style", Some(String::from("false")));
         let actual_config2 = parse(&ini2, None)?;
         assert!(
-            !actual_config2.layers.get(layer2).unwrap().parameters_allowed,
+            !actual_config2.layers.get(&layer2).unwrap().parameters_allowed,
             "Failed to parse parameterize_style");
         Ok(())
     }
 
     #[test]
     fn test_parse_server_alias() -> Result<(), Box<dyn Error>> {
-        let layer1 = "basic";
+        let layer1 = LayerName::from("basic");
         let mut ini1 = Ini::new();
-        ini1.set(layer1, "server_alias", Some(String::from("webserver")));
+        ini1.set(layer1.as_str(), "server_alias", Some(String::from("webserver")));
         let actual_config1 = parse(&ini1, None)?;
         assert_eq!(
             "http://webserver",
-            actual_config1.layers.get(layer1).unwrap().host_name,
+            actual_config1.layers.get(&layer1).unwrap().host_name,
             "Failed to parse server_alias");
 
-        let layer2 = "directory";
+        let layer2 = LayerName::from("directory");
         let mut ini2 = Ini::new();
-        ini2.set(layer2, "uri", Some(String::from("/foo/")));
+        ini2.set(layer2.as_str(), "uri", Some(String::from("/foo/")));
         let actual_config2 = parse(&ini2, Some("myserver"))?;
         assert_eq!(
             "http://myserver",
-            actual_config2.layers.get(layer2).unwrap().host_name,
+            actual_config2.layers.get(&layer2).unwrap().host_name,
             "Failed to use server name as hostname when server_alias is not specified");
 
-        let layer3 = "custom";
+        let layer3 = LayerName::from("custom");
         let mut ini3 = Ini::new();
-        ini3.set(layer3, "uri", Some(String::from("/bar/")));
+        ini3.set(layer3.to_str(), "uri", Some(String::from("/bar/")));
         let actual_config3 = parse(&ini3, None)?;
         assert_eq!(
             "http://localhost",
-            actual_config3.layers.get(layer3).unwrap().host_name,
+            actual_config3.layers.get(&layer3).unwrap().host_name,
             "Failed to use default hostname when both server_alias and server name are not specified");
         Ok(())
     }

@@ -4,6 +4,7 @@ use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
+use crate::schema::tile::identity::LayerName;
 use crate::interface::apache2::Writer;
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
@@ -23,7 +24,7 @@ use std::vec::Vec;
 const VALID_ZOOM_RANGE: Range<u32> = 0..(MAX_ZOOM_SERVER as u32 + 1);
 
 pub struct ResponseAnalysis {
-    analysis_by_layer: HashMap<String, LayerResponseAnalysis>,
+    analysis_by_layer: HashMap<LayerName, LayerResponseAnalysis>,
     status_codes_responded: HashSet<StatusCode>,
 }
 
@@ -193,7 +194,7 @@ impl ResponseMetrics for ResponseAnalysis {
         VALID_ZOOM_RANGE.clone()
     }
 
-    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ String> + '_> {
+    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_> {
         Box::new(self.analysis_by_layer.keys())
     }
 
@@ -274,7 +275,7 @@ impl ResponseMetrics for ResponseAnalysis {
         return total;
     }
 
-    fn count_response_by_layer_and_status_code(&self, layer: &String, status_code: &StatusCode) -> u64 {
+    fn count_response_by_layer_and_status_code(&self, layer: &LayerName, status_code: &StatusCode) -> u64 {
         match self.analysis_by_layer.get(layer) {
             Some(layer_analysis) => {
                 layer_analysis.response_count_by_status_and_zoom[status_code].iter().sum()
@@ -632,7 +633,7 @@ mod tests {
                 connection: Connection::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
-            let layer = String::from("default");
+            let layer = LayerName::from("default");
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {

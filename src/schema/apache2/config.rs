@@ -1,12 +1,13 @@
+use crate::schema::tile::identity::LayerName;
+
 use std::collections::hash_map::HashMap;
-use std::string::String;
 use std::time::Duration;
 
 
 #[derive(Debug)]
 pub struct ModuleConfig {
     pub renderd: RenderdConfig,
-    pub layers: HashMap<String, LayerConfig>,
+    pub layers: HashMap<LayerName, LayerConfig>,
 }
 
 impl ModuleConfig {
@@ -15,7 +16,7 @@ impl ModuleConfig {
             renderd: RenderdConfig::new(),
             layers: HashMap::new(),
         };
-        value.layers.insert(String::from("default"), LayerConfig::new());
+        value.layers.insert(LayerName::from("default"), LayerConfig::new());
         value
     }
 }
@@ -41,7 +42,7 @@ pub const MAX_ZOOM_SERVER: usize = 30;
 
 #[derive(Debug)]
 pub struct LayerConfig {
-    pub name: String,
+    pub name: LayerName,
     pub base_url: String,
     pub description: String,
     pub attribution: String,
@@ -56,7 +57,7 @@ pub struct LayerConfig {
 impl LayerConfig {
     pub fn new() -> LayerConfig {
         let mut config = LayerConfig {
-            name: String::from("default"),
+            name: LayerName::from("default"),
             base_url: String::from("/osm"),
             description: String::from("default"),
             attribution: String::from("default"),

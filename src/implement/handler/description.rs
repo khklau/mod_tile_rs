@@ -2,12 +2,11 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
+use crate::schema::tile::identity::LayerName;
 use crate::interface::handler::{ HandleContext, RequestHandler, };
 
 use chrono::Utc;
 use mime;
-
-use std::string::String;
 
 
 pub struct DescriptionHandler { }
@@ -44,12 +43,12 @@ impl RequestHandler for DescriptionHandler {
     }
 }
 
-fn describe(config: &ModuleConfig, layer: &String) -> response::Description {
+fn describe(config: &ModuleConfig, layer: &LayerName) -> response::Description {
     let layer_config = &config.layers[layer];
     let mut value = response::Description {
         tilejson: "2.0.0",
         schema: "xyz",
-        name: layer_config.name.clone(),
+        name: String::from(layer_config.name.as_str()),
         description: layer_config.description.clone(),
         attribution: layer_config.attribution.clone(),
         minzoom: layer_config.min_zoom,
@@ -84,7 +83,7 @@ mod tests {
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
         let mut layer_handler = DescriptionHandler { };
-        let layer_name = String::from("default");
+        let layer_name = LayerName::from("default");
         let module_config = ModuleConfig::new();
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
@@ -112,7 +111,7 @@ mod tests {
     #[test]
     fn test_default_config_json() -> Result<(), Box<dyn Error>> {
         let mut layer_handler = DescriptionHandler { };
-        let layer_name = String::from("default");
+        let layer_name = LayerName::from("default");
         let module_config = ModuleConfig::new();
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
@@ -136,7 +135,7 @@ mod tests {
             let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",
-                name: layer_name.clone(),
+                name: String::from(layer_name.as_str()),
                 description: layer_config.description.clone(),
                 attribution: layer_config.attribution.clone(),
                 minzoom: layer_config.min_zoom,

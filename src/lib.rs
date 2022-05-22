@@ -13,6 +13,7 @@ mod schema {
     }
     pub mod tile {
         pub mod age;
+        pub mod identity;
         pub mod source;
     }
     #[macro_use]

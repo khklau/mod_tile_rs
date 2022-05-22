@@ -2,6 +2,7 @@ use crate::binding::apache2::request_rec;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::virtual_host::VirtualHost;
+use crate::schema::tile::identity::LayerName;
 use crate::interface::apache2::PoolStored;
 
 use std::ffi::CString;
@@ -22,20 +23,20 @@ pub struct Header {
     pub host_key: CString,
     pub connection_key: CString,
     pub request_key: CString,
-    pub layer: String,
+    pub layer: LayerName,
 }
 
 impl Header {
     pub fn new(
         request: &request_rec,
     ) -> Header {
-        let layer = String::new();
+        let layer = LayerName::new();
         Self::new_with_layer(request, &layer)
     }
 
     pub fn new_with_layer(
         request: &request_rec,
-        layer: &String,
+        layer: &LayerName,
     ) -> Header {
         Header {
             host_key: VirtualHost::search_pool_key(request),

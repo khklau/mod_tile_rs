@@ -1,4 +1,5 @@
 use crate::schema::tile::age::TileAge;
+use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 
 use http::status::StatusCode;
@@ -13,7 +14,7 @@ pub trait ResponseMetrics {
 
     fn iterate_valid_zoom_levels(&self) -> Range<u32>;
 
-    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ String> + '_>;
+    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_>;
 
     fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64;
 
@@ -29,7 +30,7 @@ pub trait ResponseMetrics {
 
     fn tally_tile_response_duration_by_zoom_level(&self, zoom: u32) -> u64;
 
-    fn count_response_by_layer_and_status_code(&self, layer: &String, status_code: &StatusCode) -> u64;
+    fn count_response_by_layer_and_status_code(&self, layer: &LayerName, status_code: &StatusCode) -> u64;
 }
 
 pub trait TileHandlingMetrics {
@@ -60,7 +61,7 @@ pub mod test_utils {
     pub struct MockZeroResponseMetrics {
         pub mock_status_codes: Vec<StatusCode>,
         pub mock_zoom_levels: Vec<u32>,
-        pub mock_layers: Vec<String>,
+        pub mock_layers: Vec<LayerName>,
     }
 
     impl MockZeroResponseMetrics {
@@ -85,7 +86,7 @@ pub mod test_utils {
             }
         }
 
-        fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ String> + '_> {
+        fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_> {
             Box::new(self.mock_layers.iter())
         }
 
@@ -103,7 +104,7 @@ pub mod test_utils {
 
         fn tally_tile_response_duration_by_zoom_level(&self, _zoom: u32) -> u64 { 0 }
 
-        fn count_response_by_layer_and_status_code(&self, _layer: &String, _status_code: &StatusCode) -> u64 { 0 }
+        fn count_response_by_layer_and_status_code(&self, _layer: &LayerName, _status_code: &StatusCode) -> u64 { 0 }
     }
 
     pub struct MockZeroTileHandlingMetrics { }

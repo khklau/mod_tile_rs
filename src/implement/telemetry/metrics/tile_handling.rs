@@ -3,6 +3,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response::{ self, TileResponse };
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::schema::tile::age::TileAge;
+use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::interface::apache2::Writer;
 use crate::interface::slippy::{
@@ -18,7 +19,7 @@ use std::marker::Copy;
 
 
 pub struct TileHandlingAnalysis {
-    analysis_by_layer: HashMap<String, TileLayerHandlingAnalysis>,
+    analysis_by_layer: HashMap<LayerName, TileLayerHandlingAnalysis>,
 }
 
 impl TileHandlingAnalysis {

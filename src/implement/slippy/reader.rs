@@ -1,6 +1,7 @@
 use crate::binding::apache2::get_module_name;
-use crate::schema::core::processed::ProcessOutcome;
+use crate::schema::apache2::config::{ LayerConfig, MAX_ZOOM_SERVER };
 use crate::schema::apache2::request::Apache2Request;
+use crate::schema::core::processed::ProcessOutcome;
 use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
@@ -8,7 +9,6 @@ use crate::schema::slippy::request::{
     BodyVariant, Header, SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
-use crate::schema::apache2::config::{ LayerConfig, MAX_ZOOM_SERVER };
 use crate::interface::slippy::ReadContext;
 
 use scan_fmt::scan_fmt;
@@ -388,6 +388,7 @@ mod tests {
     use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
+    use crate::schema::tile::identity::LayerName;
     use crate::interface::apache2::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use std::boxed::Box;
@@ -421,9 +422,9 @@ mod tests {
     #[test]
     fn test_parse_describe_layer() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = ReadContext {
@@ -435,7 +436,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
@@ -451,9 +452,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
@@ -466,7 +467,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
@@ -491,9 +492,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/999.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
@@ -520,9 +521,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.into_raw();
@@ -535,7 +536,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
@@ -560,9 +561,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.into_raw();
@@ -575,7 +576,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
@@ -600,9 +601,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = ReadContext {
@@ -614,7 +615,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
@@ -638,9 +639,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/999.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = ReadContext {
@@ -666,9 +667,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = ReadContext {
@@ -680,7 +681,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,
@@ -704,9 +705,9 @@ mod tests {
     #[test]
     fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
         with_request_rec(|record| {
-            let layer_name = "default";
+           let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
-            let layer_config = module_config.layers.get_mut(layer_name).unwrap();
+            let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.into_raw();
             let context = ReadContext {
@@ -718,7 +719,7 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_layer = String::from(layer_name);
+            let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
                 header: Header::new_with_layer(
                     request.record,

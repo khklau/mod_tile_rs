@@ -74,9 +74,9 @@ impl<'h> StatisticsHandler<'h> {
         result.total_duration_tile_response = self.metrics.response_metrics.tally_total_tile_response_duration();
         for layer in self.metrics.response_metrics.iterate_layers_responded() {
             let count_200 = self.metrics.response_metrics.count_response_by_layer_and_status_code(layer, &http::StatusCode::OK);
-            result.number_response_200_by_layer.insert(layer.clone(), count_200);
+            result.number_response_200_by_layer.insert(String::from(layer.as_str()), count_200);
             let count_404 = self.metrics.response_metrics.count_response_by_layer_and_status_code(layer, &http::StatusCode::NOT_FOUND);
-            result.number_response_404_by_layer.insert(layer.clone(), count_404);
+            result.number_response_404_by_layer.insert(String::from(layer.as_str()), count_404);
         }
         return result;
     }
