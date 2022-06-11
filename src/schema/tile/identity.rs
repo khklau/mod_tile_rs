@@ -14,8 +14,8 @@ pub const fn max_layer_name_char_len() -> usize {
 }
 
 pub struct TileIdentity {
-    x: i32,
-    y: i32,
-    z: i32,
-    layer: LayerName,
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+    pub layer: LayerName,
 }

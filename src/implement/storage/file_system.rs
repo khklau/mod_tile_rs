@@ -1,6 +1,15 @@
-use std::result::Result;
+use crate::schema::tile::identity::TileIdentity;
+use crate::interface::handler::HandleContext;
+use crate::interface::storage::TileStorage;
 
-pub fn initialise(
-) -> Result<(), std::io::Error> {
-    Ok(())
+
+pub struct FileSystemStorage {}
+
+impl TileStorage for FileSystemStorage {
+    fn read_tile(
+        &self,
+        _context: &HandleContext,
+        _id: &TileIdentity,
+    ) -> () {
+    }
 }

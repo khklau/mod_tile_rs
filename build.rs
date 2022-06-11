@@ -19,7 +19,7 @@ fn main() {
         .write_to_file(out_path.join("apache2_bindings.rs"))
         .expect("Could not write bindings for apache2");
 
-    println!("cargo:rerun-if-changed=render_protocol_headers.h");
+    println!("cargo:rerun-if-changed=renderd_protocol.h");
     let renderd_protocol_bindings = bindgen::Builder::default()
         .header("renderd_protocol.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
@@ -27,5 +27,15 @@ fn main() {
         .expect("Unable to generate bindings for renderd protocol");
     renderd_protocol_bindings
         .write_to_file(out_path.join("renderd_protocol_bindings.rs"))
-        .expect("Could not write bindings for renderd protocol")
+        .expect("Could not write bindings for renderd protocol");
+
+    println!("cargo:rerun-if-changed=metatile.h");
+    let metatile_bindings = bindgen::Builder::default()
+        .header("metatile.h")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .generate()
+        .expect("Unable to generate bindings for metatile");
+    metatile_bindings
+        .write_to_file(out_path.join("metatile_bindings.rs"))
+        .expect("Could not write bindings for metatile");
 }

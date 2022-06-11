@@ -2,6 +2,7 @@
 mod binding {
     #[macro_use]
     pub mod apache2;
+    pub mod meta_tile;
     pub mod renderd_protocol;
 }
 mod schema {
@@ -39,6 +40,7 @@ mod interface {
     pub mod apache2;
     pub mod handler;
     pub mod slippy;
+    pub mod storage;
     pub mod telemetry;
 }
 #[macro_use]
@@ -61,6 +63,7 @@ mod implement {
     pub mod handler {
         pub mod description;
         pub mod statistics;
+        pub mod tile;
     }
     pub mod slippy {
         pub mod reader;
@@ -68,6 +71,7 @@ mod implement {
     }
     pub mod storage {
         pub mod file_system;
+        mod meta_tile;
     }
     pub mod telemetry{
         pub mod metrics {

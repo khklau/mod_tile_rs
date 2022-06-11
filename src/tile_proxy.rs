@@ -26,9 +26,10 @@ use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::handler::statistics::StatisticsHandler;
+//use crate::implement::handler::tile::TileHandler;
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
-use crate::implement::storage::file_system;
+//use crate::implement::storage::file_system::FileSystemStorage;
 use crate::implement::telemetry::metrics::response::ResponseAnalysis;
 use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
@@ -159,7 +160,6 @@ impl<'p> TileProxy<'p> {
             let copied_path = original_path.clone();
             self.load_config(copied_path, record.get_host_name())?;
         }
-        file_system::initialise()?;
         return Ok(());
     }
 
@@ -221,7 +221,7 @@ impl<'p> TileProxy<'p> {
                     );
                     let context = HandleContext::new(record, module_config) ;
                     metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
-                        handler_factory.with_handler_inventory(tracing_state, metrics_inventory, |handler_inventory| {
+                        handler_factory.with_handler_inventory(module_config, tracing_state, metrics_inventory, |handler_inventory| {
                             let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
                                 (*handler).handle(&context, request).as_some_when_processed(handler)
                             });
@@ -379,6 +379,12 @@ impl TracingState {
     }
 }
 
+/*
+struct StorageState {
+    file_system: Option<FileSystemStorage>,
+}
+*/
+
 struct HandlerInventory<'i> {
     handlers: [&'i mut dyn RequestHandler; 2],
     handle_observers: [&'i mut dyn HandleRequestObserver; 1],
@@ -399,6 +405,7 @@ impl<'f> HandlerFactory<'f> {
 
     fn with_handler_inventory<F, R>(
         &mut self,
+        module_config: &ModuleConfig,
         tracing_state: &mut TracingState,
         metrics_inventory: &MetricsInventory,
         func: F,
