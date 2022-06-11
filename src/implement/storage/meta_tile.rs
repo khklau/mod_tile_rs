@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_valid_meta_tile() -> Result<(), InvalidMetaTileError> {
+    fn test_read_valid_basic_meta_tile() -> Result<(), InvalidMetaTileError> {
         let mut test_store_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_store_path.push("resources");
         test_store_path.push("test");
@@ -401,7 +401,37 @@ mod tests {
         let meta_tile = MetaTile::read(&path.meta_tile_path)?;
         for tile_offset in 0..meta_tile.tile_count {
             let mut path = env::temp_dir();
-            path.push(format!("{}.png", tile_offset));
+            path.push(format!("basic-{}.png", tile_offset));
+            std::fs::write(path, meta_tile.select(tile_offset).unwrap());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_valid_complex_meta_tile() -> Result<(), InvalidMetaTileError> {
+        let mut test_store_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        test_store_path.push("resources");
+        test_store_path.push("test");
+        test_store_path.push("meta_tile");
+        let mut config = ModuleConfig::new();
+        config.renderd.store_uri = String::from(test_store_path.to_str().unwrap());
+        let id = TileIdentity {
+            x: 000000 + 000000 + 000000 + 00000 + 00000 + 00000 + 0000 + 0000 + 0000 + 0000 + 000 + 000 + 000 + 00 + 32 + 16 + 8 + 0 + 0 + 0,
+            y: 000000 + 000000 + 000000 + 00000 + 00000 + 00000 + 0000 + 0000 + 0000 + 0000 + 000 + 000 + 000 + 00 + 32 + 00 + 0 + 0 + 0 + 0,
+            z: 6,
+            layer: LayerName::from("default"),
+        };
+        let hash = MetaTile::calc_directory_hash(&id);
+        assert_eq!(128, hash[0], "Incorrect directory hash calculation");
+        assert_eq!(50, hash[1], "Incorrect directory hash calculation");
+        assert_eq!(0, hash[2], "Incorrect directory hash calculation");
+        assert_eq!(0, hash[3], "Incorrect directory hash calculation");
+        assert_eq!(0, hash[4], "Incorrect directory hash calculation");
+        let path = MetaTile::identity_to_path(&config, &id);
+        let meta_tile = MetaTile::read(&path.meta_tile_path)?;
+        for tile_offset in 0..meta_tile.tile_count {
+            let mut path = env::temp_dir();
+            path.push(format!("complex-{}.png", tile_offset));
             std::fs::write(path, meta_tile.select(tile_offset).unwrap());
         }
         Ok(())
