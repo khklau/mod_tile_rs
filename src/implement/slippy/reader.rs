@@ -184,11 +184,11 @@ impl ServeTileV3RequestParser {
         match scan_fmt!(
             request_url,
             "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
-            String, i32, i32, u32, String, String
+            String, i32, i32, i32, String, String
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
                 info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
-                if z <= MAX_ZOOM_SERVER as u32 {
+                if z <= MAX_ZOOM_SERVER as i32 {
                     return ProcessOutcome::Processed(
                         Ok(
                             SlippyRequest {
@@ -230,11 +230,11 @@ impl ServeTileV3RequestParser {
         match scan_fmt!(
             request_url,
             "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}{///?/}",
-            String, i32, i32, u32, String
+            String, i32, i32, i32, String
         ) {
             Ok((parameter, x, y, z, extension)) => {
                 info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
-                if z <= MAX_ZOOM_SERVER as u32 {
+                if z <= MAX_ZOOM_SERVER as i32 {
                     return ProcessOutcome::Processed(
                         Ok(
                             SlippyRequest {
@@ -290,10 +290,10 @@ impl ServeTileV2RequestParser {
     match scan_fmt!(
         request_url,
         "/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
-        i32, i32, u32, String, String
+        i32, i32, i32, String, String
     ) {
         Ok((x, y, z, extension, option)) => {
-            if z <= MAX_ZOOM_SERVER as u32 {
+            if z <= MAX_ZOOM_SERVER as i32 {
                 info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
                 return ProcessOutcome::Processed(
                     Ok(
@@ -335,10 +335,10 @@ impl ServeTileV2RequestParser {
     match scan_fmt!(
         request_url,
         "/{d}/{d}/{d}.{255[a-z]}{///?/}",
-        i32, i32, u32, String
+        i32, i32, i32, String
     ) {
         Ok((x, y, z, extension)) => {
-            if z <= MAX_ZOOM_SERVER as u32 {
+            if z <= MAX_ZOOM_SERVER as i32 {
                 info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
                 return ProcessOutcome::Processed(
                     Ok(

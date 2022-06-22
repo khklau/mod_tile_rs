@@ -62,7 +62,7 @@ pub struct ServeTileRequestV3 {
     pub parameter: String,
     pub x: i32,
     pub y: i32,
-    pub z: u32,
+    pub z: i32,
     pub extension: String,
     pub option: Option<String>,
 }
@@ -72,7 +72,7 @@ pub struct ServeTileRequestV3 {
 pub struct ServeTileRequestV2 {
     pub x: i32,
     pub y: i32,
-    pub z: u32,
+    pub z: i32,
     pub extension: String,
     pub option: Option<String>,
 }

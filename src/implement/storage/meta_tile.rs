@@ -2,32 +2,34 @@ use crate::binding::meta_tile::{
     META_MAGIC, META_MAGIC_COMPRESSED, entry, meta_layout
 };
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::tile::error::{
+    InvalidMetaTileError, InvalidCompressionError, TileOffsetOutOfBoundsError,
+};
 use crate::schema::tile::identity::TileIdentity;
+use crate::interface::tile::TileRef;
+
+use mime::Mime;
 
 use std::cmp::min;
-use std::convert::From;
-use std::error::Error;
-use std::io;
 use std::ffi::CStr;
-use std::fmt;
 use std::fs;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::result::Result;
-use std::str::Utf8Error;
-use std::string::String;
 
 
 const META_TILE_WIDTH: i32 = 8;
 const META_TILE_MASK: i32 = META_TILE_WIDTH - 1;
 
 pub struct TilePath {
-    meta_tile_path: PathBuf,
-    tile_offset: u32,
+    pub meta_tile_path: PathBuf,
+    pub tile_offset: u32,
 }
 
 pub struct MetaTile {
-    raw_bytes: Vec<u8>,
+    raw_bytes: Rc<Vec<u8>>,
     tile_count: u32,
+    media_type: Mime,
     compression: CompressionEncoding,
 }
 
@@ -40,14 +42,15 @@ impl MetaTile {
     pub fn read(
         path: &PathBuf
     ) -> Result<MetaTile, InvalidMetaTileError> {
-        let raw_bytes = fs::read(path)?;
+        let raw_bytes = Rc::new(fs::read(path)?);
         let layout = MetaTile::get_layout(&raw_bytes);
         let compression = MetaTile::detect_compression(layout)?;
         let tile_count = MetaTile::detect_tile_count(layout)?;
-        // TODO - veridy tile mime type
+        // TODO - verify tile media type
         let result = MetaTile {
             raw_bytes,
             tile_count,
+            media_type: mime::IMAGE_PNG,
             compression,
         };
         result.verify_tile_lengths()?;
@@ -79,13 +82,18 @@ impl MetaTile {
     pub fn select(
         &self,
         tile_offset: u32
-    ) -> Result<&[u8], TileOffsetOutOfBoundsError> {
+    ) -> Result<TileRef, TileOffsetOutOfBoundsError> {
         let layout = MetaTile::get_layout(&self.raw_bytes);
         let entry = self.get_entry(tile_offset)?;
         let selected_tile_start = entry.offset as usize;
         let next_tile_start= (entry.offset + entry.size) as usize;
         return Ok(
-            &(self.raw_bytes[selected_tile_start..next_tile_start])
+            TileRef {
+                raw_bytes: Rc::downgrade(&self.raw_bytes),
+                begin: selected_tile_start,
+                end: next_tile_start,
+                media_type: self.media_type.clone(),
+            }
         );
     }
 
@@ -191,63 +199,6 @@ impl MetaTile {
     }
 }
 
-#[derive(Debug)]
-pub enum InvalidMetaTileError {
-    Io(std::io::Error),
-    InvalidCompression(InvalidCompressionError),
-    InvalidTileCount(i32),
-    InvalidTileLength(u32),
-}
-
-impl From<std::io::Error> for InvalidMetaTileError {
-    fn from(error: std::io::Error) -> Self {
-        InvalidMetaTileError::Io(error)
-    }
-}
-
-impl From<InvalidCompressionError> for InvalidMetaTileError {
-    fn from(error: InvalidCompressionError) -> Self {
-        InvalidMetaTileError::InvalidCompression(error)
-    }
-}
-
-impl fmt::Display for InvalidMetaTileError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            InvalidMetaTileError::Io(err) => return write!(f, "{}", err),
-            InvalidMetaTileError::InvalidCompression(err) => return write!(f, "{}", err),
-            InvalidMetaTileError::InvalidTileCount(err) => return write!(f, "{}", err),
-            InvalidMetaTileError::InvalidTileLength(err) => return write!(f, "{}", err),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum InvalidCompressionError {
-    TagIsNotUtf8(Utf8Error),
-    InvalidTag(String),
-}
-
-impl From<Utf8Error> for InvalidCompressionError {
-    fn from(error: Utf8Error) -> Self {
-        InvalidCompressionError::TagIsNotUtf8(error)
-    }
-}
-
-impl fmt::Display for InvalidCompressionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            InvalidCompressionError::TagIsNotUtf8(err) => return write!(f, "{}", err),
-            InvalidCompressionError::InvalidTag(err) => return write!(f, "{}", err),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TileOffsetOutOfBoundsError {
-    pub tile_offset: u32,
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -256,8 +207,8 @@ mod tests {
     use std::boxed::Box;
     use std::error::Error;
     use std::env;
-    use std::path::Component;
     use std::result::Result;
+    use std::string::String;
 
     #[test]
     fn test_calc_offset_x_positive_y_positive_small() -> Result<(), Box<dyn Error>> {
@@ -402,7 +353,10 @@ mod tests {
         for tile_offset in 0..meta_tile.tile_count {
             let mut path = env::temp_dir();
             path.push(format!("basic-{}.png", tile_offset));
-            std::fs::write(path, meta_tile.select(tile_offset).unwrap());
+            let tile_ref = meta_tile.select(tile_offset).unwrap();
+            tile_ref.with_tile(|raw_bytes| {
+                std::fs::write(path, raw_bytes);
+            });
         }
         Ok(())
     }
@@ -432,7 +386,10 @@ mod tests {
         for tile_offset in 0..meta_tile.tile_count {
             let mut path = env::temp_dir();
             path.push(format!("complex-{}.png", tile_offset));
-            std::fs::write(path, meta_tile.select(tile_offset).unwrap());
+            let tile_ref = meta_tile.select(tile_offset).unwrap();
+            tile_ref.with_tile(|raw_bytes| {
+                std::fs::write(path, raw_bytes);
+            });
         }
         Ok(())
     }

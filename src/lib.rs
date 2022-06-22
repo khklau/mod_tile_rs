@@ -14,6 +14,7 @@ mod schema {
     }
     pub mod tile {
         pub mod age;
+        pub mod error;
         pub mod identity;
         pub mod source;
     }
@@ -42,6 +43,7 @@ mod interface {
     pub mod slippy;
     pub mod storage;
     pub mod telemetry;
+    pub mod tile;
 }
 #[macro_use]
 mod utility {

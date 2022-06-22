@@ -487,7 +487,7 @@ mod tests {
                             request::ServeTileRequestV2 {
                                 x: 1,
                                 y: 2,
-                                z: (MAX_ZOOM_SERVER + 1) as u32,
+                                z: (MAX_ZOOM_SERVER + 1) as i32,
                                 extension: String::from("jpg"),
                                 option: None,
                             }
@@ -818,7 +818,7 @@ mod tests {
                             request::ServeTileRequestV2 {
                                 x: 1,
                                 y: 2,
-                                z: (MAX_ZOOM_SERVER + 1) as u32,
+                                z: (MAX_ZOOM_SERVER + 1) as i32,
                                 extension: String::from("jpg"),
                                 option: None,
                             }
