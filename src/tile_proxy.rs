@@ -2,6 +2,7 @@ use crate::binding::apache2::{
     APR_BADARG, APR_SUCCESS, OK,
     apr_status_t, request_rec, server_rec,
 };
+use crate::interface::storage::TileStorageInventory;
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::request::Apache2Request;
@@ -18,6 +19,7 @@ use crate::interface::slippy::{
     ReadContext, ReadRequestFunc, ReadRequestObserver,
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
+use crate::interface::storage::TileStorage;
 use crate::interface::telemetry::{
     MetricsInventory, ResponseMetrics, TileHandlingMetrics,
 };
@@ -26,10 +28,9 @@ use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::handler::description::DescriptionHandler;
 use crate::implement::handler::statistics::StatisticsHandler;
-//use crate::implement::handler::tile::TileHandler;
+use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
-//use crate::implement::storage::file_system::FileSystemStorage;
 use crate::implement::telemetry::metrics::response::ResponseAnalysis;
 use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
@@ -58,13 +59,13 @@ pub enum HandleRequestError {
 pub struct TileProxy<'p> {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
-    metrics_state: MetricsState,
-    tracing_state: TracingState,
-    read_request: ReadRequestFunc,
-    write_response: WriteResponseFunc,
     metrics_factory: MetricsFactory<'p>,
     handler_factory: HandlerFactory<'p>,
-    description_handler: DescriptionHandler,
+    metrics_state: MetricsState,
+    tracing_state: TracingState,
+    tile_handler_state: TileHandlerState,
+    read_request: ReadRequestFunc,
+    write_response: WriteResponseFunc,
     response_analysis: ResponseAnalysis,
     tile_handling_analysis: TileHandlingAnalysis,
     trans_trace: TransactionTrace,
@@ -115,13 +116,13 @@ impl<'p> TileProxy<'p> {
         )?.0;
         new_server.config = module_config;
         new_server.config_file_path = None;
-        new_server.metrics_state = MetricsState::new();
-        new_server.tracing_state = TracingState::new();
-        new_server.read_request = SlippyRequestReader::read;
-        new_server.write_response = SlippyResponseWriter::write;
         new_server.metrics_factory = MetricsFactory::new();
         new_server.handler_factory = HandlerFactory::new();
-        new_server.description_handler = DescriptionHandler { };
+        new_server.metrics_state = MetricsState::new();
+        new_server.tracing_state = TracingState::new();
+        new_server.tile_handler_state = TileHandlerState::new(&new_server.config);
+        new_server.read_request = SlippyRequestReader::read;
+        new_server.write_response = SlippyResponseWriter::write;
         new_server.response_analysis = ResponseAnalysis::new();
         new_server.tile_handling_analysis = TileHandlingAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
@@ -212,16 +213,17 @@ impl<'p> TileProxy<'p> {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let (module_config, metrics_state, metrics_factory, tracing_state, handler_factory) = (
+                    let (module_config, metrics_state, metrics_factory, tracing_state, tile_handler_state, handler_factory) = (
                         &self.config,
                         &self.metrics_state,
                         &self.metrics_factory,
                         &mut self.tracing_state,
+                        &mut self.tile_handler_state,
                         &mut self.handler_factory,
                     );
                     let context = HandleContext::new(record, module_config) ;
                     metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
-                        handler_factory.with_handler_inventory(module_config, tracing_state, metrics_inventory, |handler_inventory| {
+                        handler_factory.with_handler_inventory(module_config, tracing_state, tile_handler_state, metrics_inventory, |handler_inventory| {
                             let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
                                 (*handler).handle(&context, request).as_some_when_processed(handler)
                             });
@@ -379,19 +381,13 @@ impl TracingState {
     }
 }
 
-/*
-struct StorageState {
-    file_system: Option<FileSystemStorage>,
-}
-*/
-
 struct HandlerInventory<'i> {
-    handlers: [&'i mut dyn RequestHandler; 2],
+    handlers: [&'i mut dyn RequestHandler; 3],
     handle_observers: [&'i mut dyn HandleRequestObserver; 1],
 }
 
 struct HandlerFactory<'f> {
-    handlers: Option<[&'f mut dyn RequestHandler; 2]>,
+    handlers: Option<[&'f mut dyn RequestHandler; 3]>,
     handle_observers: Option<[&'f mut dyn HandleRequestObserver; 1]>,
 }
 
@@ -407,6 +403,7 @@ impl<'f> HandlerFactory<'f> {
         &mut self,
         module_config: &ModuleConfig,
         tracing_state: &mut TracingState,
+        tile_handler_state: &mut TileHandlerState,
         metrics_inventory: &MetricsInventory,
         func: F,
     ) -> R
@@ -414,11 +411,12 @@ impl<'f> HandlerFactory<'f> {
         F: FnOnce(&mut HandlerInventory) -> R {
         let mut description_handler = DescriptionHandler { };
         let mut statistics_handler = StatisticsHandler::new(&metrics_inventory);
+        let mut tile_handler = TileHandler::new(tile_handler_state, None);
         let mut handler_inventory = HandlerInventory {
             handlers: match &mut self.handlers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
-                Some([handler_0, handler_1]) => [*handler_0, *handler_1],
-                None => [&mut description_handler, &mut statistics_handler],
+                Some([handler_0, handler_1, handler_2]) => [*handler_0, *handler_1, *handler_2],
+                None => [&mut description_handler, &mut statistics_handler, &mut tile_handler],
             },
             handle_observers: match &mut self.handle_observers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements

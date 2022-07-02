@@ -1,9 +1,9 @@
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::implement::storage::meta_tile::MetaTile;
 use crate::interface::handler::HandleContext;
 use crate::interface::storage::TileStorage;
 use crate::interface::tile::TileRef;
+use crate::implement::storage::meta_tile::MetaTile;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -14,11 +14,19 @@ use std::result::Result;
 
 const MAX_CACHE_SIZE: usize = 1024;
 
-pub struct FileSystemState {
+pub struct FileSystem {
     pub cache: HashMap<PathBuf, MetaTile>,
 }
 
-impl TileStorage for FileSystemState {
+impl FileSystem {
+    pub fn new() -> FileSystem {
+        FileSystem {
+            cache: HashMap::new(),
+        }
+    }
+}
+
+impl TileStorage for FileSystem {
     fn read_tile(
         &mut self,
         context: &HandleContext,

@@ -1,3 +1,4 @@
+use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::slippy::request::{ BodyVariant, SlippyRequest, };
@@ -6,19 +7,47 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{ HandleContext, RequestHandler, };
-use crate::interface::storage::TileStorageInventory;
+use crate::interface::storage::{ TileStorage, TileStorageInventory, };
+use crate::implement::storage::file_system::FileSystem;
+use crate::implement::storage::variant::StorageVariant;
 
 use chrono::Utc;
 
 use std::collections::HashMap;
+use std::option::Option;
 
 
-pub struct TileHandlingState {
+pub struct TileHandlerState {
     render_requests_by_tile_id: HashMap<TileIdentity, i32>,
+    primary_store: StorageVariant,
+}
+
+impl TileHandlerState {
+    pub fn new(_config: &ModuleConfig) -> TileHandlerState {
+        TileHandlerState {
+            render_requests_by_tile_id: HashMap::new(),
+            primary_store: StorageVariant::file_system(
+                FileSystem::new()
+            ),
+        }
+    }
 }
 
 pub struct TileHandler<'h> {
-    storage: &'h mut TileStorageInventory<'h>,
+    state: &'h mut TileHandlerState,
+    storage_inventory: Option<TileStorageInventory<'h>>,
+}
+
+impl<'h> TileHandler<'h> {
+    pub fn new(
+        state: &'h mut TileHandlerState,
+        storage_inventory: Option<TileStorageInventory<'h>>,
+    ) -> TileHandler<'h> {
+        TileHandler {
+            state,
+            storage_inventory,
+        }
+    }
 }
 
 impl<'h> RequestHandler for TileHandler<'h> {
@@ -43,7 +72,14 @@ impl<'h> RequestHandler for TileHandler<'h> {
             },
             _ => return HandleOutcome::Ignored,
         };
-        let tile = match self.storage.primary_store.read_tile(context, &tile_id) {
+        let primary_store: &mut dyn TileStorage = match &mut self.storage_inventory {
+            Some(inventory) => inventory.primary_store,
+            None => match &mut self.state.primary_store {
+                StorageVariant::file_system(file) => file,
+                StorageVariant::memcached(mem) => mem,
+            }
+        };
+        let tile = match primary_store.read_tile(context, &tile_id) {
             Ok(tile) => tile,
             Err(err) => {
                 return HandleOutcome::Processed(

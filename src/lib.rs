@@ -73,6 +73,8 @@ mod implement {
     }
     pub mod storage {
         pub mod file_system;
+        pub mod memcached;
+        pub mod variant;
         mod meta_tile;
     }
     pub mod telemetry{
