@@ -83,7 +83,6 @@ impl MetaTile {
         &self,
         tile_offset: u32
     ) -> Result<TileRef, TileOffsetOutOfBoundsError> {
-        let layout = MetaTile::get_layout(&self.raw_bytes);
         let entry = self.get_entry(tile_offset)?;
         let selected_tile_start = entry.offset as usize;
         let next_tile_start= (entry.offset + entry.size) as usize;
@@ -184,7 +183,6 @@ impl MetaTile {
     fn verify_tile_lengths(
         &self,
     ) -> Result<(), InvalidMetaTileError> {
-        let layout = MetaTile::get_layout(&self.raw_bytes);
         for tile_offset in 0..self.tile_count {
             let entry = self.get_entry(tile_offset).unwrap();
             let end_of_tile_position= (entry.offset + entry.size - 1) as usize;
@@ -355,7 +353,7 @@ mod tests {
             path.push(format!("basic-{}.png", tile_offset));
             let tile_ref = meta_tile.select(tile_offset).unwrap();
             tile_ref.with_tile(|raw_bytes| {
-                std::fs::write(path, raw_bytes);
+                std::fs::write(path, raw_bytes).expect("Tile write failed");
             });
         }
         Ok(())
@@ -388,7 +386,7 @@ mod tests {
             path.push(format!("complex-{}.png", tile_offset));
             let tile_ref = meta_tile.select(tile_offset).unwrap();
             tile_ref.with_tile(|raw_bytes| {
-                std::fs::write(path, raw_bytes);
+                std::fs::write(path, raw_bytes).expect("Tile write failed");
             });
         }
         Ok(())

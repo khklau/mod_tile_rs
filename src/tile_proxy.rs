@@ -1,8 +1,7 @@
 use crate::binding::apache2::{
-    APR_BADARG, APR_SUCCESS, OK,
+    APR_BADARG, APR_SUCCESS, DECLINED,
     apr_status_t, request_rec, server_rec,
 };
-use crate::interface::storage::TileStorageInventory;
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::request::Apache2Request;
@@ -19,7 +18,6 @@ use crate::interface::slippy::{
     ReadContext, ReadRequestFunc, ReadRequestObserver,
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
-use crate::interface::storage::TileStorage;
 use crate::interface::telemetry::{
     MetricsInventory, ResponseMetrics, TileHandlingMetrics,
 };
@@ -39,13 +37,13 @@ use chrono::Utc;
 
 use std::any::type_name;
 use std::boxed::Box;
+use std::convert::From;
 use std::error::Error;
 use std::ffi::CString;
 use std::option::Option;
 use std::os::raw::{ c_int, c_void, };
 use std::path::PathBuf;
 use std::result::Result;
-use std::string::String;
 use std::time::Duration;
 
 
@@ -53,7 +51,34 @@ pub enum HandleRequestError {
     Read(ReadError),
     Handle(HandleError),
     Write(WriteError),
-    Inventory(String),
+}
+
+impl From<ReadError> for HandleRequestError {
+    fn from(error: ReadError) -> Self {
+        HandleRequestError::Read(error)
+    }
+}
+
+impl From<HandleError> for HandleRequestError {
+    fn from(error: HandleError) -> Self {
+        HandleRequestError::Handle(error)
+    }
+}
+
+impl From<WriteError> for HandleRequestError {
+    fn from(error: WriteError) -> Self {
+        HandleRequestError::Write(error)
+    }
+}
+
+impl std::fmt::Display for HandleRequestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HandleRequestError::Read(err) => return write!(f, "{}", err),
+            HandleRequestError::Handle(err) => return write!(f, "{}", err),
+            HandleRequestError::Write(err) => return write!(f, "{}", err),
+        }
+    }
 }
 
 pub struct TileProxy<'p> {
@@ -167,13 +192,19 @@ impl<'p> TileProxy<'p> {
     pub fn handle_request(
         &mut self,
         record: &mut request_rec,
-    ) -> Result<c_int, ReadError> {
+    ) -> Result<c_int, HandleRequestError> {
         debug!(record.server, "TileServer::handle_request - start");
         let (read_outcome, self2) = self.read_request(record);
         let (handle_outcome, self3) = self2.call_handlers(record, &read_outcome);
         let (write_outcome, _) = self3.write_response(record, &read_outcome, &handle_outcome);
+        let result: Result<c_int, HandleRequestError> = match write_outcome {
+            WriteOutcome::Processed(write_result) => {
+                Ok(write_result?.status_code.as_u16() as c_int)
+            },
+            WriteOutcome::Ignored => Ok(DECLINED as c_int)
+        };
         debug!(record.server, "TileServer::handle_request - finish");
-        return Ok(OK as c_int);
+        return result;
     }
 
     fn read_request(
@@ -401,7 +432,7 @@ impl<'f> HandlerFactory<'f> {
 
     fn with_handler_inventory<F, R>(
         &mut self,
-        module_config: &ModuleConfig,
+        _module_config: &ModuleConfig,
         tracing_state: &mut TracingState,
         tile_handler_state: &mut TileHandlerState,
         metrics_inventory: &MetricsInventory,
@@ -437,6 +468,7 @@ mod tests {
     use crate::schema::slippy::response;
     use crate::framework::apache2::record::test_utils::{ with_request_rec, with_server_rec };
     use chrono::Utc;
+    use std::string::String;
 
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {

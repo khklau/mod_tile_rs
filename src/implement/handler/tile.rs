@@ -26,7 +26,7 @@ impl TileHandlerState {
     pub fn new(_config: &ModuleConfig) -> TileHandlerState {
         TileHandlerState {
             render_requests_by_tile_id: HashMap::new(),
-            primary_store: StorageVariant::file_system(
+            primary_store: StorageVariant::FileSystem(
                 FileSystem::new()
             ),
         }
@@ -75,8 +75,8 @@ impl<'h> RequestHandler for TileHandler<'h> {
         let primary_store: &mut dyn TileStorage = match &mut self.storage_inventory {
             Some(inventory) => inventory.primary_store,
             None => match &mut self.state.primary_store {
-                StorageVariant::file_system(file) => file,
-                StorageVariant::memcached(mem) => mem,
+                StorageVariant::FileSystem(file) => file,
+                StorageVariant::Memcached(mem) => mem,
             }
         };
         let tile = match primary_store.read_tile(context, &tile_id) {

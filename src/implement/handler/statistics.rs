@@ -113,3 +113,55 @@ impl<'h> RequestHandler for StatisticsHandler<'h> {
         );
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::schema::apache2::config::ModuleConfig;
+    use crate::schema::apache2::connection::Connection;
+    use crate::schema::apache2::request::Apache2Request;
+    use crate::schema::apache2::virtual_host::VirtualHost;
+    use crate::schema::tile::identity::LayerName;
+    use crate::interface::apache2::PoolStored;
+    use crate::interface::telemetry::test_utils::with_mock_zero_metrics;
+    use crate::framework::apache2::record::test_utils::with_request_rec;
+
+    use std::error::Error;
+    use std::ffi::CString;
+
+
+    #[test]
+    fn test_not_handled() -> Result<(), Box<dyn Error>> {
+        with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
+            let metrics_inventory = MetricsInventory {
+                response_metrics,
+                tile_handling_metrics,
+            };
+            let mut stat_handler = StatisticsHandler::new(&metrics_inventory);
+            let layer_name = LayerName::from("default");
+            let module_config = ModuleConfig::new();
+            let layer_config = module_config.layers.get(&layer_name).unwrap();
+            with_request_rec(|request| {
+                let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+                request.uri = uri.into_raw();
+                let handle_context = HandleContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(request)?,
+                    connection: Connection::find_or_allocate_new(request)?,
+                    request: Apache2Request::create_with_tile_config(request)?,
+                };
+                let request = request::SlippyRequest {
+                    header: request::Header::new_with_layer(
+                        handle_context.request.record,
+                        &layer_name,
+                    ),
+                    body: request::BodyVariant::DescribeLayer,
+                };
+
+                assert!(stat_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
+                Ok(())
+            })
+        })
+    }
+}

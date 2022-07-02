@@ -1,6 +1,5 @@
 use mime::Mime;
 
-use std::option::Option;
 use std::rc::Weak;
 
 
