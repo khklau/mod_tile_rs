@@ -1,5 +1,6 @@
 use crate::binding::apache2::request_rec;
 use crate::schema::apache2::error::ResponseWriteError;
+use crate::schema::http::encoding::ContentEncoding;
 
 use http::header::{ HeaderName, HeaderValue, ToStrError, };
 use mime::Mime;
@@ -42,6 +43,11 @@ pub trait Writer {
         key: &HeaderName,
         value: &HeaderValue,
     ) -> Result<(), ToStrError>;
+
+    fn set_content_encoding(
+        &mut self,
+        encoding: &ContentEncoding,
+    ) -> ();
 
     fn set_content_type(
         &mut self,

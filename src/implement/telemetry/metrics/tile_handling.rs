@@ -207,6 +207,7 @@ mod tests {
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::handler::result::HandleRequestResult;
+    use crate::schema::http::encoding::ContentEncoding;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
@@ -269,6 +270,7 @@ mod tests {
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,
+                encoding: ContentEncoding::NotCompressed,
             };
             let response = response::SlippyResponse {
                 header: response::Header::new(
@@ -355,6 +357,7 @@ mod tests {
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,
+                encoding: ContentEncoding::NotCompressed,
             };
             let response = response::SlippyResponse {
                 header: response::Header::new(
@@ -455,6 +458,7 @@ mod tests {
                         begin: 0,
                         end: 1,
                         media_type: mime::IMAGE_PNG,
+                        encoding: ContentEncoding::NotCompressed,
                     };
                     let response = response::SlippyResponse {
                         header: response::Header::new(

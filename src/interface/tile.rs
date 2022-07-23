@@ -1,3 +1,5 @@
+use crate::schema::http::encoding::ContentEncoding;
+
 use mime::Mime;
 use serde::{ Serialize, Serializer, };
 use serde::ser::SerializeStruct;
@@ -14,6 +16,7 @@ pub struct TileRef {
     pub begin: usize,
     pub end: usize,
     pub media_type: Mime,
+    pub encoding: ContentEncoding,
 }
 
 impl TileRef {

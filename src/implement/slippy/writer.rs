@@ -156,6 +156,7 @@ impl TileWriter {
                 let etag_value = HeaderValue::from_str(digest.as_str()).unwrap();
                 writer.set_http_header(&etag_key, &etag_value).unwrap();
                 http_headers.insert(etag_key, etag_value);
+                writer.set_content_encoding(&tile.tile_ref.encoding);
                 let written_length = writer.write_content(&raw_bytes)?;
                 writer.set_content_length(written_length);
                 writer.flush_response()?;

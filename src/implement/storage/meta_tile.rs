@@ -2,6 +2,7 @@ use crate::binding::meta_tile::{
     META_MAGIC, META_MAGIC_COMPRESSED, entry, meta_layout
 };
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::http::encoding::ContentEncoding;
 use crate::schema::tile::error::{
     InvalidMetaTileError, InvalidCompressionError, TileOffsetOutOfBoundsError,
 };
@@ -30,12 +31,7 @@ pub struct MetaTile {
     raw_bytes: Rc<Vec<u8>>,
     tile_count: u32,
     media_type: Mime,
-    compression: CompressionEncoding,
-}
-
-pub enum CompressionEncoding {
-    NotCompressed,
-    Gzip,
+    encoding: ContentEncoding,
 }
 
 impl MetaTile {
@@ -44,14 +40,14 @@ impl MetaTile {
     ) -> Result<MetaTile, InvalidMetaTileError> {
         let raw_bytes = Rc::new(fs::read(path)?);
         let layout = MetaTile::get_layout(&raw_bytes);
-        let compression = MetaTile::detect_compression(layout)?;
+        let encoding = MetaTile::detect_compression(layout)?;
         let tile_count = MetaTile::detect_tile_count(layout)?;
         // TODO - verify tile media type
         let result = MetaTile {
             raw_bytes,
             tile_count,
             media_type: mime::IMAGE_PNG,
-            compression,
+            encoding,
         };
         result.verify_tile_lengths()?;
         return Ok(result);
@@ -92,6 +88,7 @@ impl MetaTile {
                 begin: selected_tile_start,
                 end: next_tile_start,
                 media_type: self.media_type.clone(),
+                encoding: self.encoding.clone(),
             }
         );
     }
@@ -129,7 +126,7 @@ impl MetaTile {
 
     fn detect_compression(
         layout: &meta_layout
-    ) -> Result<CompressionEncoding, InvalidCompressionError> {
+    ) -> Result<ContentEncoding, InvalidCompressionError> {
         let raw_tag = unsafe {
             CStr::from_ptr(layout.magic.as_ptr()).to_str()?
         };
@@ -142,9 +139,9 @@ impl MetaTile {
         let actual_gzip_tag = &(raw_tag[..gzip_tag_length]);
 
         if actual_uncompressed_tag == expected_uncompressed_tag {
-            Ok(CompressionEncoding::NotCompressed)
+            Ok(ContentEncoding::NotCompressed)
         } else if actual_gzip_tag == expected_gzip_tag {
-            Ok(CompressionEncoding::Gzip)
+            Ok(ContentEncoding::Gzip)
         } else {
             Err(InvalidCompressionError::InvalidTag(raw_tag.to_string()))
         }

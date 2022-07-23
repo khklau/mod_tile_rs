@@ -5,6 +5,7 @@ use crate::binding::apache2::{
     apr_psprintf, apr_table_setn, apr_table_mergen,
 };
 use crate::schema::apache2::error::ResponseWriteError;
+use crate::schema::http::encoding::ContentEncoding;
 use crate::interface::apache2::Writer;
 #[cfg(not(test))]
 use crate::framework::apache2::record::RequestRecord;
@@ -81,6 +82,16 @@ impl Writer for request_rec {
         Ok(())
     }
 
+    fn set_content_encoding(
+        &mut self,
+        encoding: &ContentEncoding,
+    ) -> () {
+        match encoding {
+            ContentEncoding::Gzip => self.content_encoding = cstr!("gzip"),
+            _ => ()
+        }
+    }
+
     fn set_content_type(
         &mut self,
         mime: &Mime,
@@ -148,6 +159,12 @@ impl Writer for request_rec {
         _value: &HeaderValue,
     ) -> Result<(), ToStrError> {
         Ok(())
+    }
+
+    fn set_content_encoding(
+        &mut self,
+        _encoding: &ContentEncoding,
+    ) -> () {
     }
 
     fn set_content_type(
@@ -219,6 +236,12 @@ pub mod test_utils {
             _value: &HeaderValue,
         ) -> Result<(), ToStrError> {
             Ok(())
+        }
+
+        fn set_content_encoding(
+            &mut self,
+            _encoding: &ContentEncoding,
+        ) -> () {
         }
 
         fn set_content_type(

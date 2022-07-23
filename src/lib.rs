@@ -10,6 +10,7 @@ mod schema {
         pub mod processed;
     }
     pub mod http {
+        pub mod encoding;
         pub mod response;
     }
     pub mod tile {
