@@ -79,7 +79,7 @@ impl<'h> RequestHandler for TileHandler<'h> {
                 StorageVariant::Memcached(mem) => mem,
             }
         };
-        let tile = match primary_store.read_tile(context, &tile_id) {
+        let tile_ref = match primary_store.read_tile(context, &tile_id) {
             Ok(tile) => tile,
             Err(err) => {
                 return HandleOutcome::Processed(
@@ -94,12 +94,13 @@ impl<'h> RequestHandler for TileHandler<'h> {
         let response = response::SlippyResponse {
             header: response::Header::new(
                 context.request.record,
-                &tile.media_type,
+                &tile_ref.media_type,
             ),
             body: response::BodyVariant::Tile(
                 response::TileResponse {
                     source: TileSource::Cache,
                     age: TileAge::Fresh,
+                    tile_ref,
                 }
             ),
         };

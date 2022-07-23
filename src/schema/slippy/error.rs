@@ -1,5 +1,7 @@
 use crate::schema::apache2::error::ResponseWriteError;
 
+use mime::Mime;
+
 use std::convert::From;
 use std::error::Error;
 use std::fmt;
@@ -18,6 +20,7 @@ pub enum ReadError {
 #[derive(Debug, Clone)]
 pub enum WriteError {
     RequestNotHandled, // FIXME: define the error type properly
+    UnsupportedMediaType(Mime),
     ResponseWrite(ResponseWriteError),
     Io(Rc<std::io::Error>),
     Utf8(Utf8Error),
@@ -58,7 +61,8 @@ impl From<Utf8Error> for ReadError {
 impl Error for WriteError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            WriteError::RequestNotHandled => return None, // FIXME
+            WriteError::RequestNotHandled => return None,
+            WriteError::UnsupportedMediaType(_) => return None,
             WriteError::ResponseWrite(err) => return Some(err),
             WriteError::Io(err) => return Some(&(**err)),
             WriteError::Utf8(err) => return Some(err),
@@ -70,6 +74,7 @@ impl fmt::Display for WriteError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             WriteError::RequestNotHandled => return write!(f, "FIXME"),
+            WriteError::UnsupportedMediaType(mime) => return write!(f, "Unsupported tile media tyoe {}", mime.essence_str()),
             WriteError::ResponseWrite(err) => return write!(f, "{}", err),
             WriteError::Io(err) => return write!(f, "{}", err),
             WriteError::Utf8(err) => return write!(f, "{}", err),

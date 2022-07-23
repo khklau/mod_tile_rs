@@ -1,6 +1,7 @@
 use crate::schema::http::response::HttpResponse;
+use crate::schema::slippy::error::WriteError;
 use crate::schema::slippy::response::{
-    BodyVariant, Header, Description, SlippyResponse, Statistics,
+    BodyVariant, Header, Description, SlippyResponse, Statistics, TileResponse,
 };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::interface::apache2::Writer;
@@ -30,8 +31,10 @@ impl SlippyResponseWriter {
                     StatisticsWriter::write(context, &response.header, statistics, writer)
                 )
             },
-            BodyVariant::Tile(_) => {
-                WriteOutcome::Ignored
+            BodyVariant::Tile(tile) => {
+                WriteOutcome::Processed(
+                    TileWriter::write(context, &response.header, tile, writer)
+                )
             },
         }
     }
@@ -93,6 +96,7 @@ impl DescriptionWriter {
         )
     }
 }
+
 struct StatisticsWriter { }
 impl StatisticsWriter {
     pub fn write(
@@ -130,5 +134,45 @@ impl StatisticsWriter {
                 http_headers,
             }
         )
+    }
+}
+
+struct TileWriter {}
+impl TileWriter {
+    pub fn write(
+        context: &WriteContext,
+        header: &Header,
+        tile: &TileResponse,
+        writer: &mut dyn Writer,
+    ) -> WriteResponseResult {
+        debug!(context.host.record, "TileWriter::write - start");
+        let result = if let (mime::IMAGE, mime::PNG) = (header.mime_type.type_(), header.mime_type.subtype()) {
+            let mut http_headers = HeaderMap::new();
+            writer.set_content_type(&mime::IMAGE_PNG);
+            debug!(context.host.record, "TileWriter::write - setting content type to {}", mime::IMAGE_PNG.essence_str());
+            tile.tile_ref.with_tile(|raw_bytes| {
+                let digest = format!("\"{:x}\"", md5::compute(&raw_bytes));
+                let etag_key = ETAG.clone();
+                let etag_value = HeaderValue::from_str(digest.as_str()).unwrap();
+                writer.set_http_header(&etag_key, &etag_value).unwrap();
+                http_headers.insert(etag_key, etag_value);
+                let written_length = writer.write_content(&raw_bytes)?;
+                writer.set_content_length(written_length);
+                writer.flush_response()?;
+                Ok(
+                    HttpResponse {
+                        status_code: StatusCode::OK,
+                        bytes_written: written_length,
+                        http_headers,
+                    }
+                )
+            })
+        } else {
+            Err(
+                WriteError::UnsupportedMediaType(tile.tile_ref.media_type.clone())
+            )
+        };
+        debug!(context.host.record, "TileWriter::write - finish");
+        return result;
     }
 }

@@ -212,6 +212,7 @@ mod tests {
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::WriteOutcome;
     use crate::interface::apache2::{ PoolStored, Writer, };
+    use crate::interface::tile::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::framework::apache2::writer::test_utils::MockWriter;
     use chrono::Utc;
@@ -219,6 +220,7 @@ mod tests {
     use http::status::StatusCode;
     use std::error::Error;
     use std::ffi::CString;
+    use std::rc::Rc;
 
     fn mock_write(
         _context: &WriteContext,
@@ -261,6 +263,13 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
+            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let tile_ref = TileRef {
+                raw_bytes: Rc::downgrade(&empty_tile),
+                begin: 0,
+                end: 1,
+                media_type: mime::IMAGE_PNG,
+            };
             let response = response::SlippyResponse {
                 header: response::Header::new(
                     write_context.request.record,
@@ -270,6 +279,7 @@ mod tests {
                     response::TileResponse {
                         source: TileSource::Render,
                         age: TileAge::Fresh,
+                        tile_ref,
                     }
                 ),
             };
@@ -339,6 +349,13 @@ mod tests {
             );
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
+            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let tile_ref = TileRef {
+                raw_bytes: Rc::downgrade(&empty_tile),
+                begin: 0,
+                end: 1,
+                media_type: mime::IMAGE_PNG,
+            };
             let response = response::SlippyResponse {
                 header: response::Header::new(
                     write_context.request.record,
@@ -348,6 +365,7 @@ mod tests {
                     response::TileResponse {
                         source: TileSource::Cache,
                         age: TileAge::VeryOld,
+                        tile_ref,
                     }
                 ),
             };
@@ -427,10 +445,17 @@ mod tests {
             let mut analysis = TileHandlingAnalysis::new();
             let all_sources = [TileSource::Render, TileSource::Cache];
             let all_ages = [TileAge::Fresh, TileAge::Old, TileAge::VeryOld];
+            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
             for source in &all_sources {
                 for age in &all_ages {
                     let before_timestamp = Utc::now();
                     let after_timestamp = before_timestamp + Duration::seconds(2);
+                    let tile_ref = TileRef {
+                        raw_bytes: Rc::downgrade(&empty_tile),
+                        begin: 0,
+                        end: 1,
+                        media_type: mime::IMAGE_PNG,
+                    };
                     let response = response::SlippyResponse {
                         header: response::Header::new(
                             write_context.request.record,
@@ -440,6 +465,7 @@ mod tests {
                             response::TileResponse {
                                 source: source.clone(),
                                 age: age.clone(),
+                                tile_ref,
                             }
                         ),
                     };

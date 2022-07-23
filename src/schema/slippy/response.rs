@@ -6,6 +6,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::interface::apache2::PoolStored;
+use crate::interface::tile::TileRef;
 
 use mime::Mime;
 use serde::Serialize;
@@ -118,4 +119,5 @@ impl Statistics {
 pub struct TileResponse {
     pub source: TileSource,
     pub age: TileAge,
+    pub tile_ref: TileRef,
 }
