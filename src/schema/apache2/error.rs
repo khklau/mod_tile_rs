@@ -42,3 +42,17 @@ impl fmt::Display for ResponseWriteError {
         write!(f, "Error on writing response: code {}", self.error_code)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct InvalidConfigError {
+    pub entry: String,
+    pub reason: String,
+}
+
+impl Error for InvalidConfigError {}
+
+impl fmt::Display for InvalidConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "In module config entry {} is invalid: {}", self.entry, self.reason)
+    }
+}

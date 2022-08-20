@@ -40,6 +40,7 @@ mod schema {
 }
 mod interface {
     pub mod apache2;
+    pub mod communication;
     pub mod handler;
     pub mod slippy;
     pub mod storage;
@@ -63,6 +64,9 @@ mod framework {
     }
 }
 mod implement {
+    pub mod communication {
+        pub mod renderd_socket;
+    }
     pub mod handler {
         pub mod description;
         pub mod statistics;

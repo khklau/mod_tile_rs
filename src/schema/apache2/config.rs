@@ -1,10 +1,11 @@
 use crate::schema::tile::identity::LayerName;
 
+use std::clone::Clone;
 use std::collections::hash_map::HashMap;
 use std::time::Duration;
 
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ModuleConfig {
     pub renderd: RenderdConfig,
     pub layers: HashMap<LayerName, LayerConfig>,
@@ -21,7 +22,7 @@ impl ModuleConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RenderdConfig {
     pub store_uri: String,
     pub ipc_uri: String,
@@ -40,7 +41,7 @@ impl RenderdConfig {
 
 pub const MAX_ZOOM_SERVER: usize = 30;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LayerConfig {
     pub name: LayerName,
     pub base_url: String,

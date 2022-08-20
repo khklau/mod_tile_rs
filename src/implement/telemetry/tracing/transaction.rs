@@ -9,7 +9,7 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
-use crate::interface::apache2::Writer;
+use crate::interface::apache2::HttpResponseWriter;
 use crate::interface::slippy::{ ReadContext, WriteContext, };
 
 
@@ -44,7 +44,7 @@ impl WriteResponseObserver for TransactionTrace {
         &mut self,
         _context: &WriteContext,
         _response: &SlippyResponse,
-        _writer: &dyn Writer,
+        _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,
         _func: WriteResponseFunc,
         _read_outcome: &ReadOutcome,

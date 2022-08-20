@@ -1,4 +1,5 @@
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::slippy::request::{ BodyVariant, SlippyRequest, };
@@ -8,6 +9,7 @@ use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{ HandleContext, RequestHandler, };
 use crate::interface::storage::{ TileStorage, TileStorageInventory, };
+use crate::implement::communication::renderd_socket::RenderdSocket;
 use crate::implement::storage::file_system::FileSystem;
 use crate::implement::storage::variant::StorageVariant;
 
@@ -15,21 +17,25 @@ use chrono::Utc;
 
 use std::collections::HashMap;
 use std::option::Option;
+use std::result::Result;
 
 
 pub struct TileHandlerState {
     render_requests_by_tile_id: HashMap<TileIdentity, i32>,
     primary_store: StorageVariant,
+    primary_comms: RenderdSocket,
 }
 
 impl TileHandlerState {
-    pub fn new(_config: &ModuleConfig) -> TileHandlerState {
-        TileHandlerState {
+    pub fn new(config: &ModuleConfig) -> Result<TileHandlerState, InvalidConfigError> {
+        let value = TileHandlerState {
             render_requests_by_tile_id: HashMap::new(),
             primary_store: StorageVariant::FileSystem(
                 FileSystem::new()
             ),
-        }
+            primary_comms: RenderdSocket::new(config)?,
+        };
+        return Ok(value);
     }
 }
 

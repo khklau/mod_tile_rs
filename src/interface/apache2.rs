@@ -30,7 +30,7 @@ pub trait PoolStored<'p> {
     }
 }
 
-pub trait Writer {
+pub trait HttpResponseWriter {
 
     fn append_http_header(
         &mut self,

@@ -4,7 +4,7 @@ use crate::schema::slippy::response::{
     BodyVariant, Header, Description, SlippyResponse, Statistics, TileResponse,
 };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
-use crate::interface::apache2::Writer;
+use crate::interface::apache2::HttpResponseWriter;
 use crate::interface::slippy::WriteContext;
 
 use chrono::{ TimeZone, Utc, };
@@ -18,7 +18,7 @@ impl SlippyResponseWriter {
     pub fn write(
         context: &WriteContext,
         response: &SlippyResponse,
-        writer: &mut dyn Writer,
+        writer: &mut dyn HttpResponseWriter,
     ) -> WriteOutcome {
         match &response.body {
             BodyVariant::Description(description) => {
@@ -46,7 +46,7 @@ impl DescriptionWriter {
         context: &WriteContext,
         header: &Header,
         description: &Description,
-        writer: &mut dyn Writer,
+        writer: &mut dyn HttpResponseWriter,
     ) -> WriteResponseResult {
         debug!(context.host.record, "DescriptionWriter::write - start");
         let mut http_headers = HeaderMap::new();
@@ -103,7 +103,7 @@ impl StatisticsWriter {
         context: &WriteContext,
         header: &Header,
         statistics: &Statistics,
-        writer: &mut dyn Writer,
+        writer: &mut dyn HttpResponseWriter,
     ) -> WriteResponseResult {
         debug!(context.host.record, "StatisticsWriter::write - start");
         let mut http_headers = HeaderMap::new();
@@ -143,7 +143,7 @@ impl TileWriter {
         context: &WriteContext,
         header: &Header,
         tile: &TileResponse,
-        writer: &mut dyn Writer,
+        writer: &mut dyn HttpResponseWriter,
     ) -> WriteResponseResult {
         debug!(context.host.record, "TileWriter::write - start");
         let result = if let (mime::IMAGE, mime::PNG) = (header.mime_type.type_(), header.mime_type.subtype()) {

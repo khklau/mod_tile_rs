@@ -5,7 +5,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
-use crate::interface::apache2::Writer;
+use crate::interface::apache2::HttpResponseWriter;
 
 
 pub struct ReadContext<'c> {
@@ -23,7 +23,7 @@ pub struct WriteContext<'c> {
 
 pub type ReadRequestFunc = fn(&ReadContext, &Apache2Request) -> ReadOutcome;
 
-pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn Writer) -> WriteOutcome;
+pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteOutcome;
 
 pub trait ReadRequestObserver {
     fn on_read(
@@ -40,7 +40,7 @@ pub trait WriteResponseObserver {
         &mut self,
         context: &WriteContext,
         response: &SlippyResponse,
-        writer: &dyn Writer,
+        writer: &dyn HttpResponseWriter,
         write_outcome: &WriteOutcome,
         func: WriteResponseFunc,
         read_outcome: &ReadOutcome,

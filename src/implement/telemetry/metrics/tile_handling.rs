@@ -5,7 +5,7 @@ use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
-use crate::interface::apache2::Writer;
+use crate::interface::apache2::HttpResponseWriter;
 use crate::interface::slippy::{
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
@@ -81,7 +81,7 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         &mut self,
         context: &WriteContext,
         _response: &response::SlippyResponse,
-        _writer: &dyn Writer,
+        _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,
         _func: WriteResponseFunc,
         read_outcome: &ReadOutcome,
@@ -212,7 +212,7 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::WriteOutcome;
-    use crate::interface::apache2::{ PoolStored, Writer, };
+    use crate::interface::apache2::{ PoolStored, HttpResponseWriter, };
     use crate::interface::tile::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::framework::apache2::writer::test_utils::MockWriter;
@@ -226,7 +226,7 @@ mod tests {
     fn mock_write(
         _context: &WriteContext,
         _response: &response::SlippyResponse,
-        _writer: &mut dyn Writer,
+        _writer: &mut dyn HttpResponseWriter,
     ) -> WriteOutcome {
         WriteOutcome::Ignored
     }

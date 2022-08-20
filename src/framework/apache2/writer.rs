@@ -6,7 +6,7 @@ use crate::binding::apache2::{
 };
 use crate::schema::apache2::error::ResponseWriteError;
 use crate::schema::http::encoding::ContentEncoding;
-use crate::interface::apache2::Writer;
+use crate::interface::apache2::HttpResponseWriter;
 #[cfg(not(test))]
 use crate::framework::apache2::record::RequestRecord;
 
@@ -18,7 +18,7 @@ use std::ffi::{ CString, c_void };
 
 
 #[cfg(not(test))]
-impl Writer for request_rec {
+impl HttpResponseWriter for request_rec {
 
     fn append_http_header(
         &mut self,
@@ -143,7 +143,7 @@ impl Writer for request_rec {
 
 
 #[cfg(test)]
-impl Writer for request_rec {
+impl HttpResponseWriter for request_rec {
 
     fn append_http_header(
         &mut self,
@@ -196,7 +196,7 @@ impl Writer for request_rec {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
-    use crate::interface::apache2::Writer;
+    use crate::interface::apache2::HttpResponseWriter;
     use std::cmp::min;
     use std::collections::VecDeque;
     use std::slice;
@@ -220,7 +220,7 @@ pub mod test_utils {
         }
     }
 
-    impl Writer for MockWriter {
+    impl HttpResponseWriter for MockWriter {
 
         fn append_http_header(
             &mut self,

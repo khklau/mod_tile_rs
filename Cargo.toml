@@ -14,6 +14,9 @@ crate-type = ["dylib"]
 [build-dependencies]
 bindgen = "0.59.2"
 
+[dev-dependencies]
+mktemp = "0.4.1"
+
 [dependencies]
 chrono = "0.4.19"
 configparser = "2.1.0"
