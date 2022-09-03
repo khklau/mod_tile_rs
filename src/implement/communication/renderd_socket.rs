@@ -1,11 +1,14 @@
 use crate::interface::communication::{
-    CommunicationError, BidirectionalChannel, RenderResponse
+    CommunicationError, BidirectionalChannel,
 };
 use crate::interface::handler::HandleContext;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::tile::identity::TileIdentity;
 
+use std::io::Read;
+use std::io::Write;
+use std::io::ErrorKind::TimedOut;
+use std::option::Option;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::result::Result;
@@ -24,21 +27,72 @@ impl RenderdSocket {
                     reason: ioerr.to_string(),
                 }
             ),
-            Ok(socket) => Ok(
-                RenderdSocket {
-                    socket
+            Ok(socket) => {
+                let availability_timeout = config.renderd.availability_timeout.clone();
+                if !availability_timeout.is_zero() {
+                    if let Err(ioerr) = socket.set_write_timeout(Some(availability_timeout)) {
+                        return Err(
+                            InvalidConfigError {
+                                entry: String::from("availability_timeout"),
+                                reason: ioerr.to_string(),
+                            }
+                        );
+                    }
                 }
-            )
+                let render_timeout = config.renderd.render_timeout.clone();
+                if !render_timeout.is_zero() {
+                    if let Err(ioerr) = socket.set_read_timeout(Some(render_timeout)) {
+                        return Err(
+                            InvalidConfigError {
+                                entry: String::from("render_timeout"),
+                                reason: ioerr.to_string(),
+                            }
+                        );
+                    }
+                }
+                Ok(
+                    RenderdSocket {
+                        socket,
+                    }
+                )
+            }
         }
     }
 }
 
 impl BidirectionalChannel for RenderdSocket {
-    fn request_render(
+    fn send_blocking_request(
         &mut self,
-        context: &HandleContext,
-        id: &TileIdentity,
-    ) -> Result<RenderResponse, CommunicationError> {
-        return Ok(RenderResponse::NotDone);
+        _context: &HandleContext,
+        request: &[u8],
+        response_buffer: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>, CommunicationError> {
+        let mut output = match response_buffer {
+            Some(buffer) => buffer,
+            None => Vec::new()
+        };
+        if let Err(ioerr) = self.socket.write_all(request) {
+            match ioerr.kind() {
+                TimedOut => return Err(
+                    CommunicationError::TimeoutError
+                ),
+                _ => return Err(
+                    CommunicationError::Io(ioerr)
+                )
+            }
+        }
+        self.socket.flush()?;
+        let _bytes_read = match self.socket.read_to_end(&mut output) {
+            Ok(bytes_read) => bytes_read,
+            Err(ioerr) => match ioerr.kind() {
+                TimedOut => return Err(
+                    CommunicationError::TimeoutError
+                ),
+                _ => return Err(
+                    CommunicationError::Io(ioerr)
+                )
+            }
+        };
+        return Ok(output);
     }
 }

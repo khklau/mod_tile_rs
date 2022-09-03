@@ -26,6 +26,7 @@ impl ModuleConfig {
 pub struct RenderdConfig {
     pub store_uri: String,
     pub ipc_uri: String,
+    pub availability_timeout: Duration,
     pub render_timeout: Duration,
 }
 
@@ -34,6 +35,7 @@ impl RenderdConfig {
         RenderdConfig {
             store_uri: String::from("/var/cache/renderd"),
             ipc_uri: String::from("/var/run/renderd/renderd.sock"),
+            availability_timeout: Duration::new(0, 0),
             render_timeout: Duration::new(0, 0),
         }
     }
