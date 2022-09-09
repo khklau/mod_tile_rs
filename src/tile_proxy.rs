@@ -471,30 +471,63 @@ mod tests {
     use mktemp::Temp;
     use std::boxed::Box;
     use std::error::Error;
+    use std::marker::Send;
     use std::ops::FnOnce;
     use std::os::unix::net::UnixListener;
     use std::string::String;
+    use std::sync::{ Arc, Condvar, Mutex, };
+    use std::thread::{ ScopedJoinHandle, scope, } ;
 
-    pub struct MockEnv {
-        mock_ipc_dir: Temp,
-        renderd_listener: UnixListener,
+    struct MockEnv<'e> {
         mock_config: ModuleConfig,
+        mock_ipc_dir: Temp,
+        main_condition: Arc<(Mutex<bool>, Condvar)>,
+        renderd_thread: ScopedJoinHandle<'e, ()>,
     }
 
-    pub fn with_mock_env<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&MockEnv) -> Result<(), Box<dyn Error>> {
-        let temp_ipc_dir = Temp::new_dir()?;
-        let mut ipc_path = temp_ipc_dir.to_path_buf();
-        ipc_path.push("renderd.sock");
-        let listener = UnixListener::bind(&ipc_path)?;
-        let mut config = ModuleConfig::new();
-        config.renderd.ipc_uri = ipc_path.to_str().unwrap().to_string();
-        let env = MockEnv {
-            mock_ipc_dir: temp_ipc_dir,
-            renderd_listener: listener,
-            mock_config: config,
-        };
-        func(&env)
+    fn with_mock_env<R, F>(func: F, render: R) -> Result<(), Box<dyn Error>>
+        where F: FnOnce(&MockEnv) -> Result<(), Box<dyn Error>>,
+              R: FnOnce(Arc<(Mutex<bool>, Condvar)>, ModuleConfig, UnixListener) -> () + Send {
+        scope(|thread_scope| {
+            let main_condition = Arc::new((Mutex::new(true), Condvar::new()));
+            let thread_condition = Arc::clone(&main_condition);
+            let temp_ipc_dir = Temp::new_dir()?;
+            let mut ipc_path = temp_ipc_dir.to_path_buf();
+            ipc_path.push("renderd.sock");
+            let mut config = ModuleConfig::new();
+            let render_config_copy = config.clone();
+            config.renderd.ipc_uri = ipc_path.to_str().unwrap().to_string();
+            let listener = UnixListener::bind(&ipc_path).expect("Failed to bind");
+            let env = MockEnv {
+                mock_config: config,
+                mock_ipc_dir: temp_ipc_dir,
+                main_condition,
+                renderd_thread: thread_scope.spawn(move|| {
+                    render(thread_condition, render_config_copy, listener)
+                }),
+            };
+            let result = func(&env);
+            {
+                let (lock, cvar) = &(*env.main_condition);
+                let mut persist = lock.lock().unwrap();
+                *persist = false;
+                cvar.notify_one();
+            }
+            return result;
+        })
+    }
+
+    fn render_no_op(
+        thread_condition: Arc<(Mutex<bool>, Condvar)>,
+        _config: ModuleConfig,
+        _listener: UnixListener
+    ) -> () {
+        let (lock, cvar) = &(*thread_condition);
+        let mut persist = lock.lock().unwrap();
+        while *persist {
+            persist = cvar.wait(persist).unwrap();
+        }
+        return ();
     }
 
     #[test]
@@ -517,7 +550,7 @@ mod tests {
                 }
                 Ok(())
             })
-        })
+        }, render_no_op)
     }
 
     struct MockReadObserver {
@@ -554,7 +587,7 @@ mod tests {
                     Ok(())
                 })
             })
-        })
+        }, render_no_op)
     }
 
     struct MockHandleObserver {
@@ -603,7 +636,7 @@ mod tests {
                     Ok(())
                 })
             })
-        })
+        }, render_no_op)
     }
 
     struct MockWriteObserver {
@@ -686,6 +719,6 @@ mod tests {
                     Ok(())
                 })
             })
-        })
+        }, render_no_op)
     }
 }
