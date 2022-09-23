@@ -469,64 +469,69 @@ mod tests {
     use crate::framework::apache2::record::test_utils::{ with_request_rec, with_server_rec };
     use chrono::Utc;
     use mktemp::Temp;
+    use thread_id;
     use std::boxed::Box;
     use std::error::Error;
     use std::marker::Send;
     use std::ops::FnOnce;
     use std::os::unix::net::UnixListener;
     use std::string::String;
-    use std::sync::{ Arc, Condvar, Mutex, };
+    use std::sync::{ Arc, Mutex, };
     use std::thread::{ ScopedJoinHandle, scope, } ;
 
     struct MockEnv<'e> {
         mock_config: ModuleConfig,
-        mock_ipc_dir: Temp,
-        main_condition: Arc<(Mutex<bool>, Condvar)>,
+        main_condition: Arc<Mutex<bool>>,
         renderd_thread: ScopedJoinHandle<'e, ()>,
     }
 
     fn with_mock_env<R, F>(func: F, render: R) -> Result<(), Box<dyn Error>>
         where F: FnOnce(&MockEnv) -> Result<(), Box<dyn Error>>,
-              R: FnOnce(Arc<(Mutex<bool>, Condvar)>, ModuleConfig, UnixListener) -> () + Send {
+              R: FnOnce(Arc<Mutex<bool>>, ModuleConfig, Temp, UnixListener) -> () + Send {
+        let main_condition = Arc::new(Mutex::new(true));
+        let temp_ipc_dir = Temp::new_dir()?;
+        let mut ipc_path = temp_ipc_dir.to_path_buf();
+        ipc_path.push("renderd.sock");
+        let mut config = ModuleConfig::new();
+        config.renderd.ipc_uri = ipc_path.to_str().unwrap().to_string();
         scope(|thread_scope| {
-            let main_condition = Arc::new((Mutex::new(true), Condvar::new()));
             let thread_condition = Arc::clone(&main_condition);
-            let temp_ipc_dir = Temp::new_dir()?;
-            let mut ipc_path = temp_ipc_dir.to_path_buf();
-            ipc_path.push("renderd.sock");
-            let mut config = ModuleConfig::new();
             let render_config_copy = config.clone();
-            config.renderd.ipc_uri = ipc_path.to_str().unwrap().to_string();
             let listener = UnixListener::bind(&ipc_path).expect("Failed to bind");
             let env = MockEnv {
                 mock_config: config,
-                mock_ipc_dir: temp_ipc_dir,
                 main_condition,
                 renderd_thread: thread_scope.spawn(move|| {
-                    render(thread_condition, render_config_copy, listener)
+                    render(thread_condition, render_config_copy, temp_ipc_dir, listener)
                 }),
             };
             let result = func(&env);
-            {
-                let (lock, cvar) = &(*env.main_condition);
-                let mut persist = lock.lock().unwrap();
-                *persist = false;
-                cvar.notify_one();
+            let mut renderd_persisting = true;
+            while renderd_persisting {
+                let lock = &(*env.main_condition);
+                if let Ok(mut guard) = lock.try_lock() {
+                    *guard = false;
+                    renderd_persisting = *guard;
+                }
             }
             return result;
         })
     }
 
     fn render_no_op(
-        thread_condition: Arc<(Mutex<bool>, Condvar)>,
+        thread_condition: Arc<Mutex<bool>>,
         _config: ModuleConfig,
-        _listener: UnixListener
+        _listener_dir: Temp,
+        listener: UnixListener
     ) -> () {
-        let (lock, cvar) = &(*thread_condition);
-        let mut persist = lock.lock().unwrap();
-        while *persist {
-            persist = cvar.wait(persist).unwrap();
+        let mut persist = true;
+        while persist {
+            let lock = &(*thread_condition);
+            if let Ok(guard) = lock.try_lock() {
+                persist = *guard;
+            }
         }
+        drop(listener);
         return ();
     }
 
@@ -534,7 +539,7 @@ mod tests {
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
         with_mock_env(|env| {
             with_server_rec(|record| {
-                let proxy = TileProxy::new(record, env.mock_config.clone()).unwrap();
+                let proxy = TileProxy::new(record, env.mock_config.clone())?;
 
                 let expected_timeout = Duration::new(30, 50);
                 proxy.set_render_timeout(&expected_timeout);
@@ -577,7 +582,7 @@ mod tests {
                     let mut mock1 = MockReadObserver {
                         count: 0,
                     };
-                    let proxy = TileProxy::new(server, env.mock_config.clone()).unwrap();
+                    let proxy = TileProxy::new(server, env.mock_config.clone())?;
                     proxy.read_observers = Some([&mut mock1]);
                     let uri = CString::new("/mod_tile_rs")?;
                     request.uri = uri.into_raw();
@@ -615,7 +620,7 @@ mod tests {
                     let mut mock1 = MockHandleObserver {
                         count: 0,
                     };
-                    let proxy = TileProxy::new(server, env.mock_config.clone()).unwrap();
+                    let proxy = TileProxy::new(server, env.mock_config.clone())?;
                     proxy.handler_factory.handle_observers = Some([&mut mock1]);
                     let uri = CString::new("/mod_tile_rs")?;
                     request.uri = uri.into_raw();
@@ -672,7 +677,7 @@ mod tests {
                     let mut mock3 = MockWriteObserver {
                         count: 0,
                     };
-                    let proxy = TileProxy::new(server, env.mock_config.clone()).unwrap();
+                    let proxy = TileProxy::new(server, env.mock_config.clone())?;
                     proxy.write_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
                     let uri = CString::new("/mod_tile_rs")?;
                     request.uri = uri.into_raw();
