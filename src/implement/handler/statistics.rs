@@ -10,6 +10,8 @@ use chrono::Utc;
 use http::status::StatusCode;
 use mime;
 
+use std::any::type_name;
+
 
 pub struct StatisticsHandler<'h> {
     metrics: &'h MetricsInventory<'h>,
@@ -111,6 +113,10 @@ impl<'h> RequestHandler for StatisticsHandler<'h> {
                 result: Ok(response),
             }
         );
+    }
+
+    fn type_name(&self) -> &'static str {
+        type_name::<Self>()
     }
 }
 

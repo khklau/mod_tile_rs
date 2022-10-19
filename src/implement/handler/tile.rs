@@ -15,6 +15,7 @@ use crate::implement::storage::variant::StorageVariant;
 
 use chrono::Utc;
 
+use std::any::type_name;
 use std::collections::HashMap;
 use std::option::Option;
 use std::result::Result;
@@ -120,4 +121,7 @@ impl<'h> RequestHandler for TileHandler<'h> {
         );
     }
 
+    fn type_name(&self) -> &'static str {
+        type_name::<Self>()
+    }
 }

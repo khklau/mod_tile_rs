@@ -36,6 +36,8 @@ pub trait RequestHandler {
         context: &HandleContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
+
+    fn type_name(&self) -> &'static str;
 }
 
 pub trait HandleRequestObserver {
@@ -44,7 +46,7 @@ pub trait HandleRequestObserver {
         context: &HandleContext,
         request: &SlippyRequest,
         handle_outcome: &HandleOutcome,
-        obj: &dyn RequestHandler,
+        handler_name: &'static str,
         read_outcome: &ReadOutcome,
     ) -> ();
 }
@@ -65,6 +67,10 @@ pub mod test_utils {
             _request: &request::SlippyRequest,
         ) -> HandleOutcome {
             HandleOutcome::Ignored
+        }
+
+        fn type_name(&self) -> &'static str {
+            std::any::type_name::<Self>()
         }
     }
 }

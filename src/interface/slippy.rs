@@ -31,7 +31,7 @@ pub trait ReadRequestObserver {
         context: &ReadContext,
         request: &Apache2Request,
         read_outcome: &ReadOutcome,
-        func: ReadRequestFunc,
+        read_func_name: &'static str,
     ) -> ();
 }
 
@@ -42,7 +42,7 @@ pub trait WriteResponseObserver {
         response: &SlippyResponse,
         writer: &dyn HttpResponseWriter,
         write_outcome: &WriteOutcome,
-        func: WriteResponseFunc,
+        write_func_name: &'static str,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
     ) -> ();

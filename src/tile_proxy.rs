@@ -32,6 +32,7 @@ use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::telemetry::metrics::response::ResponseAnalysis;
 use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
+use crate::utility::debugging::function_name;
 
 use chrono::Utc;
 
@@ -90,7 +91,9 @@ pub struct TileProxy<'p> {
     tracing_state: TracingState,
     tile_handler_state: TileHandlerState,
     read_request: ReadRequestFunc,
+    read_func_name: &'static str,
     write_response: WriteResponseFunc,
+    write_func_name: &'static str,
     response_analysis: ResponseAnalysis,
     tile_handling_analysis: TileHandlingAnalysis,
     trans_trace: TransactionTrace,
@@ -147,7 +150,9 @@ impl<'p> TileProxy<'p> {
         new_server.tracing_state = TracingState::new();
         new_server.tile_handler_state = TileHandlerState::new(&new_server.config)?;
         new_server.read_request = SlippyRequestReader::read;
+        new_server.read_func_name = function_name(SlippyRequestReader::read);
         new_server.write_response = SlippyResponseWriter::write;
+        new_server.write_func_name = function_name(SlippyResponseWriter::write);
         new_server.response_analysis = ResponseAnalysis::new();
         new_server.tile_handling_analysis = TileHandlingAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
@@ -212,7 +217,7 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> (ReadOutcome, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
-        let read = self.read_request;
+        let (read, read_func_name) = (self.read_request, self.read_func_name);
         let context = ReadContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
@@ -227,7 +232,7 @@ impl<'p> TileProxy<'p> {
         };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(&context, request, &read_outcome, read);
+            (*observer_iter).on_read(&context, request, &read_outcome, read_func_name);
         }
         debug!(record.server, "TileServer::read_request - finish");
         return (read_outcome, self);
@@ -256,12 +261,12 @@ impl<'p> TileProxy<'p> {
                     metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
                         handler_factory.with_handler_inventory(module_config, tracing_state, tile_handler_state, metrics_inventory, |handler_inventory| {
                             let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
-                                (*handler).handle(&context, request).as_some_when_processed(handler)
+                                (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
                             });
-                            if let Some((handle_outcome, handler)) = outcome_option {
+                            if let Some((handle_outcome, handler_name)) = outcome_option {
                                 for observer_iter in handler_inventory.handle_observers.iter_mut() {
                                     debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                    (*observer_iter).on_handle(&context, request, &handle_outcome, *handler, read_outcome);
+                                    (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
                                 }
                                 handle_outcome
                             } else {
@@ -294,7 +299,7 @@ impl<'p> TileProxy<'p> {
         handle_outcome: &HandleOutcome,
     ) -> (WriteOutcome, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
-        let write = self.write_response;
+        let (write, write_func_name) = (self.write_response, self.write_func_name);
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
         let writer: &mut dyn HttpResponseWriter = unsafe { write_record.as_mut().unwrap() };
@@ -318,7 +323,7 @@ impl<'p> TileProxy<'p> {
                             context.host.record,
                             "TileServer::write_response - calling observer {:p}", *observer_iter
                         );
-                        (*observer_iter).on_write(&context, response, writer, &outcome, write, &read_outcome, &handle_outcome);
+                        (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);
                     }
                     outcome
                 }
@@ -568,7 +573,7 @@ mod tests {
             _context: &ReadContext,
             _request: &Apache2Request,
             _outcome: &ReadOutcome,
-            _func: ReadRequestFunc,
+            _read_func_name: &'static str,
         ) -> () {
             self.count += 1;
         }
@@ -605,7 +610,7 @@ mod tests {
             _context: &HandleContext,
             _request: &request::SlippyRequest,
             _handle_outcome: &HandleOutcome,
-            _obj: &dyn RequestHandler,
+            _handler_name: &'static str,
             _read_outcome: &ReadOutcome,
         ) -> () {
             self.count += 1;
@@ -655,7 +660,7 @@ mod tests {
             _response: &response::SlippyResponse,
             _writer: &dyn HttpResponseWriter,
             _write_result: &WriteOutcome,
-            _func: WriteResponseFunc,
+            _write_func_name: &'static str,
             _read_outcome: &ReadOutcome,
             _handle_outcome: &HandleOutcome,
         ) -> () {

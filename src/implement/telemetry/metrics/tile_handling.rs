@@ -83,7 +83,7 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,
-        _func: WriteResponseFunc,
+        _write_func_name: &'static str,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
     ) -> () {
@@ -223,14 +223,6 @@ mod tests {
     use std::ffi::CString;
     use std::rc::Rc;
 
-    fn mock_write(
-        _context: &WriteContext,
-        _response: &response::SlippyResponse,
-        _writer: &mut dyn HttpResponseWriter,
-    ) -> WriteOutcome {
-        WriteOutcome::Ignored
-    }
-
     #[test]
     fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
@@ -303,7 +295,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -390,7 +382,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -481,8 +473,8 @@ mod tests {
                         }
                     );
                     let writer = MockWriter::new();
-                    analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
-                    analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+                    analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+                    analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
                 }
             }
             for age in &all_ages {

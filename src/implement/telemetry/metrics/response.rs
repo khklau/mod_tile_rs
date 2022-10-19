@@ -158,7 +158,7 @@ impl WriteResponseObserver for ResponseAnalysis {
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         write_outcome: &WriteOutcome,
-        _func: WriteResponseFunc,
+        _write_func_name: &'static str,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
     ) -> () {
@@ -312,14 +312,6 @@ mod tests {
     use std::ffi::CString;
     use std::rc::Rc;
 
-    fn mock_write(
-        _context: &WriteContext,
-        _response: &response::SlippyResponse,
-        _writer: &mut dyn HttpResponseWriter,
-    ) -> WriteOutcome {
-        WriteOutcome::Ignored
-    }
-
     #[test]
     fn test_tile_handle_duration_accural_on_serve_tile_handle() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
@@ -392,7 +384,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 Duration::seconds(2).num_seconds() as u64,
                 analysis.tally_tile_response_duration_by_zoom_level(3),
@@ -467,7 +459,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -546,7 +538,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.tally_total_tile_response_duration(),
@@ -626,7 +618,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -722,7 +714,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 1,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
@@ -820,7 +812,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code(&StatusCode::OK),
@@ -904,7 +896,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new();
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, mock_write, &read_outcome, &handle_outcome);
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_total_tile_response(),

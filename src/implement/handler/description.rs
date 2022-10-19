@@ -8,6 +8,8 @@ use crate::interface::handler::{ HandleContext, RequestHandler, };
 use chrono::Utc;
 use mime;
 
+use std::any::type_name;
+
 
 pub struct DescriptionHandler { }
 
@@ -40,6 +42,10 @@ impl RequestHandler for DescriptionHandler {
                 result: Ok(response),
             }
         );
+    }
+
+    fn type_name(&self) -> &'static str {
+        type_name::<Self>()
     }
 }
 

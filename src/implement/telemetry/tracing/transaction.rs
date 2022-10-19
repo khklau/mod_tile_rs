@@ -21,7 +21,7 @@ impl ReadRequestObserver for TransactionTrace {
         _context: &ReadContext,
         _request: &Apache2Request,
         _read_outcome: &ReadOutcome,
-        _func: ReadRequestFunc,
+        _read_func_name: &'static str,
     ) -> () {
     }
 }
@@ -32,11 +32,10 @@ impl HandleRequestObserver for TransactionTrace {
         _context: &HandleContext,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,
-        _obj: &dyn RequestHandler,
+        _handler_name: &'static str,
         _read_outcome: &ReadOutcome,
     ) -> () {
     }
-
 }
 
 impl WriteResponseObserver for TransactionTrace {
@@ -46,7 +45,7 @@ impl WriteResponseObserver for TransactionTrace {
         _response: &SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,
-        _func: WriteResponseFunc,
+        _write_func_name: &'static str,
         _read_outcome: &ReadOutcome,
         _handle_outcome: &HandleOutcome,
     ) -> () {
