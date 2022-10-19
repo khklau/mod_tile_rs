@@ -24,7 +24,7 @@ use crate::interface::telemetry::{
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
-use crate::implement::handler::description::DescriptionHandler;
+use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::statistics::StatisticsHandler;
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
@@ -89,6 +89,7 @@ pub struct TileProxy<'p> {
     handler_factory: HandlerFactory<'p>,
     metrics_state: MetricsState,
     tracing_state: TracingState,
+    description_handler_state: DescriptionHandlerState,
     tile_handler_state: TileHandlerState,
     read_request: ReadRequestFunc,
     read_func_name: &'static str,
@@ -148,6 +149,7 @@ impl<'p> TileProxy<'p> {
         new_server.handler_factory = HandlerFactory::new();
         new_server.metrics_state = MetricsState::new();
         new_server.tracing_state = TracingState::new();
+        new_server.description_handler_state = DescriptionHandlerState::new(&new_server.config)?;
         new_server.tile_handler_state = TileHandlerState::new(&new_server.config)?;
         new_server.read_request = SlippyRequestReader::read;
         new_server.read_func_name = function_name(SlippyRequestReader::read);
@@ -249,17 +251,32 @@ impl<'p> TileProxy<'p> {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let (module_config, metrics_state, metrics_factory, tracing_state, tile_handler_state, handler_factory) = (
+                    let (
+                        module_config,
+                        metrics_state,
+                        metrics_factory,
+                        tracing_state,
+                        description_handler_state,
+                        tile_handler_state,
+                        handler_factory
+                    ) = (
                         &self.config,
                         &self.metrics_state,
                         &self.metrics_factory,
                         &mut self.tracing_state,
+                        &mut self.description_handler_state,
                         &mut self.tile_handler_state,
                         &mut self.handler_factory,
                     );
                     let context = HandleContext::new(record, module_config) ;
                     metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
-                        handler_factory.with_handler_inventory(module_config, tracing_state, tile_handler_state, metrics_inventory, |handler_inventory| {
+                        handler_factory.with_handler_inventory(
+                            module_config,
+                            tracing_state,
+                            description_handler_state,
+                            tile_handler_state,
+                            metrics_inventory,
+                            |handler_inventory| {
                             let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
                                 (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
                             });
@@ -439,13 +456,14 @@ impl<'f> HandlerFactory<'f> {
         &mut self,
         _module_config: &ModuleConfig,
         tracing_state: &mut TracingState,
+        description_handler_state: &mut DescriptionHandlerState,
         tile_handler_state: &mut TileHandlerState,
         metrics_inventory: &MetricsInventory,
         func: F,
     ) -> R
     where
         F: FnOnce(&mut HandlerInventory) -> R {
-        let mut description_handler = DescriptionHandler { };
+        let mut description_handler = DescriptionHandler::new(description_handler_state);
         let mut statistics_handler = StatisticsHandler::new(&metrics_inventory);
         let mut tile_handler = TileHandler::new(tile_handler_state, None);
         let mut handler_inventory = HandlerInventory {

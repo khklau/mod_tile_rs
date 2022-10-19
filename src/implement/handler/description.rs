@@ -1,4 +1,5 @@
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
@@ -11,9 +12,31 @@ use mime;
 use std::any::type_name;
 
 
-pub struct DescriptionHandler { }
+pub struct DescriptionHandlerState { }
 
-impl RequestHandler for DescriptionHandler {
+impl DescriptionHandlerState {
+    pub fn new(config: &ModuleConfig) -> Result<DescriptionHandlerState, InvalidConfigError> {
+        Ok(
+            DescriptionHandlerState {  }
+        )
+    }
+}
+
+pub struct DescriptionHandler<'h> {
+    state: &'h mut DescriptionHandlerState,
+}
+
+impl<'h> DescriptionHandler<'h> {
+    pub fn new(
+        state: &'h mut DescriptionHandlerState,
+    ) -> DescriptionHandler<'h> {
+        DescriptionHandler {
+            state,
+        }
+    }
+}
+
+impl<'h> RequestHandler for DescriptionHandler<'h> {
     fn handle(
         &mut self,
         context: &HandleContext,
@@ -88,9 +111,10 @@ mod tests {
 
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
-        let mut layer_handler = DescriptionHandler { };
-        let layer_name = LayerName::from("default");
         let module_config = ModuleConfig::new();
+        let mut description_state = DescriptionHandlerState::new(&module_config)?;
+        let mut description_handler = DescriptionHandler::new(&mut description_state);
+        let layer_name = LayerName::from("default");
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
@@ -109,16 +133,17 @@ mod tests {
                 body: request::BodyVariant::ReportStatistics,
             };
 
-            assert!(layer_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
+            assert!(description_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
             Ok(())
         })
     }
 
     #[test]
     fn test_default_config_json() -> Result<(), Box<dyn Error>> {
-        let mut layer_handler = DescriptionHandler { };
-        let layer_name = LayerName::from("default");
         let module_config = ModuleConfig::new();
+        let mut description_state = DescriptionHandlerState::new(&module_config)?;
+        let mut layer_handler = DescriptionHandler::new(&mut description_state);
+        let layer_name = LayerName::from("default");
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
