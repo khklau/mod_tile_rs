@@ -15,7 +15,7 @@ use std::any::type_name;
 pub struct DescriptionHandlerState { }
 
 impl DescriptionHandlerState {
-    pub fn new(config: &ModuleConfig) -> Result<DescriptionHandlerState, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<DescriptionHandlerState, InvalidConfigError> {
         Ok(
             DescriptionHandlerState {  }
         )
@@ -23,7 +23,7 @@ impl DescriptionHandlerState {
 }
 
 pub struct DescriptionHandler<'h> {
-    state: &'h mut DescriptionHandlerState,
+    _state: &'h mut DescriptionHandlerState,
 }
 
 impl<'h> DescriptionHandler<'h> {
@@ -31,7 +31,7 @@ impl<'h> DescriptionHandler<'h> {
         state: &'h mut DescriptionHandlerState,
     ) -> DescriptionHandler<'h> {
         DescriptionHandler {
-            state,
+            _state: state,
         }
     }
 }

@@ -15,13 +15,28 @@ use mime;
 use std::any::type_name;
 
 
+pub struct StatisticsHandlerState { }
+
+impl StatisticsHandlerState {
+    pub fn new(_config: &ModuleConfig) -> Result<StatisticsHandlerState, InvalidConfigError> {
+        Ok(
+            StatisticsHandlerState {  }
+        )
+    }
+}
+
 pub struct StatisticsHandler<'h> {
+    _state: &'h mut StatisticsHandlerState,
     metrics: &'h MetricsInventory<'h>,
 }
 
 impl<'h> StatisticsHandler<'h> {
-    pub fn new(metrics: &'h MetricsInventory) -> StatisticsHandler<'h> {
+    pub fn new(
+        state: &'h mut StatisticsHandlerState,
+        metrics: &'h MetricsInventory
+    ) -> StatisticsHandler<'h> {
         StatisticsHandler {
+            _state: state,
             metrics,
         }
     }
@@ -146,9 +161,10 @@ mod tests {
                 response_metrics,
                 tile_handling_metrics,
             };
-            let mut stat_handler = StatisticsHandler::new(&metrics_inventory);
-            let layer_name = LayerName::from("default");
             let module_config = ModuleConfig::new();
+            let mut stat_state = StatisticsHandlerState::new(&module_config)?;
+            let mut stat_handler = StatisticsHandler::new(&mut stat_state, &metrics_inventory);
+            let layer_name = LayerName::from("default");
             let layer_config = module_config.layers.get(&layer_name).unwrap();
             with_request_rec(|request| {
                 let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;

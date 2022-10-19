@@ -25,7 +25,7 @@ use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
-use crate::implement::handler::statistics::StatisticsHandler;
+use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
@@ -90,6 +90,7 @@ pub struct TileProxy<'p> {
     metrics_state: MetricsState,
     tracing_state: TracingState,
     description_handler_state: DescriptionHandlerState,
+    statistics_handler_state: StatisticsHandlerState,
     tile_handler_state: TileHandlerState,
     read_request: ReadRequestFunc,
     read_func_name: &'static str,
@@ -150,6 +151,7 @@ impl<'p> TileProxy<'p> {
         new_server.metrics_state = MetricsState::new();
         new_server.tracing_state = TracingState::new();
         new_server.description_handler_state = DescriptionHandlerState::new(&new_server.config)?;
+        new_server.statistics_handler_state = StatisticsHandlerState::new(&new_server.config)?;
         new_server.tile_handler_state = TileHandlerState::new(&new_server.config)?;
         new_server.read_request = SlippyRequestReader::read;
         new_server.read_func_name = function_name(SlippyRequestReader::read);
@@ -257,6 +259,7 @@ impl<'p> TileProxy<'p> {
                         metrics_factory,
                         tracing_state,
                         description_handler_state,
+                        statistics_handler_state,
                         tile_handler_state,
                         handler_factory
                     ) = (
@@ -265,6 +268,7 @@ impl<'p> TileProxy<'p> {
                         &self.metrics_factory,
                         &mut self.tracing_state,
                         &mut self.description_handler_state,
+                        &mut self.statistics_handler_state,
                         &mut self.tile_handler_state,
                         &mut self.handler_factory,
                     );
@@ -274,6 +278,7 @@ impl<'p> TileProxy<'p> {
                             module_config,
                             tracing_state,
                             description_handler_state,
+                            statistics_handler_state,
                             tile_handler_state,
                             metrics_inventory,
                             |handler_inventory| {
@@ -457,6 +462,7 @@ impl<'f> HandlerFactory<'f> {
         _module_config: &ModuleConfig,
         tracing_state: &mut TracingState,
         description_handler_state: &mut DescriptionHandlerState,
+        statistics_handler_state: &mut StatisticsHandlerState,
         tile_handler_state: &mut TileHandlerState,
         metrics_inventory: &MetricsInventory,
         func: F,
@@ -464,7 +470,7 @@ impl<'f> HandlerFactory<'f> {
     where
         F: FnOnce(&mut HandlerInventory) -> R {
         let mut description_handler = DescriptionHandler::new(description_handler_state);
-        let mut statistics_handler = StatisticsHandler::new(&metrics_inventory);
+        let mut statistics_handler = StatisticsHandler::new(statistics_handler_state, &metrics_inventory);
         let mut tile_handler = TileHandler::new(tile_handler_state, None);
         let mut handler_inventory = HandlerInventory {
             handlers: match &mut self.handlers {
