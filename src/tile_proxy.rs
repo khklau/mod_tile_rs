@@ -96,8 +96,6 @@ pub struct TileProxy<'p> {
     read_func_name: &'static str,
     write_response: WriteResponseFunc,
     write_func_name: &'static str,
-    response_analysis: ResponseAnalysis,
-    tile_handling_analysis: TileHandlingAnalysis,
     trans_trace: TransactionTrace,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
@@ -157,8 +155,6 @@ impl<'p> TileProxy<'p> {
         new_server.read_func_name = function_name(SlippyRequestReader::read);
         new_server.write_response = SlippyResponseWriter::write;
         new_server.write_func_name = function_name(SlippyResponseWriter::write);
-        new_server.response_analysis = ResponseAnalysis::new();
-        new_server.tile_handling_analysis = TileHandlingAnalysis::new();
         new_server.trans_trace = TransactionTrace { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
@@ -338,7 +334,11 @@ impl<'p> TileProxy<'p> {
                     let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
                         // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
                         Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-                        None => [&mut self.trans_trace, &mut self.response_analysis, &mut self.tile_handling_analysis],
+                        None => [
+                            &mut self.trans_trace,
+                            &mut self.metrics_state.response_analysis,
+                            &mut self.metrics_state.tile_handling_analysis
+                        ],
                     };
                     for observer_iter in write_observers.iter_mut() {
                         debug!(
