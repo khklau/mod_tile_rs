@@ -29,8 +29,10 @@ use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandle
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
+use crate::implement::telemetry::metrics::inventory::{ MetricsFactory, MetricsState, };
 use crate::implement::telemetry::metrics::response::ResponseAnalysis;
 use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
+use crate::implement::telemetry::tracing::inventory::TracingState;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
 use crate::utility::debugging::function_name;
 
@@ -372,71 +374,6 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
     };
     drop(server_ref);
     return APR_SUCCESS as apr_status_t;
-}
-
-struct MetricsState {
-    response_analysis: ResponseAnalysis,
-    tile_handling_analysis: TileHandlingAnalysis,
-}
-
-impl MetricsState {
-    fn new() -> MetricsState {
-        MetricsState {
-            response_analysis: ResponseAnalysis::new(),
-            tile_handling_analysis: TileHandlingAnalysis::new(),
-        }
-    }
-}
-
-
-struct MetricsFactory<'f> {
-    response_metrics: Option<&'f dyn ResponseMetrics>,
-    tile_handling_metrics: Option<&'f dyn TileHandlingMetrics>,
-}
-
-impl<'f> MetricsFactory<'f> {
-    fn new() -> MetricsFactory<'f> {
-        MetricsFactory {
-            response_metrics: None,
-            tile_handling_metrics: None,
-        }
-    }
-
-    fn with_metrics_inventory<F, R>(
-        &self,
-        metrics_state: &MetricsState,
-        func: F,
-    ) -> R
-    where
-        F: FnOnce(&MetricsInventory) -> R {
-        let response_metrics = if let Some(obj) = self.response_metrics {
-            obj
-        } else {
-            &metrics_state.response_analysis
-        };
-        let tile_handling_metrics = if let Some(obj) = self.tile_handling_metrics {
-            obj
-        } else {
-            &metrics_state.tile_handling_analysis
-        };
-        let metrics_inventory = MetricsInventory {
-            response_metrics,
-            tile_handling_metrics,
-        };
-        func(&metrics_inventory)
-    }
-}
-
-struct TracingState {
-    trans_trace: TransactionTrace,
-}
-
-impl TracingState {
-    fn new() -> TracingState {
-        TracingState {
-            trans_trace: TransactionTrace { },
-        }
-    }
 }
 
 struct HandlerInventory<'i> {

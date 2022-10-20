@@ -85,10 +85,12 @@ mod implement {
     }
     pub mod telemetry{
         pub mod metrics {
+            pub mod inventory;
             pub mod response;
             pub mod tile_handling;
         }
         pub mod tracing {
+            pub mod inventory;
             pub mod transaction;
         }
     }
