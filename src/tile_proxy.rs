@@ -25,13 +25,12 @@ use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
+use crate::implement::handler::inventory::HandlerFactory;
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::telemetry::metrics::inventory::{ MetricsFactory, MetricsState, };
-use crate::implement::telemetry::metrics::response::ResponseAnalysis;
-use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
 use crate::implement::telemetry::tracing::inventory::TracingState;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
 use crate::utility::debugging::function_name;
@@ -374,55 +373,6 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
     };
     drop(server_ref);
     return APR_SUCCESS as apr_status_t;
-}
-
-struct HandlerInventory<'i> {
-    handlers: [&'i mut dyn RequestHandler; 3],
-    handle_observers: [&'i mut dyn HandleRequestObserver; 1],
-}
-
-struct HandlerFactory<'f> {
-    handlers: Option<[&'f mut dyn RequestHandler; 3]>,
-    handle_observers: Option<[&'f mut dyn HandleRequestObserver; 1]>,
-}
-
-impl<'f> HandlerFactory<'f> {
-    fn new() -> HandlerFactory<'f> {
-        HandlerFactory {
-            handlers: None,
-            handle_observers: None,
-        }
-    }
-
-    fn with_handler_inventory<F, R>(
-        &mut self,
-        _module_config: &ModuleConfig,
-        tracing_state: &mut TracingState,
-        description_handler_state: &mut DescriptionHandlerState,
-        statistics_handler_state: &mut StatisticsHandlerState,
-        tile_handler_state: &mut TileHandlerState,
-        metrics_inventory: &MetricsInventory,
-        func: F,
-    ) -> R
-    where
-        F: FnOnce(&mut HandlerInventory) -> R {
-        let mut description_handler = DescriptionHandler::new(description_handler_state);
-        let mut statistics_handler = StatisticsHandler::new(statistics_handler_state, &metrics_inventory);
-        let mut tile_handler = TileHandler::new(tile_handler_state, None);
-        let mut handler_inventory = HandlerInventory {
-            handlers: match &mut self.handlers {
-                // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
-                Some([handler_0, handler_1, handler_2]) => [*handler_0, *handler_1, *handler_2],
-                None => [&mut description_handler, &mut statistics_handler, &mut tile_handler],
-            },
-            handle_observers: match &mut self.handle_observers {
-                // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
-                Some([observer_0]) => [*observer_0],
-                None => [&mut tracing_state.trans_trace],
-            }
-        };
-        func(&mut handler_inventory)
-    }
 }
 
 

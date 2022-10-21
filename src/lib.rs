@@ -70,6 +70,7 @@ mod implement {
     }
     pub mod handler {
         pub mod description;
+        pub mod inventory;
         pub mod statistics;
         pub mod tile;
     }
