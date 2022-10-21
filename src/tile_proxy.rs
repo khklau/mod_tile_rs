@@ -18,9 +18,7 @@ use crate::interface::slippy::{
     ReadContext, ReadRequestFunc, ReadRequestObserver,
     WriteContext, WriteResponseFunc, WriteResponseObserver,
 };
-use crate::interface::telemetry::{
-    MetricsInventory, ResponseMetrics, TileHandlingMetrics,
-};
+use crate::interface::telemetry::{ ResponseMetrics, TileHandlingMetrics, };
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -30,7 +28,9 @@ use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandle
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
-use crate::implement::telemetry::metrics::inventory::{ MetricsFactory, MetricsState, };
+use crate::implement::telemetry::metrics::inventory::{
+    MetricsFactory, MetricsInventory, MetricsState,
+};
 use crate::implement::telemetry::tracing::inventory::TracingState;
 use crate::implement::telemetry::tracing::transaction::TransactionTrace;
 use crate::utility::debugging::function_name;

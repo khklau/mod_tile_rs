@@ -6,7 +6,7 @@ use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{ HandleContext, RequestHandler, };
-use crate::interface::telemetry::MetricsInventory;
+use crate::implement::telemetry::metrics::inventory::MetricsInventory;
 
 use chrono::Utc;
 use http::status::StatusCode;

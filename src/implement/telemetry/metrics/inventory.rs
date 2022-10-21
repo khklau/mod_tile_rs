@@ -1,8 +1,4 @@
-use crate::interface::telemetry::{
-    MetricsInventory,
-    ResponseMetrics,
-    TileHandlingMetrics,
-};
+use crate::interface::telemetry::{ ResponseMetrics, TileHandlingMetrics, };
 use crate::implement::telemetry::metrics::response::ResponseAnalysis;
 use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
 
@@ -21,6 +17,10 @@ impl MetricsState {
     }
 }
 
+pub struct MetricsInventory<'i> {
+    pub response_metrics: &'i dyn ResponseMetrics,
+    pub tile_handling_metrics: &'i dyn TileHandlingMetrics,
+}
 
 pub struct MetricsFactory<'f> {
     response_metrics: Option<&'f dyn ResponseMetrics>,

@@ -1,9 +1,9 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
-use crate::interface::telemetry::MetricsInventory;
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
+use crate::implement::telemetry::metrics::inventory::MetricsInventory;
 use crate::implement::telemetry::tracing::inventory::TracingState;
 
 
