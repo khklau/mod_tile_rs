@@ -1,4 +1,5 @@
 use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
@@ -6,6 +7,24 @@ use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::telemetry::metrics::inventory::MetricsInventory;
 use crate::implement::telemetry::tracing::inventory::TracingState;
 
+
+pub struct HandlerState {
+    pub description: DescriptionHandlerState,
+    pub statistics: StatisticsHandlerState,
+    pub tile: TileHandlerState,
+}
+
+impl HandlerState {
+    pub fn new(config: &ModuleConfig) -> Result<HandlerState, InvalidConfigError> {
+        Ok(
+            HandlerState {
+                description: DescriptionHandlerState::new(config)?,
+                statistics: StatisticsHandlerState::new(config)?,
+                tile: TileHandlerState::new(config)?,
+            }
+        )
+    }
+}
 
 pub struct HandlerInventory<'i> {
     pub handlers: [&'i mut dyn RequestHandler; 3],
@@ -29,17 +48,20 @@ impl<'f> HandlerFactory<'f> {
         &mut self,
         _module_config: &ModuleConfig,
         tracing_state: &mut TracingState,
-        description_handler_state: &mut DescriptionHandlerState,
-        statistics_handler_state: &mut StatisticsHandlerState,
-        tile_handler_state: &mut TileHandlerState,
+        handler_state: &mut HandlerState,
         metrics_inventory: &MetricsInventory,
         func: F,
     ) -> R
     where
         F: FnOnce(&mut HandlerInventory) -> R {
-        let mut description_handler = DescriptionHandler::new(description_handler_state);
-        let mut statistics_handler = StatisticsHandler::new(statistics_handler_state, &metrics_inventory);
-        let mut tile_handler = TileHandler::new(tile_handler_state, None);
+        let (descr_state, stats_state, tile_state) = (
+            &mut handler_state.description,
+            &mut handler_state.statistics,
+            &mut handler_state.tile,
+        );
+        let mut description_handler = DescriptionHandler::new(descr_state);
+        let mut statistics_handler = StatisticsHandler::new(stats_state, &metrics_inventory);
+        let mut tile_handler = TileHandler::new(tile_state, None);
         let mut handler_inventory = HandlerInventory {
             handlers: match &mut self.handlers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
