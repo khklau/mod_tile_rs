@@ -71,7 +71,7 @@ impl<'f> HandlerFactory<'f> {
             handle_observers: match &mut self.handle_observers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
                 Some([observer_0]) => [*observer_0],
-                None => [&mut tracing_state.trans_trace],
+                None => [tracing_state.handle_request_observer()],
             }
         };
         func(&mut handler_inventory)
