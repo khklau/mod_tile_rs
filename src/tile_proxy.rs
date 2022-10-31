@@ -222,10 +222,11 @@ impl<'p> TileProxy<'p> {
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_outcome = read(&context, request);
+        let [tracing_read_observer_0] = self.tracing_state.read_request_observers();
         let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
             Some([observer_0]) => [*observer_0],
-            None => [&mut self.trans_trace],
+            None => [tracing_read_observer_0],
         };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
@@ -322,13 +323,20 @@ impl<'p> TileProxy<'p> {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {
                     let outcome = write(&context, &response, writer);
+                    let (
+                        [tracing_write_observer_0],
+                        [metrics_write_observer_0, metrics_write_observer_1],
+                    ) = (
+                        self.tracing_state.write_response_observers(),
+                        self.metrics_state.write_observers(),
+                    );
                     let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
                         // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
                         Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
                         None => [
-                            &mut self.trans_trace,
-                            &mut self.metrics_state.response_analysis,
-                            &mut self.metrics_state.tile_handling_analysis
+                            tracing_write_observer_0,
+                            metrics_write_observer_0,
+                            metrics_write_observer_1,
                         ],
                     };
                     for observer_iter in write_observers.iter_mut() {

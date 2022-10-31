@@ -62,6 +62,7 @@ impl<'f> HandlerFactory<'f> {
         let mut description_handler = DescriptionHandler::new(descr_state);
         let mut statistics_handler = StatisticsHandler::new(stats_state, &metrics_inventory);
         let mut tile_handler = TileHandler::new(tile_state, None);
+        let [tracing_handle_observer_0] = tracing_state.handle_request_observers();
         let mut handler_inventory = HandlerInventory {
             handlers: match &mut self.handlers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
@@ -71,7 +72,7 @@ impl<'f> HandlerFactory<'f> {
             handle_observers: match &mut self.handle_observers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
                 Some([observer_0]) => [*observer_0],
-                None => [tracing_state.handle_request_observer()],
+                None => [tracing_handle_observer_0],
             }
         };
         func(&mut handler_inventory)

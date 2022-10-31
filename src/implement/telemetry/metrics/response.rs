@@ -287,6 +287,86 @@ impl ResponseMetrics for ResponseAnalysis {
 
 
 #[cfg(test)]
+pub mod test_utils {
+    use super::*;
+
+    pub struct MockNoOpResponseAnalysis {
+        analysis_by_layer: HashMap<LayerName, u64>,
+        status_codes_responded: HashSet<StatusCode>,
+    }
+
+    impl MockNoOpResponseAnalysis {
+        pub fn new() -> MockNoOpResponseAnalysis {
+            MockNoOpResponseAnalysis {
+                analysis_by_layer: HashMap::new(),
+                status_codes_responded: HashSet::new(),
+            }
+        }
+    }
+
+    impl ResponseMetrics for MockNoOpResponseAnalysis {
+        fn iterate_status_codes_responded(&self) -> Box<dyn Iterator<Item = &'_ StatusCode> + '_> {
+            Box::new(self.status_codes_responded.iter())
+        }
+
+        fn iterate_valid_zoom_levels(&self) -> Range<u32> {
+            VALID_ZOOM_RANGE.clone()
+        }
+
+        fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_> {
+            Box::new(self.analysis_by_layer.keys())
+        }
+
+        fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64 {
+            0
+        }
+
+        fn count_response_by_zoom_level(&self, zoom: u32) -> u64 {
+            0
+        }
+
+        fn count_response_by_status_code_and_zoom_level(&self, status_code: &StatusCode, zoom: u32) -> u64 {
+            0
+        }
+
+        fn count_total_tile_response(&self) -> u64 {
+            0
+        }
+
+        fn tally_total_tile_response_duration(&self) -> u64 {
+            0
+        }
+
+        fn count_tile_response_by_zoom_level(&self, zoom: u32) -> u64 {
+            0
+        }
+
+        fn tally_tile_response_duration_by_zoom_level(&self, zoom: u32) -> u64 {
+            0
+        }
+
+        fn count_response_by_layer_and_status_code(&self, layer: &LayerName, status_code: &StatusCode) -> u64 {
+            0
+        }
+    }
+
+    impl WriteResponseObserver for MockNoOpResponseAnalysis {
+        fn on_write(
+            &mut self,
+            context: &WriteContext,
+            _response: &response::SlippyResponse,
+            _writer: &dyn HttpResponseWriter,
+            write_outcome: &WriteOutcome,
+            _write_func_name: &'static str,
+            read_outcome: &ReadOutcome,
+            handle_outcome: &HandleOutcome,
+        ) -> () {
+        }
+    }
+}
+
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;

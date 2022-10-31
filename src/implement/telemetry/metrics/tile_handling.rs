@@ -200,6 +200,54 @@ impl<T: DefaultMetric + Copy> TileMetricTable<T> {
 
 
 #[cfg(test)]
+pub mod test_utils {
+    use super::*;
+
+    pub struct MockNoOpTileHandlingAnalysis {}
+
+    impl TileHandlingMetrics for MockNoOpTileHandlingAnalysis {
+        fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
+            Box::new(TileAge::into_enum_iter())
+        }
+
+        fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
+            Box::new(TileAge::into_enum_iter())
+        }
+
+        fn count_handled_tile_by_source_and_age(
+            &self,
+            source: &TileSource,
+            age: &TileAge,
+        ) -> u64 {
+            0
+        }
+
+        fn tally_tile_handle_duration_by_source_and_age(
+            &self,
+            source: &TileSource,
+            age: &TileAge,
+        ) -> u64 {
+            0
+        }
+    }
+
+    impl WriteResponseObserver for MockNoOpTileHandlingAnalysis {
+        fn on_write(
+            &mut self,
+            context: &WriteContext,
+            _response: &response::SlippyResponse,
+            _writer: &dyn HttpResponseWriter,
+            _write_outcome: &WriteOutcome,
+            _write_func_name: &'static str,
+            read_outcome: &ReadOutcome,
+            handle_outcome: &HandleOutcome,
+        ) -> () {
+        }
+    }
+}
+
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;

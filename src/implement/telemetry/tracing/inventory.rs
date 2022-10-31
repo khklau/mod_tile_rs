@@ -18,16 +18,16 @@ impl TracingState {
         }
     }
 
-    pub fn read_request_observer(&mut self) -> &mut dyn ReadRequestObserver {
-        &mut self.trans_trace
+    pub fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
+        [&mut self.trans_trace]
     }
 
-    pub fn handle_request_observer(&mut self) -> &mut dyn HandleRequestObserver {
-        &mut self.trans_trace
+    pub fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1] {
+        [&mut self.trans_trace]
     }
 
-    pub fn write_response_observer(&mut self) -> &mut dyn WriteResponseObserver {
-        &mut self.trans_trace
+    pub fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 1] {
+        [&mut self.trans_trace]
     }
 }
 
@@ -47,31 +47,37 @@ impl TracingState {
         }
     }
 
-    pub fn new_with_mock(mock: TransactionTraceVariant) -> TracingState {
+    pub fn new_mock(mock: TransactionTraceVariant) -> TracingState {
         TracingState {
             trans_trace: mock,
         }
     }
 
-    pub fn read_request_observer(&mut self) -> &mut dyn ReadRequestObserver {
-        match &mut self.trans_trace {
-            TransactionTraceVariant::Real(trace) => &mut *trace,
-            TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
-        }
+    pub fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
+        [
+            match &mut self.trans_trace {
+                TransactionTraceVariant::Real(trace) => &mut *trace,
+                TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
+            },
+        ]
     }
 
-    pub fn handle_request_observer(&mut self) -> &mut dyn HandleRequestObserver {
-        match &mut self.trans_trace {
-            TransactionTraceVariant::Real(trace) => &mut *trace,
-            TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
-        }
+    pub fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1] {
+        [
+            match &mut self.trans_trace {
+                TransactionTraceVariant::Real(trace) => &mut *trace,
+                TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
+            },
+        ]
     }
 
-    pub fn write_response_observer(&mut self) -> &mut dyn WriteResponseObserver {
-        match &mut self.trans_trace {
-            TransactionTraceVariant::Real(trace) => &mut *trace,
-            TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
-        }
+    pub fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 1] {
+        [
+            match &mut self.trans_trace {
+                TransactionTraceVariant::Real(trace) => &mut *trace,
+                TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
+            },
+        ]
     }
 }
 
