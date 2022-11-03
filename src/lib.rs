@@ -86,11 +86,11 @@ mod implement {
     }
     pub mod telemetry{
         pub mod inventory;
+        pub mod response;
+        pub mod tile_handling;
         pub mod transaction;
         pub mod metrics {
             pub mod inventory;
-            pub mod response;
-            pub mod tile_handling;
         }
     }
 }

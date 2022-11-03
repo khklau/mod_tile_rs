@@ -1,7 +1,7 @@
 use crate::interface::slippy::WriteResponseObserver;
 use crate::interface::telemetry::{ ResponseMetrics, TileHandlingMetrics, };
-use crate::implement::telemetry::metrics::response::ResponseAnalysis;
-use crate::implement::telemetry::metrics::tile_handling::TileHandlingAnalysis;
+use crate::implement::telemetry::response::ResponseAnalysis;
+use crate::implement::telemetry::tile_handling::TileHandlingAnalysis;
 
 
 #[cfg(not(test))]
@@ -101,13 +101,13 @@ impl MetricsState {
 #[cfg(test)]
 pub enum ResponseAnalysisVariant {
     Real(ResponseAnalysis),
-    MockNoOp(crate::implement::telemetry::metrics::response::test_utils::MockNoOpResponseAnalysis),
+    MockNoOp(crate::implement::telemetry::response::test_utils::MockNoOpResponseAnalysis),
 }
 
 #[cfg(test)]
 pub enum TileHandlingAnalysisVariant {
     Real(TileHandlingAnalysis),
-    MockNoOp(crate::implement::telemetry::metrics::tile_handling::test_utils::MockNoOpTileHandlingAnalysis),
+    MockNoOp(crate::implement::telemetry::tile_handling::test_utils::MockNoOpTileHandlingAnalysis),
 }
 
 pub struct MetricsInventory<'i> {
