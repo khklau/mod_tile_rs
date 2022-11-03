@@ -1,6 +1,6 @@
 use crate::interface::handler::HandleRequestObserver;
 use crate::interface::slippy::{ ReadRequestObserver, WriteResponseObserver, };
-use crate::implement::telemetry::tracing::transaction::TransactionTrace;
+use crate::implement::telemetry::transaction::TransactionTrace;
 
 use std::option::Option;
 
@@ -84,7 +84,7 @@ impl TracingState {
 #[cfg(test)]
 pub enum TransactionTraceVariant {
     Real(TransactionTrace),
-    MockNoOp(crate::implement::telemetry::tracing::transaction::test_utils::MockNoOpTransactionTrace),
+    MockNoOp(crate::implement::telemetry::transaction::test_utils::MockNoOpTransactionTrace),
 }
 
 

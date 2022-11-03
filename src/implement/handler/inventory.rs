@@ -5,7 +5,7 @@ use crate::implement::handler::description::{ DescriptionHandler, DescriptionHan
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::telemetry::metrics::inventory::MetricsInventory;
-use crate::implement::telemetry::tracing::inventory::TracingState;
+use crate::implement::telemetry::inventory::TracingState;
 
 
 pub struct HandlerState {
