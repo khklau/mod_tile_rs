@@ -31,8 +31,8 @@ use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::telemetry::metrics::inventory::{
     MetricsFactory, MetricsInventory, MetricsState,
 };
-use crate::implement::telemetry::tracing::inventory::TracingState;
-use crate::implement::telemetry::tracing::transaction::TransactionTrace;
+use crate::implement::telemetry::inventory::TracingState;
+use crate::implement::telemetry::transaction::TransactionTrace;
 use crate::utility::debugging::function_name;
 
 use chrono::Utc;
