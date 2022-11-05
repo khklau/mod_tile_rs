@@ -56,25 +56,3 @@ impl TelemetryInventory for TelemetryState {
         &self.tile_handling_analysis
     }
 }
-
-pub struct TracingInventory<'i> {
-    pub read_observer: &'i mut dyn ReadRequestObserver,
-    pub handle_observer: &'i mut dyn HandleRequestObserver,
-    pub write_observer: &'i mut dyn WriteResponseObserver,
-}
-
-pub struct TracingFactory<'f> {
-    pub read_observer: Option<&'f mut dyn ReadRequestObserver>,
-    pub handle_observer: Option<&'f mut dyn HandleRequestObserver>,
-    pub write_observer: Option<&'f mut dyn WriteResponseObserver>,
-}
-
-impl<'f> TracingFactory<'f> {
-    pub fn new() -> TracingFactory<'f> {
-        TracingFactory {
-            read_observer: None,
-            handle_observer: None,
-            write_observer: None,
-        }
-    }
-}

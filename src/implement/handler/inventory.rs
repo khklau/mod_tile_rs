@@ -49,7 +49,7 @@ impl<'f> HandlerFactory<'f> {
     pub fn with_handler_inventory<F, R>(
         &mut self,
         _module_config: &ModuleConfig,
-        telemetry_state: &mut TelemetryState,
+        telemetry_state: &TelemetryState,
         handler_state: &mut HandlerState,
         func: F,
     ) -> R

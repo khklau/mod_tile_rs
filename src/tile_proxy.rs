@@ -247,7 +247,7 @@ impl<'p> TileProxy<'p> {
                         handler_factory
                     ) = (
                         &self.config,
-                        &mut self.telemetry_state,
+                        &self.telemetry_state,
                         &mut self.handler_state,
                         &mut self.handler_factory,
                     );
