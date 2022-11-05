@@ -89,9 +89,6 @@ mod implement {
         pub mod response;
         pub mod tile_handling;
         pub mod transaction;
-        pub mod metrics {
-            pub mod inventory;
-        }
     }
 }
 mod tile_proxy;

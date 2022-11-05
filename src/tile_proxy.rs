@@ -28,10 +28,7 @@ use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandle
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
-use crate::implement::telemetry::metrics::inventory::{
-    MetricsFactory, MetricsInventory, MetricsState,
-};
-use crate::implement::telemetry::inventory::TracingState;
+use crate::implement::telemetry::inventory::TelemetryState;
 use crate::implement::telemetry::transaction::TransactionTrace;
 use crate::utility::debugging::function_name;
 
@@ -86,10 +83,8 @@ impl std::fmt::Display for HandleRequestError {
 pub struct TileProxy<'p> {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
-    metrics_factory: MetricsFactory<'p>,
     handler_factory: HandlerFactory<'p>,
-    metrics_state: MetricsState,
-    tracing_state: TracingState,
+    telemetry_state: TelemetryState,
     handler_state: HandlerState,
     read_request: ReadRequestFunc,
     read_func_name: &'static str,
@@ -143,10 +138,8 @@ impl<'p> TileProxy<'p> {
         )?.0;
         new_server.config = module_config;
         new_server.config_file_path = None;
-        new_server.metrics_factory = MetricsFactory::new();
         new_server.handler_factory = HandlerFactory::new();
-        new_server.metrics_state = MetricsState::new();
-        new_server.tracing_state = TracingState::new();
+        new_server.telemetry_state = TelemetryState::new(&new_server.config)?;
         new_server.handler_state = HandlerState::new(&new_server.config)?;
         new_server.read_request = SlippyRequestReader::read;
         new_server.read_func_name = function_name(SlippyRequestReader::read);
@@ -222,7 +215,7 @@ impl<'p> TileProxy<'p> {
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_outcome = read(&context, request);
-        let [tracing_read_observer_0] = self.tracing_state.read_request_observers();
+        let [tracing_read_observer_0] = self.telemetry_state.read_request_observers();
         let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
             Some([observer_0]) => [*observer_0],
@@ -249,41 +242,36 @@ impl<'p> TileProxy<'p> {
                 Ok(request) => {
                     let (
                         module_config,
-                        metrics_state,
-                        metrics_factory,
-                        tracing_state,
+                        telemetry_state,
                         handler_state,
                         handler_factory
                     ) = (
                         &self.config,
-                        &self.metrics_state,
-                        &self.metrics_factory,
-                        &mut self.tracing_state,
+                        &mut self.telemetry_state,
                         &mut self.handler_state,
                         &mut self.handler_factory,
                     );
                     let context = HandleContext::new(record, module_config) ;
-                    metrics_factory.with_metrics_inventory(metrics_state, |metrics_inventory| {
-                        handler_factory.with_handler_inventory(
-                            module_config,
-                            tracing_state,
-                            handler_state,
-                            metrics_inventory,
-                            |handler_inventory| {
-                            let outcome_option = handler_inventory.handlers.iter_mut().find_map(|handler| {
-                                (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
-                            });
-                            if let Some((handle_outcome, handler_name)) = outcome_option {
-                                for observer_iter in handler_inventory.handle_observers.iter_mut() {
-                                    debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                    (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
-                                }
-                                handle_outcome
-                            } else {
-                                HandleOutcome::Ignored
-                            }
+                    let outcome_option = handler_factory.with_handler_inventory(
+                        module_config,
+                        telemetry_state,
+                        handler_state,
+                        |handler_inventory| {
+                        handler_inventory.handlers.iter_mut().find_map(|handler| {
+                            (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
                         })
-                    })
+                    });
+                    if let Some((handle_outcome, handler_name)) = outcome_option {
+                        handler_factory.with_handler_observers(&mut self.telemetry_state, |mut observer_inventory| {
+                            for observer_iter in observer_inventory.handle_observers.iter_mut() {
+                                debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                                (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
+                            }
+                        });
+                        handle_outcome
+                    } else {
+                        HandleOutcome::Ignored
+                    }
                 },
                 Err(err) => {
                     HandleOutcome::Processed(
@@ -323,21 +311,10 @@ impl<'p> TileProxy<'p> {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {
                     let outcome = write(&context, &response, writer);
-                    let (
-                        [tracing_write_observer_0],
-                        [metrics_write_observer_0, metrics_write_observer_1],
-                    ) = (
-                        self.tracing_state.write_response_observers(),
-                        self.metrics_state.write_observers(),
-                    );
                     let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
                         // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
                         Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-                        None => [
-                            tracing_write_observer_0,
-                            metrics_write_observer_0,
-                            metrics_write_observer_1,
-                        ],
+                        None => self.telemetry_state.write_response_observers(),
                     };
                     for observer_iter in write_observers.iter_mut() {
                         debug!(

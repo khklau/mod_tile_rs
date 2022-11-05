@@ -4,8 +4,7 @@ use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
-use crate::implement::telemetry::metrics::inventory::MetricsInventory;
-use crate::implement::telemetry::inventory::TracingState;
+use crate::implement::telemetry::inventory::TelemetryState;
 
 
 pub struct HandlerState {
@@ -28,6 +27,9 @@ impl HandlerState {
 
 pub struct HandlerInventory<'i> {
     pub handlers: [&'i mut dyn RequestHandler; 3],
+}
+
+pub struct HandlerObserverInventory<'i> {
     pub handle_observers: [&'i mut dyn HandleRequestObserver; 1],
 }
 
@@ -47,9 +49,8 @@ impl<'f> HandlerFactory<'f> {
     pub fn with_handler_inventory<F, R>(
         &mut self,
         _module_config: &ModuleConfig,
-        tracing_state: &mut TracingState,
+        telemetry_state: &mut TelemetryState,
         handler_state: &mut HandlerState,
-        metrics_inventory: &MetricsInventory,
         func: F,
     ) -> R
     where
@@ -60,21 +61,32 @@ impl<'f> HandlerFactory<'f> {
             &mut handler_state.tile,
         );
         let mut description_handler = DescriptionHandler::new(descr_state);
-        let mut statistics_handler = StatisticsHandler::new(stats_state, &metrics_inventory);
+        let mut statistics_handler = StatisticsHandler::new(stats_state, &(*telemetry_state));
         let mut tile_handler = TileHandler::new(tile_state, None);
-        let [tracing_handle_observer_0] = tracing_state.handle_request_observers();
         let mut handler_inventory = HandlerInventory {
             handlers: match &mut self.handlers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
                 Some([handler_0, handler_1, handler_2]) => [*handler_0, *handler_1, *handler_2],
                 None => [&mut description_handler, &mut statistics_handler, &mut tile_handler],
             },
+        };
+        func(&mut handler_inventory)
+    }
+
+    pub fn with_handler_observers<F>(
+        &mut self,
+        telemetry_state: &mut TelemetryState,
+        func: F,
+    ) -> ()
+    where
+        F: FnOnce(&mut HandlerObserverInventory) -> () {
+        let mut observer_inventory = HandlerObserverInventory {
             handle_observers: match &mut self.handle_observers {
                 // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
                 Some([observer_0]) => [*observer_0],
-                None => [tracing_handle_observer_0],
-            }
+                None => telemetry_state.handle_request_observers(),
+            },
         };
-        func(&mut handler_inventory)
+        func(&mut observer_inventory);
     }
 }

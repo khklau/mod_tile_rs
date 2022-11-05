@@ -1,4 +1,5 @@
-use crate::schema::apache2::config::MAX_ZOOM_SERVER;
+use crate::schema::apache2::config::{MAX_ZOOM_SERVER, ModuleConfig,};
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
@@ -29,11 +30,13 @@ pub struct ResponseAnalysis {
 }
 
 impl ResponseAnalysis {
-    pub fn new() -> ResponseAnalysis {
-        ResponseAnalysis {
-            analysis_by_layer: HashMap::new(),
-            status_codes_responded: HashSet::new(),
-        }
+    pub fn new(config: &ModuleConfig) -> Result<ResponseAnalysis, InvalidConfigError> {
+        Ok(
+            ResponseAnalysis {
+                analysis_by_layer: HashMap::new(),
+                status_codes_responded: HashSet::new(),
+            }
+        )
     }
 
     fn mut_layer<'s>(
@@ -462,7 +465,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -537,7 +540,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -616,7 +619,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -696,7 +699,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -792,7 +795,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -890,7 +893,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -974,7 +977,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = ResponseAnalysis::new();
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(

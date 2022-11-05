@@ -1,21 +1,33 @@
+use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::interface::handler::HandleRequestObserver;
-use crate::interface::slippy::{ ReadRequestObserver, WriteResponseObserver, };
+use crate::interface::slippy::{ReadRequestObserver, WriteResponseObserver,};
+use crate::interface::telemetry::{
+    ResponseMetrics, TelemetryInventory, TileHandlingMetrics,
+};
+use crate::implement::telemetry::response::ResponseAnalysis;
+use crate::implement::telemetry::tile_handling::TileHandlingAnalysis;
 use crate::implement::telemetry::transaction::TransactionTrace;
 
 use std::option::Option;
+use std::result::Result;
 
 
-#[cfg(not(test))]
-pub struct TracingState {
-    pub trans_trace: TransactionTrace,
+pub struct TelemetryState {
+    response_analysis: ResponseAnalysis,
+    tile_handling_analysis: TileHandlingAnalysis,
+    trans_trace: TransactionTrace,
 }
 
-#[cfg(not(test))]
-impl TracingState {
-    pub fn new() -> TracingState {
-        TracingState {
-            trans_trace: TransactionTrace { },
-        }
+impl TelemetryState {
+    pub fn new(config: &ModuleConfig) -> Result<TelemetryState, InvalidConfigError> {
+        Ok(
+            TelemetryState {
+                response_analysis: ResponseAnalysis::new(config)?,
+                tile_handling_analysis: TileHandlingAnalysis::new(config)?,
+                trans_trace: TransactionTrace { },
+            }
+        )
     }
 
     pub fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
@@ -26,67 +38,24 @@ impl TracingState {
         [&mut self.trans_trace]
     }
 
-    pub fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 1] {
-        [&mut self.trans_trace]
-    }
-}
-
-
-#[cfg(test)]
-pub struct TracingState {
-    pub trans_trace: TransactionTraceVariant,
-}
-
-#[cfg(test)]
-impl TracingState {
-    pub fn new() -> TracingState {
-        TracingState {
-            trans_trace: TransactionTraceVariant::Real(
-                TransactionTrace { }
-            ),
-        }
-    }
-
-    pub fn new_mock(mock: TransactionTraceVariant) -> TracingState {
-        TracingState {
-            trans_trace: mock,
-        }
-    }
-
-    pub fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
+    pub fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 3] {
         [
-            match &mut self.trans_trace {
-                TransactionTraceVariant::Real(trace) => &mut *trace,
-                TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
-            },
-        ]
-    }
-
-    pub fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1] {
-        [
-            match &mut self.trans_trace {
-                TransactionTraceVariant::Real(trace) => &mut *trace,
-                TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
-            },
-        ]
-    }
-
-    pub fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 1] {
-        [
-            match &mut self.trans_trace {
-                TransactionTraceVariant::Real(trace) => &mut *trace,
-                TransactionTraceVariant::MockNoOp(trace) => &mut *trace,
-            },
+            &mut self.trans_trace,
+            &mut self.response_analysis,
+            &mut self.tile_handling_analysis,
         ]
     }
 }
 
-#[cfg(test)]
-pub enum TransactionTraceVariant {
-    Real(TransactionTrace),
-    MockNoOp(crate::implement::telemetry::transaction::test_utils::MockNoOpTransactionTrace),
-}
+impl TelemetryInventory for TelemetryState {
+    fn response_metrics(&self) -> &dyn ResponseMetrics {
+        &self.response_analysis
+    }
 
+    fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics {
+        &self.tile_handling_analysis
+    }
+}
 
 pub struct TracingInventory<'i> {
     pub read_observer: &'i mut dyn ReadRequestObserver,

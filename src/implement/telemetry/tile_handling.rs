@@ -1,3 +1,5 @@
+use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response::{ self, TileResponse };
@@ -23,10 +25,12 @@ pub struct TileHandlingAnalysis {
 }
 
 impl TileHandlingAnalysis {
-    pub fn new() -> TileHandlingAnalysis {
-        TileHandlingAnalysis {
-            analysis_by_layer: HashMap::new(),
-        }
+    pub fn new(config: &ModuleConfig) -> Result<TileHandlingAnalysis, InvalidConfigError> {
+        Ok(
+            TileHandlingAnalysis {
+                analysis_by_layer: HashMap::new(),
+            }
+        )
     }
 
     fn mut_layer<'s>(
@@ -341,7 +345,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = TileHandlingAnalysis::new();
+            let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -428,7 +432,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = TileHandlingAnalysis::new();
+            let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
             analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
@@ -485,7 +489,7 @@ mod tests {
                     }
                 )
             );
-            let mut analysis = TileHandlingAnalysis::new();
+            let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let all_sources = [TileSource::Render, TileSource::Cache];
             let all_ages = [TileAge::Fresh, TileAge::Old, TileAge::VeryOld];
             let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());

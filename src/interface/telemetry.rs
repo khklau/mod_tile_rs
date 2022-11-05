@@ -43,6 +43,12 @@ pub trait TileHandlingMetrics {
     fn tally_tile_handle_duration_by_source_and_age(&self, source: &TileSource, age: &TileAge) -> u64;
 }
 
+pub trait TelemetryInventory {
+    fn response_metrics(&self) -> &dyn ResponseMetrics;
+
+    fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics;
+}
+
 
 #[cfg(test)]
 pub mod test_utils {
