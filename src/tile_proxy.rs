@@ -90,7 +90,6 @@ pub struct TileProxy<'p> {
     read_func_name: &'static str,
     write_response: WriteResponseFunc,
     write_func_name: &'static str,
-    trans_trace: TransactionTrace,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
     write_observers: Option<[&'p mut dyn WriteResponseObserver; 3]>,
@@ -145,7 +144,6 @@ impl<'p> TileProxy<'p> {
         new_server.read_func_name = function_name(SlippyRequestReader::read);
         new_server.write_response = SlippyResponseWriter::write;
         new_server.write_func_name = function_name(SlippyResponseWriter::write);
-        new_server.trans_trace = TransactionTrace { };
         new_server.read_observers = None;
         new_server.handle_observers = None;
         new_server.write_observers = None;
@@ -215,11 +213,11 @@ impl<'p> TileProxy<'p> {
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_outcome = read(&context, request);
-        let [tracing_read_observer_0] = self.telemetry_state.read_request_observers();
+        let [read_observer_0] = self.telemetry_state.read_request_observers();
         let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
             Some([observer_0]) => [*observer_0],
-            None => [tracing_read_observer_0],
+            None => [read_observer_0],
         };
         for observer_iter in read_observers.iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
@@ -262,6 +260,7 @@ impl<'p> TileProxy<'p> {
                         })
                     });
                     if let Some((handle_outcome, handler_name)) = outcome_option {
+                        let [handle_observer_0] = self.telemetry_state.handle_request_observers();
                         handler_factory.with_handler_observers(&mut self.telemetry_state, |mut observer_inventory| {
                             for observer_iter in observer_inventory.handle_observers.iter_mut() {
                                 debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
@@ -311,10 +310,19 @@ impl<'p> TileProxy<'p> {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {
                     let outcome = write(&context, &response, writer);
+                    let [
+                        write_observer_0,
+                        write_observer_1,
+                        write_observer_2,
+                    ] = self.telemetry_state.write_response_observers();
                     let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
                         // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
                         Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-                        None => self.telemetry_state.write_response_observers(),
+                        None => [
+                            write_observer_0,
+                            write_observer_1,
+                            write_observer_2,
+                        ],
                     };
                     for observer_iter in write_observers.iter_mut() {
                         debug!(

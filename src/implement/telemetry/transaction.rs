@@ -54,9 +54,15 @@ pub mod test_utils {
     use super::*;
 
 
-    pub struct MockNoOpTransactionTrace {}
+    pub struct NoOpTransactionTrace {}
 
-    impl ReadRequestObserver for MockNoOpTransactionTrace {
+    impl NoOpTransactionTrace {
+        pub fn new() -> NoOpTransactionTrace {
+            NoOpTransactionTrace { }
+        }
+    }
+
+    impl ReadRequestObserver for NoOpTransactionTrace {
         fn on_read(
             &mut self,
             _context: &ReadContext,
@@ -67,7 +73,7 @@ pub mod test_utils {
         }
     }
 
-    impl HandleRequestObserver for MockNoOpTransactionTrace {
+    impl HandleRequestObserver for NoOpTransactionTrace {
         fn on_handle(
             &mut self,
             _context: &HandleContext,
@@ -79,7 +85,7 @@ pub mod test_utils {
         }
     }
 
-    impl WriteResponseObserver for MockNoOpTransactionTrace {
+    impl WriteResponseObserver for NoOpTransactionTrace {
         fn on_write(
             &mut self,
             _context: &WriteContext,
