@@ -1,6 +1,8 @@
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
+use crate::interface::handler::HandleRequestObserver;
+use crate::interface::slippy::{ReadRequestObserver, WriteResponseObserver,};
 
 use http::status::StatusCode;
 
@@ -47,27 +49,37 @@ pub trait TelemetryInventory {
     fn response_metrics(&self) -> &dyn ResponseMetrics;
 
     fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics;
+
+    fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1];
+
+    fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1];
+
+    fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 3];
 }
 
 
 #[cfg(test)]
 pub mod test_utils {
+    use super::*;
+    use crate::interface::handler::test_utils::NoOpHandleRequestObserver;
+    use crate::interface::slippy::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
+
     use enum_iterator::IntoEnumIterator;
 
-    use super::*;
     use std::boxed::Box;
+    use std::default::Default;
     use std::error::Error;
     use std::result::Result;
 
-    pub struct MockZeroResponseMetrics {
+    pub struct ZeroResponseMetrics {
         pub mock_status_codes: Vec<StatusCode>,
         pub mock_zoom_levels: Vec<u32>,
         pub mock_layers: Vec<LayerName>,
     }
 
-    impl MockZeroResponseMetrics {
-        fn new() -> MockZeroResponseMetrics {
-            MockZeroResponseMetrics {
+    impl ZeroResponseMetrics {
+        fn new() -> ZeroResponseMetrics {
+            ZeroResponseMetrics {
                 mock_status_codes: Vec::new(),
                 mock_zoom_levels: Vec::new(),
                 mock_layers: Vec::new(),
@@ -75,7 +87,7 @@ pub mod test_utils {
         }
     }
 
-    impl ResponseMetrics for MockZeroResponseMetrics {
+    impl ResponseMetrics for ZeroResponseMetrics {
         fn iterate_status_codes_responded(&self) -> Box<dyn Iterator<Item = &'_ StatusCode> + '_> {
             Box::new(self.mock_status_codes.iter())
         }
@@ -108,9 +120,15 @@ pub mod test_utils {
         fn count_response_by_layer_and_status_code(&self, _layer: &LayerName, _status_code: &StatusCode) -> u64 { 0 }
     }
 
-    pub struct MockZeroTileHandlingMetrics { }
+    pub struct ZeroTileHandlingMetrics { }
 
-    impl TileHandlingMetrics for MockZeroTileHandlingMetrics {
+    impl ZeroTileHandlingMetrics {
+        pub fn new() -> ZeroTileHandlingMetrics {
+            ZeroTileHandlingMetrics { }
+        }
+    }
+
+    impl TileHandlingMetrics for ZeroTileHandlingMetrics {
         fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
             Box::new(TileAge::into_enum_iter())
         }
@@ -124,10 +142,60 @@ pub mod test_utils {
         fn tally_tile_handle_duration_by_source_and_age(&self, _source: &TileSource, _age: &TileAge) -> u64 { 0 }
     }
 
+    pub struct NoOpZeroTelemetryInventory {
+        response_metrics: ZeroResponseMetrics,
+        tile_handling_metrics: ZeroTileHandlingMetrics,
+        read_observer: NoOpReadRequestObserver,
+        handle_observer: NoOpHandleRequestObserver,
+        write_observer_0: NoOpWriteResponseObserver,
+        write_observer_1: NoOpWriteResponseObserver,
+        write_observer_2: NoOpWriteResponseObserver,
+    }
+
+    impl NoOpZeroTelemetryInventory {
+        pub fn new() -> NoOpZeroTelemetryInventory {
+            NoOpZeroTelemetryInventory {
+                response_metrics: ZeroResponseMetrics::new(),
+                tile_handling_metrics: ZeroTileHandlingMetrics::new(),
+                read_observer: NoOpReadRequestObserver::new(),
+                handle_observer: NoOpHandleRequestObserver::new(),
+                write_observer_0: NoOpWriteResponseObserver::new(),
+                write_observer_1: NoOpWriteResponseObserver::new(),
+                write_observer_2: NoOpWriteResponseObserver::new(),
+            }
+        }
+    }
+
+    impl TelemetryInventory for NoOpZeroTelemetryInventory {
+        fn response_metrics(&self) -> &dyn ResponseMetrics {
+            &self.response_metrics
+        }
+
+        fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics {
+            &self.tile_handling_metrics
+        }
+
+        fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
+            [&mut self.read_observer]
+        }
+
+        fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1] {
+            [&mut self.handle_observer]
+        }
+
+        fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 3] {
+            [
+                &mut self.write_observer_0,
+                &mut self.write_observer_1,
+                &mut self.write_observer_2
+            ]
+        }
+    }
+
     pub fn with_mock_zero_metrics<F>(func: F) -> Result<(), Box<dyn Error>>
     where F: FnOnce(&dyn ResponseMetrics, &dyn TileHandlingMetrics) -> Result<(), Box<dyn Error>> {
-        let response = MockZeroResponseMetrics::new();
-        let tile = MockZeroTileHandlingMetrics { };
+        let response = ZeroResponseMetrics::new();
+        let tile = ZeroTileHandlingMetrics::new();
         return func(&response, &tile);
     }
 }

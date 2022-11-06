@@ -147,35 +147,19 @@ mod tests {
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::tile::identity::LayerName;
     use crate::interface::apache2::PoolStored;
+    use crate::interface::handler::HandleRequestObserver;
+    use crate::interface::slippy::{ReadRequestObserver, WriteResponseObserver,};
     use crate::interface::telemetry::{ResponseMetrics, TileHandlingMetrics, TelemetryInventory,};
-    use crate::interface::telemetry::test_utils::with_mock_zero_metrics;
+    use crate::interface::telemetry::test_utils::{with_mock_zero_metrics, NoOpZeroTelemetryInventory,};
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use std::error::Error;
     use std::ffi::CString;
 
-    struct MockTelemetryInventory<'i> {
-        response_metrics: &'i dyn ResponseMetrics,
-        tile_handling_metrics: &'i dyn TileHandlingMetrics,
-    }
-
-    impl<'i> TelemetryInventory for MockTelemetryInventory<'i> {
-        fn response_metrics(&self) -> &dyn ResponseMetrics {
-            self.response_metrics
-        }
-
-        fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics {
-            self.tile_handling_metrics
-        }
-    }
-
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
         with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
-            let telemetry_inventory = MockTelemetryInventory {
-                response_metrics,
-                tile_handling_metrics,
-            };
+            let telemetry_inventory = NoOpZeroTelemetryInventory::new();
             let module_config = ModuleConfig::new();
             let mut stat_state = StatisticsHandlerState::new(&module_config)?;
             let mut stat_handler = StatisticsHandler::new(&mut stat_state, &telemetry_inventory);

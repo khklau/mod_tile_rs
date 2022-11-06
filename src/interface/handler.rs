@@ -58,9 +58,9 @@ pub mod test_utils {
     use crate::schema::slippy::request;
 
 
-    pub struct MockRequestHandler { }
+    pub struct NoOpRequestHandler { }
 
-    impl RequestHandler for MockRequestHandler {
+    impl RequestHandler for NoOpRequestHandler {
         fn handle(
             &mut self,
             _context: &HandleContext,
@@ -71,6 +71,26 @@ pub mod test_utils {
 
         fn type_name(&self) -> &'static str {
             std::any::type_name::<Self>()
+        }
+    }
+
+    pub struct NoOpHandleRequestObserver {}
+
+    impl NoOpHandleRequestObserver {
+        pub fn new() -> NoOpHandleRequestObserver {
+            NoOpHandleRequestObserver { }
+        }
+    }
+
+    impl HandleRequestObserver for NoOpHandleRequestObserver {
+        fn on_handle(
+            &mut self,
+            _context: &HandleContext,
+            _request: &SlippyRequest,
+            _handle_outcome: &HandleOutcome,
+            _handler_name: &'static str,
+            _read_outcome: &ReadOutcome,
+        ) -> () {
         }
     }
 }

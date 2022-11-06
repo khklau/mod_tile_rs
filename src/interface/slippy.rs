@@ -47,3 +47,50 @@ pub trait WriteResponseObserver {
         handle_outcome: &HandleOutcome,
     ) -> ();
 }
+
+
+#[cfg(test)]
+pub mod test_utils {
+    use super::*;
+
+    pub struct NoOpReadRequestObserver { }
+
+    impl NoOpReadRequestObserver {
+        pub fn new() -> NoOpReadRequestObserver {
+            NoOpReadRequestObserver { }
+        }
+    }
+
+    impl ReadRequestObserver for NoOpReadRequestObserver {
+        fn on_read(
+            &mut self,
+            _context: &ReadContext,
+            _request: &Apache2Request,
+            _read_outcome: &ReadOutcome,
+            _read_func_name: &'static str,
+        ) -> () {
+        }
+    }
+
+    pub struct NoOpWriteResponseObserver { }
+
+    impl NoOpWriteResponseObserver {
+        pub fn new() -> NoOpWriteResponseObserver {
+            NoOpWriteResponseObserver { }
+        }
+    }
+
+    impl WriteResponseObserver for NoOpWriteResponseObserver {
+        fn on_write(
+            &mut self,
+            _context: &WriteContext,
+            _response: &SlippyResponse,
+            _writer: &dyn HttpResponseWriter,
+            _write_outcome: &WriteOutcome,
+            _write_func_name: &'static str,
+            _read_outcome: &ReadOutcome,
+            _handle_outcome: &HandleOutcome,
+        ) -> () {
+        }
+    }
+}

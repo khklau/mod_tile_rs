@@ -55,4 +55,20 @@ impl TelemetryInventory for TelemetryState {
     fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics {
         &self.tile_handling_analysis
     }
+
+    fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
+        [&mut self.trans_trace]
+    }
+
+    fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1] {
+        [&mut self.trans_trace]
+    }
+
+    fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 3] {
+        [
+            &mut self.trans_trace,
+            &mut self.response_analysis,
+            &mut self.tile_handling_analysis,
+        ]
+    }
 }
