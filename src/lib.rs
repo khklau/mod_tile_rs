@@ -85,6 +85,7 @@ mod implement {
         mod meta_tile;
     }
     pub mod telemetry{
+        pub mod counters;
         pub mod inventory;
         pub mod response;
         pub mod tile_handling;
