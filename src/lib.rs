@@ -75,6 +75,7 @@ mod implement {
         pub mod tile;
     }
     pub mod slippy {
+        pub mod inventory;
         pub mod reader;
         pub mod writer;
     }

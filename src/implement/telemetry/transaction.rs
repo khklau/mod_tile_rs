@@ -1,3 +1,5 @@
+use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
@@ -11,6 +13,14 @@ use crate::interface::slippy::{
 
 
 pub struct TransactionTrace {}
+
+impl TransactionTrace {
+    pub fn new(config: &ModuleConfig) -> Result<TransactionTrace, InvalidConfigError> {
+        Ok(
+            TransactionTrace { }
+        )
+    }
+}
 
 impl ReadRequestObserver for TransactionTrace {
     fn on_read(

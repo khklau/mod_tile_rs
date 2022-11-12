@@ -1,5 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
+use crate::interface::telemetry::TelemetryInventory;
 use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
@@ -25,17 +26,25 @@ impl HandlerState {
     }
 }
 
+pub struct HandlerObserverInventory { }
+
+impl HandlerObserverInventory {
+    pub fn handle_observers<'i>(
+        telemetry: &'i mut dyn TelemetryInventory
+    ) -> [&'i mut dyn HandleRequestObserver; 2] {
+        let [read_observer_0, read_observer_1] = telemetry.handle_request_observers();
+        return [read_observer_0, read_observer_1];
+    }
+}
+
+
 pub struct HandlerInventory<'i> {
     pub handlers: [&'i mut dyn RequestHandler; 3],
 }
 
-pub struct HandlerObserverInventory<'i> {
-    pub handle_observers: [&'i mut dyn HandleRequestObserver; 1],
-}
-
 pub struct HandlerFactory<'f> {
     pub handlers: Option<[&'f mut dyn RequestHandler; 3]>,
-    pub handle_observers: Option<[&'f mut dyn HandleRequestObserver; 1]>,
+    pub handle_observers: Option<[&'f mut dyn HandleRequestObserver; 2]>,
 }
 
 impl<'f> HandlerFactory<'f> {
@@ -71,22 +80,5 @@ impl<'f> HandlerFactory<'f> {
             },
         };
         func(&mut handler_inventory)
-    }
-
-    pub fn with_handler_observers<F>(
-        &mut self,
-        telemetry_state: &mut TelemetryState,
-        func: F,
-    ) -> ()
-    where
-        F: FnOnce(&mut HandlerObserverInventory) -> () {
-        let mut observer_inventory = HandlerObserverInventory {
-            handle_observers: match &mut self.handle_observers {
-                // TODO: find a nicer way to copy, clone method doesn't work with trait object elements
-                Some([observer_0]) => [*observer_0],
-                None => telemetry_state.handle_request_observers(),
-            },
-        };
-        func(&mut observer_inventory);
     }
 }

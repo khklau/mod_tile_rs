@@ -50,11 +50,11 @@ pub trait TelemetryInventory {
 
     fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics;
 
-    fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1];
+    fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2];
 
-    fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1];
+    fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2];
 
-    fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 3];
+    fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4];
 }
 
 
@@ -145,11 +145,14 @@ pub mod test_utils {
     pub struct NoOpZeroTelemetryInventory {
         response_metrics: ZeroResponseMetrics,
         tile_handling_metrics: ZeroTileHandlingMetrics,
-        read_observer: NoOpReadRequestObserver,
-        handle_observer: NoOpHandleRequestObserver,
+        read_observer_0: NoOpReadRequestObserver,
+        read_observer_1: NoOpReadRequestObserver,
+        handle_observer_0: NoOpHandleRequestObserver,
+        handle_observer_1: NoOpHandleRequestObserver,
         write_observer_0: NoOpWriteResponseObserver,
         write_observer_1: NoOpWriteResponseObserver,
         write_observer_2: NoOpWriteResponseObserver,
+        write_observer_3: NoOpWriteResponseObserver,
     }
 
     impl NoOpZeroTelemetryInventory {
@@ -157,11 +160,14 @@ pub mod test_utils {
             NoOpZeroTelemetryInventory {
                 response_metrics: ZeroResponseMetrics::new(),
                 tile_handling_metrics: ZeroTileHandlingMetrics::new(),
-                read_observer: NoOpReadRequestObserver::new(),
-                handle_observer: NoOpHandleRequestObserver::new(),
+                read_observer_0: NoOpReadRequestObserver::new(),
+                read_observer_1: NoOpReadRequestObserver::new(),
+                handle_observer_0: NoOpHandleRequestObserver::new(),
+                handle_observer_1: NoOpHandleRequestObserver::new(),
                 write_observer_0: NoOpWriteResponseObserver::new(),
                 write_observer_1: NoOpWriteResponseObserver::new(),
                 write_observer_2: NoOpWriteResponseObserver::new(),
+                write_observer_3: NoOpWriteResponseObserver::new(),
             }
         }
     }
@@ -175,19 +181,20 @@ pub mod test_utils {
             &self.tile_handling_metrics
         }
 
-        fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 1] {
-            [&mut self.read_observer]
+        fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2] {
+            [&mut self.read_observer_0, &mut self.read_observer_1]
         }
 
-        fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 1] {
-            [&mut self.handle_observer]
+        fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
+            [&mut self.handle_observer_0, &mut self.handle_observer_1]
         }
 
-        fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 3] {
+        fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4] {
             [
                 &mut self.write_observer_0,
                 &mut self.write_observer_1,
-                &mut self.write_observer_2
+                &mut self.write_observer_2,
+                &mut self.write_observer_3,
             ]
         }
     }

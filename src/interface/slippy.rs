@@ -72,6 +72,28 @@ pub mod test_utils {
         }
     }
 
+    pub struct CountingReadObserver {
+        pub count: u32,
+    }
+
+    impl CountingReadObserver {
+        pub fn new() -> CountingReadObserver {
+            CountingReadObserver { count: 0 }
+        }
+    }
+
+    impl ReadRequestObserver for CountingReadObserver {
+        fn on_read(
+            &mut self,
+            _context: &ReadContext,
+            _request: &Apache2Request,
+            _outcome: &ReadOutcome,
+            _read_func_name: &'static str,
+        ) -> () {
+            self.count += 1;
+        }
+    }
+
     pub struct NoOpWriteResponseObserver { }
 
     impl NoOpWriteResponseObserver {

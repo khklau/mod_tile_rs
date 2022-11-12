@@ -1,3 +1,5 @@
+use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
@@ -9,17 +11,19 @@ use crate::interface::slippy::{
 use crate::interface::handler::{HandleContext, HandleRequestObserver};
 
 
-pub struct CountingReadObserver {
+pub struct ReadCounter {
     pub count: u32,
 }
 
-impl CountingReadObserver {
-    pub fn new() -> CountingReadObserver {
-        CountingReadObserver { count: 0 }
+impl ReadCounter {
+    pub fn new(config: &ModuleConfig) -> Result<ReadCounter, InvalidConfigError> {
+        Ok(
+            ReadCounter { count: 0 }
+        )
     }
 }
 
-impl ReadRequestObserver for CountingReadObserver {
+impl ReadRequestObserver for ReadCounter {
     fn on_read(
         &mut self,
         _context: &ReadContext,
@@ -31,17 +35,19 @@ impl ReadRequestObserver for CountingReadObserver {
     }
 }
 
-pub struct CountingHandleObserver {
+pub struct HandleCounter {
     pub count: u32,
 }
 
-impl CountingHandleObserver {
-    pub fn new() -> CountingHandleObserver {
-        CountingHandleObserver { count: 0 }
+impl HandleCounter {
+    pub fn new(config: &ModuleConfig) -> Result<HandleCounter, InvalidConfigError> {
+        Ok(
+            HandleCounter { count: 0 }
+        )
     }
 }
 
-impl HandleRequestObserver for CountingHandleObserver {
+impl HandleRequestObserver for HandleCounter {
     fn on_handle(
         &mut self,
         _context: &HandleContext,
@@ -54,17 +60,19 @@ impl HandleRequestObserver for CountingHandleObserver {
     }
 }
 
-pub struct CountingWriteObserver {
+pub struct WriteCounter {
     pub count: u32,
 }
 
-impl CountingWriteObserver {
-    pub fn new() -> CountingWriteObserver {
-        CountingWriteObserver { count: 0 }
+impl WriteCounter {
+    pub fn new(config: &ModuleConfig) -> Result<WriteCounter, InvalidConfigError> {
+        Ok(
+            WriteCounter { count: 0 }
+        )
     }
 }
 
-impl WriteResponseObserver for CountingWriteObserver {
+impl WriteResponseObserver for WriteCounter {
     fn on_write(
         &mut self,
         _context: &WriteContext,

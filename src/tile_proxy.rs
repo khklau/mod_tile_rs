@@ -23,13 +23,13 @@ use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
-use crate::implement::handler::inventory::{ HandlerFactory, HandlerState, };
+use crate::implement::handler::inventory::{HandlerFactory, HandlerObserverInventory, HandlerState,};
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
+use crate::implement::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::telemetry::inventory::TelemetryState;
-use crate::implement::telemetry::transaction::TransactionTrace;
 use crate::utility::debugging::function_name;
 
 use chrono::Utc;
@@ -86,10 +86,6 @@ pub struct TileProxy<'p> {
     handler_factory: HandlerFactory<'p>,
     telemetry_state: TelemetryState,
     handler_state: HandlerState,
-    read_request: ReadRequestFunc,
-    read_func_name: &'static str,
-    write_response: WriteResponseFunc,
-    write_func_name: &'static str,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
     write_observers: Option<[&'p mut dyn WriteResponseObserver; 3]>,
@@ -140,10 +136,6 @@ impl<'p> TileProxy<'p> {
         new_server.handler_factory = HandlerFactory::new();
         new_server.telemetry_state = TelemetryState::new(&new_server.config)?;
         new_server.handler_state = HandlerState::new(&new_server.config)?;
-        new_server.read_request = SlippyRequestReader::read;
-        new_server.read_func_name = function_name(SlippyRequestReader::read);
-        new_server.write_response = SlippyResponseWriter::write;
-        new_server.write_func_name = function_name(SlippyResponseWriter::write);
         new_server.read_observers = None;
         new_server.handle_observers = None;
         new_server.write_observers = None;
@@ -205,7 +197,7 @@ impl<'p> TileProxy<'p> {
         record: &mut request_rec,
     ) -> (ReadOutcome, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
-        let (read, read_func_name) = (self.read_request, self.read_func_name);
+        let (read, read_func_name) = SlippyInventory::read_request_func();
         let context = ReadContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
@@ -213,6 +205,11 @@ impl<'p> TileProxy<'p> {
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_outcome = read(&context, request);
+        for observer_iter in SlippyObserverInventory::read_observers(&mut self.telemetry_state).iter_mut() {
+            debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
+            (*observer_iter).on_read(&context, request, &read_outcome, read_func_name);
+        }
+        /*
         let [read_observer_0] = self.telemetry_state.read_request_observers();
         let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
             // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
@@ -223,6 +220,7 @@ impl<'p> TileProxy<'p> {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(&context, request, &read_outcome, read_func_name);
         }
+        */
         debug!(record.server, "TileServer::read_request - finish");
         return (read_outcome, self);
     }
@@ -260,13 +258,19 @@ impl<'p> TileProxy<'p> {
                         })
                     });
                     if let Some((handle_outcome, handler_name)) = outcome_option {
-                        let [handle_observer_0] = self.telemetry_state.handle_request_observers();
+                        for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
+                            debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                            (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
+                        }
+                        /*
+                        let [handle_observer_0, handle_observer_1] = self.telemetry_state.handle_request_observers();
                         handler_factory.with_handler_observers(&mut self.telemetry_state, |mut observer_inventory| {
                             for observer_iter in observer_inventory.handle_observers.iter_mut() {
                                 debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
                                 (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
                             }
                         });
+                        */
                         handle_outcome
                     } else {
                         HandleOutcome::Ignored
@@ -296,7 +300,7 @@ impl<'p> TileProxy<'p> {
         handle_outcome: &HandleOutcome,
     ) -> (WriteOutcome, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
-        let (write, write_func_name) = (self.write_response, self.write_func_name);
+        let (write, write_func_name) = SlippyInventory::write_response_func();
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
         let writer: &mut dyn HttpResponseWriter = unsafe { write_record.as_mut().unwrap() };
@@ -310,10 +314,19 @@ impl<'p> TileProxy<'p> {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {
                     let outcome = write(&context, &response, writer);
+                    for observer_iter in SlippyObserverInventory::write_observers(&mut self.telemetry_state).iter_mut() {
+                        debug!(
+                            context.host.record,
+                            "TileServer::write_response - calling observer {:p}", *observer_iter
+                        );
+                        (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);
+                    }
+                    /*
                     let [
                         write_observer_0,
                         write_observer_1,
                         write_observer_2,
+                        write_observer_3,
                     ] = self.telemetry_state.write_response_observers();
                     let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
                         // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
@@ -331,6 +344,7 @@ impl<'p> TileProxy<'p> {
                         );
                         (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);
                     }
+                    */
                     outcome
                 }
                 Err(_) => WriteOutcome::Processed(
@@ -457,58 +471,22 @@ mod tests {
         }, render_no_op)
     }
 
-    struct MockReadObserver {
-        count: u32,
-    }
-
-    impl ReadRequestObserver for MockReadObserver {
-        fn on_read(
-            &mut self,
-            _context: &ReadContext,
-            _request: &Apache2Request,
-            _outcome: &ReadOutcome,
-            _read_func_name: &'static str,
-        ) -> () {
-            self.count += 1;
-        }
-    }
-
     #[test]
     fn test_read_request_calls_mock_observer() -> Result<(), Box<dyn Error>> {
         with_mock_env(|env| {
             with_server_rec(|server| {
                 with_request_rec(|request| {
-                    let mut mock1 = MockReadObserver {
-                        count: 0,
-                    };
                     let proxy = TileProxy::new(server, env.mock_config.clone())?;
-                    proxy.read_observers = Some([&mut mock1]);
                     let uri = CString::new("/mod_tile_rs")?;
                     request.uri = uri.into_raw();
                     let (outcome, _) = proxy.read_request(request);
                     outcome.expect_processed().unwrap();
-                    assert_eq!(1, mock1.count, "Read observer not called");
+                    let actual_count = proxy.telemetry_state.read_counter().count;
+                    assert_eq!(1, actual_count, "Read observer not called");
                     Ok(())
                 })
             })
         }, render_no_op)
-    }
-
-    struct MockHandleObserver {
-        count: u32,
-    }
-
-    impl HandleRequestObserver for MockHandleObserver {
-        fn on_handle(
-            &mut self,
-            _context: &HandleContext,
-            _request: &request::SlippyRequest,
-            _handle_outcome: &HandleOutcome,
-            _handler_name: &'static str,
-            _read_outcome: &ReadOutcome,
-        ) -> () {
-            self.count += 1;
-        }
     }
 
     #[test]
@@ -516,11 +494,7 @@ mod tests {
         with_mock_env(|env| {
             with_server_rec(|server| {
                 with_request_rec(|request| {
-                    let mut mock1 = MockHandleObserver {
-                        count: 0,
-                    };
                     let proxy = TileProxy::new(server, env.mock_config.clone())?;
-                    proxy.handler_factory.handle_observers = Some([&mut mock1]);
                     let uri = CString::new("/mod_tile_rs")?;
                     request.uri = uri.into_raw();
                     let context = Apache2Request::create_with_tile_config(request)?;
@@ -536,30 +510,12 @@ mod tests {
                     );
                     let (handle_outcome, _) = proxy.call_handlers(request, &read_outcome);
                     handle_outcome.expect_processed().result?;
-                    assert_eq!(1, mock1.count, "Handle observer not called");
+                    let actual_count = proxy.telemetry_state.handle_counter().count;
+                    assert_eq!(1, actual_count, "Handle observer not called");
                     Ok(())
                 })
             })
         }, render_no_op)
-    }
-
-    struct MockWriteObserver {
-        count: u32,
-    }
-
-    impl WriteResponseObserver for MockWriteObserver {
-        fn on_write(
-            &mut self,
-            _context: &WriteContext,
-            _response: &response::SlippyResponse,
-            _writer: &dyn HttpResponseWriter,
-            _write_result: &WriteOutcome,
-            _write_func_name: &'static str,
-            _read_outcome: &ReadOutcome,
-            _handle_outcome: &HandleOutcome,
-        ) -> () {
-            self.count += 1;
-        }
     }
 
     #[test]
@@ -567,17 +523,7 @@ mod tests {
         with_mock_env(|env| {
             with_server_rec(|server| {
                 with_request_rec(|request| {
-                    let mut mock1 = MockWriteObserver {
-                        count: 0,
-                    };
-                    let mut mock2 = MockWriteObserver {
-                        count: 0,
-                    };
-                    let mut mock3 = MockWriteObserver {
-                        count: 0,
-                    };
                     let proxy = TileProxy::new(server, env.mock_config.clone())?;
-                    proxy.write_observers = Some([&mut mock1, &mut mock2, &mut mock3]);
                     let uri = CString::new("/mod_tile_rs")?;
                     request.uri = uri.into_raw();
                     let context = Apache2Request::create_with_tile_config(request)?;
@@ -619,7 +565,8 @@ mod tests {
                     );
                     let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
                     result.expect_processed().unwrap();
-                    assert_eq!(1, mock1.count, "Write observer not called");
+                    let actual_count = proxy.telemetry_state.write_counter().count;
+                    assert_eq!(1, actual_count, "Write observer not called");
                     Ok(())
                 })
             })
