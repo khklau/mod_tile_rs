@@ -34,3 +34,7 @@ pub trait BidirectionalChannel {
 pub struct RenderdCommunicationInventory<'i> {
     pub primary_comms: &'i mut dyn BidirectionalChannel,
 }
+
+pub trait CommunicationInventory {
+    fn primary_renderd_comms(&mut self) -> &mut dyn BidirectionalChannel;
+}

@@ -7,7 +7,9 @@ use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
-use crate::interface::handler::{ HandleContext, RequestHandler, };
+use crate::interface::handler::{
+    HandleContext, HandleContext2, HandleIOContext, RequestHandler,
+};
 use crate::interface::storage::{ TileStorage, TileStorageInventory, };
 use crate::implement::communication::renderd_socket::RenderdSocket;
 use crate::implement::storage::file_system::FileSystem;
@@ -58,6 +60,15 @@ impl<'h> TileHandler<'h> {
 }
 
 impl<'h> RequestHandler for TileHandler<'h> {
+    fn handle2(
+        &mut self,
+        context: &HandleContext2,
+        io: &mut HandleIOContext,
+        request: &SlippyRequest,
+    ) -> HandleOutcome {
+        HandleOutcome::Ignored
+    }
+
     fn handle(
         &mut self,
         context: &HandleContext,

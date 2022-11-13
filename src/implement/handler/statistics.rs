@@ -5,7 +5,9 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::interface::handler::{ HandleContext, RequestHandler, };
+use crate::interface::handler::{
+    HandleContext, HandleContext2, HandleIOContext, RequestHandler
+};
 use crate::interface::telemetry::TelemetryInventory;
 
 use chrono::Utc;
@@ -102,6 +104,15 @@ impl<'h> StatisticsHandler<'h> {
 }
 
 impl<'h> RequestHandler for StatisticsHandler<'h> {
+    fn handle2(
+        &mut self,
+        context: &HandleContext2,
+        io: &mut HandleIOContext,
+        request: &request::SlippyRequest,
+    ) -> HandleOutcome {
+        HandleOutcome::Ignored
+    }
+
     fn handle(
         &mut self,
         context: &HandleContext,

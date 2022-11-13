@@ -7,7 +7,23 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::apache2::PoolStored;
+use crate::interface::communication::CommunicationInventory;
+use crate::interface::storage::StorageInventory;
+use crate::interface::telemetry::TelemetryInventory;
 
+
+pub struct HandleIOContext<'c> {
+    pub communication: &'c mut dyn CommunicationInventory,
+    pub storage: &'c mut dyn StorageInventory,
+}
+
+pub struct HandleContext2<'c> {
+    pub module_config: &'c ModuleConfig,
+    pub host: &'c VirtualHost<'c>,
+    pub connection: &'c Connection<'c>,
+    pub request: &'c mut Apache2Request<'c>,
+    pub telemetry: &'c dyn TelemetryInventory,
+}
 
 pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,
@@ -34,6 +50,13 @@ pub trait RequestHandler {
     fn handle(
         &mut self,
         context: &HandleContext,
+        request: &SlippyRequest,
+    ) -> HandleOutcome;
+
+    fn handle2(
+        &mut self,
+        context: &HandleContext2,
+        io: &mut HandleIOContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
 
@@ -64,6 +87,15 @@ pub mod test_utils {
         fn handle(
             &mut self,
             _context: &HandleContext,
+            _request: &request::SlippyRequest,
+        ) -> HandleOutcome {
+            HandleOutcome::Ignored
+        }
+
+        fn handle2(
+            &mut self,
+            _context: &HandleContext2,
+            _io: &mut HandleIOContext,
             _request: &request::SlippyRequest,
         ) -> HandleOutcome {
             HandleOutcome::Ignored

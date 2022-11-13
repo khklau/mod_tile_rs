@@ -19,3 +19,7 @@ pub trait TileStorage {
 pub struct TileStorageInventory<'i> {
     pub primary_store: &'i mut dyn TileStorage,
 }
+
+pub trait StorageInventory {
+    fn primary_tile_store(&mut self) -> &mut dyn TileStorage;
+}
