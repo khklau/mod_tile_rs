@@ -17,12 +17,51 @@ pub struct HandleIOContext<'c> {
     pub storage: &'c mut dyn StorageInventory,
 }
 
+impl<'c> HandleIOContext<'c> {
+    pub fn new(
+        communication: &'c mut dyn CommunicationInventory,
+        storage: &'c mut dyn StorageInventory,
+    ) -> HandleIOContext<'c> {
+        HandleIOContext {
+            communication,
+            storage,
+        }
+    }
+}
+
 pub struct HandleContext2<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
     pub request: &'c mut Apache2Request<'c>,
     pub telemetry: &'c dyn TelemetryInventory,
+}
+
+impl<'c> HandleContext2<'c> {
+    pub fn new(
+        record: &'c mut request_rec,
+        module_config: &'c ModuleConfig,
+        telemetry: &'c dyn TelemetryInventory,
+    ) -> HandleContext2<'c> {
+        HandleContext2 {
+            module_config,
+            host: VirtualHost::find_or_allocate_new(record).unwrap(),
+            connection: Connection::find_or_allocate_new(record).unwrap(),
+            request: Apache2Request::find_or_allocate_new(record).unwrap(),
+            telemetry,
+        }
+    }
+}
+
+pub trait RequestHandler2 {
+    fn handle2(
+        &mut self,
+        context: &HandleContext2,
+        io: &mut HandleIOContext,
+        request: &SlippyRequest,
+    ) -> HandleOutcome;
+
+    fn type_name2(&self) -> &'static str;
 }
 
 pub struct HandleContext<'c> {
@@ -50,13 +89,6 @@ pub trait RequestHandler {
     fn handle(
         &mut self,
         context: &HandleContext,
-        request: &SlippyRequest,
-    ) -> HandleOutcome;
-
-    fn handle2(
-        &mut self,
-        context: &HandleContext2,
-        io: &mut HandleIOContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
 
@@ -92,6 +124,12 @@ pub mod test_utils {
             HandleOutcome::Ignored
         }
 
+        fn type_name(&self) -> &'static str {
+            std::any::type_name::<Self>()
+        }
+    }
+
+    impl RequestHandler2 for NoOpRequestHandler {
         fn handle2(
             &mut self,
             _context: &HandleContext2,
@@ -101,7 +139,7 @@ pub mod test_utils {
             HandleOutcome::Ignored
         }
 
-        fn type_name(&self) -> &'static str {
+        fn type_name2(&self) -> &'static str {
             std::any::type_name::<Self>()
         }
     }

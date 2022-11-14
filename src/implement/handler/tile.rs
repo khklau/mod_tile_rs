@@ -8,7 +8,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{
-    HandleContext, HandleContext2, HandleIOContext, RequestHandler,
+    HandleContext, HandleContext2, HandleIOContext, RequestHandler, RequestHandler2,
 };
 use crate::interface::storage::{ TileStorage, TileStorageInventory, };
 use crate::implement::communication::renderd_socket::RenderdSocket;
@@ -34,11 +34,26 @@ impl TileHandlerState {
         let value = TileHandlerState {
             render_requests_by_tile_id: HashMap::new(),
             primary_store: StorageVariant::FileSystem(
-                FileSystem::new()
+                FileSystem::new(config)?
             ),
             primary_comms: RenderdSocket::new(config)?,
         };
         return Ok(value);
+    }
+}
+
+impl RequestHandler2 for TileHandlerState {
+    fn handle2(
+        &mut self,
+        context: &HandleContext2,
+        io: &mut HandleIOContext,
+        request: &SlippyRequest,
+    ) -> HandleOutcome {
+        HandleOutcome::Ignored
+    }
+
+    fn type_name2(&self) -> &'static str {
+        type_name::<Self>()
     }
 }
 
@@ -60,15 +75,6 @@ impl<'h> TileHandler<'h> {
 }
 
 impl<'h> RequestHandler for TileHandler<'h> {
-    fn handle2(
-        &mut self,
-        context: &HandleContext2,
-        io: &mut HandleIOContext,
-        request: &SlippyRequest,
-    ) -> HandleOutcome {
-        HandleOutcome::Ignored
-    }
-
     fn handle(
         &mut self,
         context: &HandleContext,

@@ -1,3 +1,5 @@
+use crate::schema::apache2::config::ModuleConfig;
+use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
 use crate::interface::handler::HandleContext;
@@ -19,10 +21,12 @@ pub struct FileSystem {
 }
 
 impl FileSystem {
-    pub fn new() -> FileSystem {
-        FileSystem {
-            cache: HashMap::new(),
-        }
+    pub fn new(config: &ModuleConfig) -> Result<FileSystem, InvalidConfigError> {
+        Ok(
+            FileSystem {
+                cache: HashMap::new(),
+            }
+        )
     }
 }
 

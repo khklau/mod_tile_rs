@@ -67,6 +67,7 @@ mod framework {
 mod implement {
     pub mod communication {
         pub mod renderd_socket;
+        pub mod state;
     }
     pub mod handler {
         pub mod description;
@@ -82,6 +83,7 @@ mod implement {
     pub mod storage {
         pub mod file_system;
         pub mod memcached;
+        pub mod state;
         pub mod variant;
         mod meta_tile;
     }

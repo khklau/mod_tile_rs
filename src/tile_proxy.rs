@@ -12,16 +12,17 @@ use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::apache2::{ PoolStored, HttpResponseWriter, };
 use crate::interface::handler::{
-    HandleContext, HandleRequestObserver, RequestHandler,
+    HandleContext, HandleContext2, HandleIOContext, HandleRequestObserver, RequestHandler,
 };
 use crate::interface::slippy::{
-    ReadContext, ReadRequestFunc, ReadRequestObserver,
-    WriteContext, WriteResponseFunc, WriteResponseObserver,
+    ReadContext, ReadRequestObserver,
+    WriteContext, WriteResponseObserver,
 };
-use crate::interface::telemetry::{ ResponseMetrics, TileHandlingMetrics, };
+use crate::interface::telemetry::TelemetryInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
+use crate::implement::communication::state::CommunicationState;
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::inventory::{HandlerFactory, HandlerObserverInventory, HandlerState,};
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
@@ -29,6 +30,7 @@ use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::implement::slippy::reader::SlippyRequestReader;
 use crate::implement::slippy::writer::SlippyResponseWriter;
+use crate::implement::storage::state::StorageState;
 use crate::implement::telemetry::inventory::TelemetryState;
 use crate::utility::debugging::function_name;
 
@@ -86,6 +88,8 @@ pub struct TileProxy<'p> {
     handler_factory: HandlerFactory<'p>,
     telemetry_state: TelemetryState,
     handler_state: HandlerState,
+    comms_state: CommunicationState,
+    storage_state: StorageState,
     read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
     handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
     write_observers: Option<[&'p mut dyn WriteResponseObserver; 3]>,
@@ -136,6 +140,8 @@ impl<'p> TileProxy<'p> {
         new_server.handler_factory = HandlerFactory::new();
         new_server.telemetry_state = TelemetryState::new(&new_server.config)?;
         new_server.handler_state = HandlerState::new(&new_server.config)?;
+        new_server.comms_state = CommunicationState::new(&new_server.config)?;
+        new_server.storage_state = StorageState::new(&new_server.config)?;
         new_server.read_observers = None;
         new_server.handle_observers = None;
         new_server.write_observers = None;
@@ -231,6 +237,7 @@ impl<'p> TileProxy<'p> {
         read_outcome: &ReadOutcome,
     ) -> (HandleOutcome, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
+        let use_v2 = false;
         let before_timestamp = Utc::now();
         let outcome = match read_outcome {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
@@ -240,40 +247,50 @@ impl<'p> TileProxy<'p> {
                         module_config,
                         telemetry_state,
                         handler_state,
-                        handler_factory
+                        handler_factory,
+                        comms_state,
+                        storage_state,
                     ) = (
                         &self.config,
                         &self.telemetry_state,
                         &mut self.handler_state,
                         &mut self.handler_factory,
+                        &mut self.comms_state,
+                        &mut self.storage_state,
                     );
-                    let context = HandleContext::new(record, module_config) ;
-                    let outcome_option = handler_factory.with_handler_inventory(
-                        module_config,
-                        telemetry_state,
-                        handler_state,
-                        |handler_inventory| {
-                        handler_inventory.handlers.iter_mut().find_map(|handler| {
-                            (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
-                        })
-                    });
-                    if let Some((handle_outcome, handler_name)) = outcome_option {
-                        for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                            debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                            (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
-                        }
-                        /*
-                        let [handle_observer_0, handle_observer_1] = self.telemetry_state.handle_request_observers();
-                        handler_factory.with_handler_observers(&mut self.telemetry_state, |mut observer_inventory| {
-                            for observer_iter in observer_inventory.handle_observers.iter_mut() {
+                    if use_v2 {
+                        let context = HandleContext2::new(record, module_config, telemetry_state);
+                        let io = HandleIOContext::new(&mut *comms_state, &mut *storage_state);
+                        HandleOutcome::Ignored
+                    } else {
+                        let context = HandleContext::new(record, module_config);
+                        let outcome_option = handler_factory.with_handler_inventory(
+                            module_config,
+                            telemetry_state,
+                            handler_state,
+                            |handler_inventory| {
+                            handler_inventory.handlers.iter_mut().find_map(|handler| {
+                                (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
+                            })
+                        });
+                        if let Some((handle_outcome, handler_name)) = outcome_option {
+                            for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
                                 debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
                                 (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
                             }
-                        });
-                        */
-                        handle_outcome
-                    } else {
-                        HandleOutcome::Ignored
+                            /*
+                            let [handle_observer_0, handle_observer_1] = self.telemetry_state.handle_request_observers();
+                            handler_factory.with_handler_observers(&mut self.telemetry_state, |mut observer_inventory| {
+                                for observer_iter in observer_inventory.handle_observers.iter_mut() {
+                                    debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
+                                    (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
+                                }
+                            });
+                            */
+                            handle_outcome
+                        } else {
+                            HandleOutcome::Ignored
+                        }
                     }
                 },
                 Err(err) => {

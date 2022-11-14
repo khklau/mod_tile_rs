@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
 use crate::interface::handler::{
-    HandleContext, HandleContext2, HandleIOContext, RequestHandler,
+    HandleContext, HandleContext2, HandleIOContext, RequestHandler, RequestHandler2,
 };
 
 use chrono::Utc;
@@ -24,6 +24,21 @@ impl DescriptionHandlerState {
     }
 }
 
+impl RequestHandler2 for DescriptionHandlerState {
+    fn handle2(
+        &mut self,
+        _context: &HandleContext2,
+        _io: &mut HandleIOContext,
+        _request: &request::SlippyRequest,
+    ) -> HandleOutcome {
+        HandleOutcome::Ignored
+    }
+
+    fn type_name2(&self) -> &'static str {
+        type_name::<Self>()
+    }
+}
+
 pub struct DescriptionHandler<'h> {
     _state: &'h mut DescriptionHandlerState,
 }
@@ -39,15 +54,6 @@ impl<'h> DescriptionHandler<'h> {
 }
 
 impl<'h> RequestHandler for DescriptionHandler<'h> {
-    fn handle2(
-        &mut self,
-        _context: &HandleContext2,
-        _io: &mut HandleIOContext,
-        _request: &request::SlippyRequest,
-    ) -> HandleOutcome {
-        HandleOutcome::Ignored
-    }
-
     fn handle(
         &mut self,
         context: &HandleContext,
