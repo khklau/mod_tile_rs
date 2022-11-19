@@ -64,6 +64,10 @@ pub trait RequestHandler2 {
     fn type_name2(&self) -> &'static str;
 }
 
+pub trait HandlerInventory2 {
+    fn request_handlers(&mut self) -> [&mut dyn RequestHandler2; 3];
+}
+
 pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
@@ -99,6 +103,14 @@ pub trait HandleRequestObserver {
     fn on_handle(
         &mut self,
         context: &HandleContext,
+        request: &SlippyRequest,
+        handle_outcome: &HandleOutcome,
+        handler_name: &'static str,
+        read_outcome: &ReadOutcome,
+    ) -> ();
+
+    fn on_handle2(
+        &mut self,
         request: &SlippyRequest,
         handle_outcome: &HandleOutcome,
         handler_name: &'static str,
@@ -156,6 +168,15 @@ pub mod test_utils {
         fn on_handle(
             &mut self,
             _context: &HandleContext,
+            _request: &SlippyRequest,
+            _handle_outcome: &HandleOutcome,
+            _handler_name: &'static str,
+            _read_outcome: &ReadOutcome,
+        ) -> () {
+        }
+
+        fn on_handle2(
+            &mut self,
             _request: &SlippyRequest,
             _handle_outcome: &HandleOutcome,
             _handler_name: &'static str,

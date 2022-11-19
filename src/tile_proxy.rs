@@ -12,7 +12,7 @@ use crate::schema::slippy::error::{ ReadError, WriteError };
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::apache2::{ PoolStored, HttpResponseWriter, };
 use crate::interface::handler::{
-    HandleContext, HandleContext2, HandleIOContext, HandleRequestObserver, RequestHandler,
+    HandleContext, HandleContext2, HandleIOContext, HandlerInventory2, HandleRequestObserver, RequestHandler,
 };
 use crate::interface::slippy::{
     ReadContext, ReadRequestObserver,
@@ -243,26 +243,37 @@ impl<'p> TileProxy<'p> {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let (
-                        module_config,
-                        telemetry_state,
-                        handler_state,
-                        handler_factory,
-                        comms_state,
-                        storage_state,
-                    ) = (
-                        &self.config,
-                        &self.telemetry_state,
-                        &mut self.handler_state,
-                        &mut self.handler_factory,
-                        &mut self.comms_state,
-                        &mut self.storage_state,
-                    );
                     if use_v2 {
-                        let context = HandleContext2::new(record, module_config, telemetry_state);
-                        let io = HandleIOContext::new(&mut *comms_state, &mut *storage_state);
-                        HandleOutcome::Ignored
+                        let context = HandleContext2::new(record, &self.config, &self.telemetry_state);
+                        let mut io = HandleIOContext::new(&mut self.comms_state, &mut self.storage_state);
+                        let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
+                            (*handler).handle2(&context, &mut io, request).as_some_when_processed(handler.type_name2())
+                        });
+                        match outcome_option {
+                            Some((handle_outcome, handler_name)) => {
+                                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
+                                    (*observer_iter).on_handle2(request, &handle_outcome, handler_name, read_outcome);
+                                }
+                                handle_outcome
+                            },
+                            None => HandleOutcome::Ignored,
+                        }
                     } else {
+                        let (
+                            module_config,
+                            telemetry_state,
+                            handler_state,
+                            handler_factory,
+                            comms_state,
+                            storage_state,
+                        ) = (
+                            &self.config,
+                            &self.telemetry_state,
+                            &mut self.handler_state,
+                            &mut self.handler_factory,
+                            &mut self.comms_state,
+                            &mut self.storage_state,
+                        );
                         let context = HandleContext::new(record, module_config);
                         let outcome_option = handler_factory.with_handler_inventory(
                             module_config,

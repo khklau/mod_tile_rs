@@ -1,7 +1,9 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::interface::telemetry::TelemetryInventory;
-use crate::interface::handler::{ HandleRequestObserver, RequestHandler, };
+use crate::interface::handler::{
+    HandlerInventory2, HandleRequestObserver, RequestHandler, RequestHandler2
+};
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
@@ -23,6 +25,16 @@ impl HandlerState {
                 tile: TileHandlerState::new(config)?,
             }
         )
+    }
+}
+
+impl HandlerInventory2 for HandlerState {
+    fn request_handlers(&mut self) -> [&mut dyn RequestHandler2; 3] {
+        [
+            &mut self.description,
+            &mut self.statistics,
+            &mut self.tile,
+        ]
     }
 }
 

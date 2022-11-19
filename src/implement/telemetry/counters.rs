@@ -58,6 +58,16 @@ impl HandleRequestObserver for HandleCounter {
     ) -> () {
         self.count += 1;
     }
+
+    fn on_handle2(
+        &mut self,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+        _read_outcome: &ReadOutcome,
+    ) -> () {
+        self.count += 1;
+    }
 }
 
 pub struct WriteCounter {

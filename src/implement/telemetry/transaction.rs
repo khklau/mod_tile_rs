@@ -6,7 +6,7 @@ use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::apache2::HttpResponseWriter;
-use crate::interface::handler::{HandleContext, HandleRequestObserver,};
+use crate::interface::handler::{HandleContext, HandleRequestObserver};
 use crate::interface::slippy::{
     ReadContext, ReadRequestObserver, WriteContext, WriteResponseObserver,
 };
@@ -37,6 +37,15 @@ impl HandleRequestObserver for TransactionTrace {
     fn on_handle(
         &mut self,
         _context: &HandleContext,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+        _read_outcome: &ReadOutcome,
+    ) -> () {
+    }
+
+    fn on_handle2(
+        &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,
         _handler_name: &'static str,
@@ -87,6 +96,15 @@ pub mod test_utils {
         fn on_handle(
             &mut self,
             _context: &HandleContext,
+            _request: &SlippyRequest,
+            _handle_outcome: &HandleOutcome,
+            _handler_name: &'static str,
+            _read_outcome: &ReadOutcome,
+        ) -> () {
+        }
+
+        fn on_handle2(
+            &mut self,
             _request: &SlippyRequest,
             _handle_outcome: &HandleOutcome,
             _handler_name: &'static str,
