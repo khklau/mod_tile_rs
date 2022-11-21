@@ -258,6 +258,7 @@ pub mod test_utils {
                 log_id: ptr::null(),
                 current_thread: ptr::null_mut(),
                 master: ptr::null_mut(),
+                outgoing: 0 as c_int,
             }
         }
     }
@@ -396,6 +397,7 @@ pub mod test_utils {
             trailers_out: ptr::null_mut(),
             useragent_host: ptr::null_mut(),
             double_reverse: 0 as c_int,
+            bnotes: 0,
         };
         with_pool(|pool| {
             record.pool = pool as *mut apr_pool_t;
