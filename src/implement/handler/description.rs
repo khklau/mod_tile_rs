@@ -27,11 +27,33 @@ impl DescriptionHandlerState {
 impl RequestHandler2 for DescriptionHandlerState {
     fn handle2(
         &mut self,
-        _context: &HandleContext2,
+        context: &HandleContext2,
         _io: &mut HandleIOContext,
-        _request: &request::SlippyRequest,
+        request: &request::SlippyRequest,
     ) -> HandleOutcome {
-        HandleOutcome::Ignored
+        let before_timestamp = Utc::now();
+        let layer = match request.body {
+            request::BodyVariant::DescribeLayer => &request.header.layer,
+            _ => {
+                return HandleOutcome::Ignored;
+            },
+        };
+        let description = describe(context.module_config, layer);
+        let response = response::SlippyResponse {
+            header: response::Header::new(
+                context.request.record,
+                &mime::APPLICATION_JSON,
+            ),
+            body: response::BodyVariant::Description(description),
+        };
+        let after_timestamp = Utc::now();
+        return HandleOutcome::Processed(
+            HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response),
+            }
+        );
     }
 
     fn type_name2(&self) -> &'static str {
