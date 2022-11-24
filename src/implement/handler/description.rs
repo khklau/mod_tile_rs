@@ -192,13 +192,11 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             request.uri = uri.into_raw();
-            let handle_context = HandleContext2 {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(request)?,
-                connection: Connection::find_or_allocate_new(request)?,
-                request: Apache2Request::create_with_tile_config(request)?,
-                telemetry: &telemetry,
-            };
+            let handle_context = HandleContext2::new(
+                request,
+                &module_config,
+                &telemetry,
+            );
             let mut io_context = HandleIOContext::new(
                 &mut communication,
                 &mut storage,
