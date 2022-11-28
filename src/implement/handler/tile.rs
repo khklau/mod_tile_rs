@@ -49,7 +49,56 @@ impl RequestHandler2 for TileHandlerState {
         io: &mut HandleIOContext,
         request: &SlippyRequest,
     ) -> HandleOutcome {
-        HandleOutcome::Ignored
+        let before_timestamp = Utc::now();
+        let tile_id = match &request.body {
+            BodyVariant::ServeTileV2(body) => TileIdentity {
+                x: body.x,
+                y: body.y,
+                z: body.z,
+                layer: request.header.layer.clone(),
+            },
+            BodyVariant::ServeTileV3(body) => TileIdentity {
+                x: body.x,
+                y: body.y,
+                z: body.z,
+                layer: request.header.layer.clone(),
+            },
+            _ => return HandleOutcome::Ignored,
+        };
+        let primary_store = io.storage.primary_tile_store();
+        let tile_ref = match primary_store.read_tile2(context, &tile_id) {
+            Ok(tile) => tile,
+            Err(err) => {
+                return HandleOutcome::Processed(
+                    HandleRequestResult {
+                        before_timestamp,
+                        after_timestamp: Utc::now(),
+                        result: Err(HandleError::TileRead(err)),
+                    }
+                )
+            },
+        };
+        let response = response::SlippyResponse {
+            header: response::Header::new(
+                context.request.record,
+                &tile_ref.media_type,
+            ),
+            body: response::BodyVariant::Tile(
+                response::TileResponse {
+                    source: TileSource::Cache,
+                    age: TileAge::Fresh,
+                    tile_ref,
+                }
+            ),
+        };
+        let after_timestamp = Utc::now();
+        return HandleOutcome::Processed(
+            HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response),
+            }
+        );
     }
 
     fn type_name2(&self) -> &'static str {
