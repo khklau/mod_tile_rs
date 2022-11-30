@@ -24,7 +24,7 @@ use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::communication::state::CommunicationState;
 use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
-use crate::implement::handler::inventory::{HandlerFactory, HandlerObserverInventory, HandlerState,};
+use crate::implement::handler::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
 use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
@@ -85,7 +85,6 @@ impl std::fmt::Display for HandleRequestError {
 pub struct TileProxy<'p> {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
-    handler_factory: HandlerFactory<'p>,
     telemetry_state: TelemetryState,
     handler_state: HandlerState,
     comms_state: CommunicationState,
@@ -137,7 +136,6 @@ impl<'p> TileProxy<'p> {
         )?.0;
         new_server.config = module_config;
         new_server.config_file_path = None;
-        new_server.handler_factory = HandlerFactory::new();
         new_server.telemetry_state = TelemetryState::new(&new_server.config)?;
         new_server.handler_state = HandlerState::new(&new_server.config)?;
         new_server.comms_state = CommunicationState::new(&new_server.config)?;
@@ -215,18 +213,6 @@ impl<'p> TileProxy<'p> {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(&context, request, &read_outcome, read_func_name);
         }
-        /*
-        let [read_observer_0] = self.telemetry_state.read_request_observers();
-        let mut read_observers: [&mut dyn ReadRequestObserver; 1] = match &mut self.read_observers {
-            // TODO: find a nicer way to copy self.read_observers, clone method doesn't work with trait object elements
-            Some([observer_0]) => [*observer_0],
-            None => [read_observer_0],
-        };
-        for observer_iter in read_observers.iter_mut() {
-            debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(&context, request, &read_outcome, read_func_name);
-        }
-        */
         debug!(record.server, "TileServer::read_request - finish");
         return (read_outcome, self);
     }
@@ -237,67 +223,24 @@ impl<'p> TileProxy<'p> {
         read_outcome: &ReadOutcome,
     ) -> (HandleOutcome, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
-        let use_v2 = true;
         let before_timestamp = Utc::now();
         let outcome = match read_outcome {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    if use_v2 {
-                        let context = HandleContext2::new(record, &self.config, &self.telemetry_state);
-                        let mut io = HandleIOContext::new(&mut self.comms_state, &mut self.storage_state);
-                        let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
-                            (*handler).handle2(&context, &mut io, request).as_some_when_processed(handler.type_name2())
-                        });
-                        match outcome_option {
-                            Some((handle_outcome, handler_name)) => {
-                                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                                    (*observer_iter).on_handle2(request, &handle_outcome, handler_name, read_outcome);
-                                }
-                                handle_outcome
-                            },
-                            None => HandleOutcome::Ignored,
-                        }
-                    } else {
-                        let (
-                            module_config,
-                            telemetry_state,
-                            handler_state,
-                            handler_factory,
-                        ) = (
-                            &self.config,
-                            &self.telemetry_state,
-                            &mut self.handler_state,
-                            &mut self.handler_factory,
-                        );
-                        let context = HandleContext::new(record, module_config);
-                        let outcome_option = handler_factory.with_handler_inventory(
-                            module_config,
-                            telemetry_state,
-                            handler_state,
-                            |handler_inventory| {
-                            handler_inventory.handlers.iter_mut().find_map(|handler| {
-                                (*handler).handle(&context, request).as_some_when_processed(handler.type_name())
-                            })
-                        });
-                        if let Some((handle_outcome, handler_name)) = outcome_option {
+                    let context = HandleContext2::new(record, &self.config, &self.telemetry_state);
+                    let mut io = HandleIOContext::new(&mut self.comms_state, &mut self.storage_state);
+                    let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
+                        (*handler).handle2(&context, &mut io, request).as_some_when_processed(handler.type_name2())
+                    });
+                    match outcome_option {
+                        Some((handle_outcome, handler_name)) => {
                             for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                                debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
+                                (*observer_iter).on_handle2(request, &handle_outcome, handler_name, read_outcome);
                             }
-                            /*
-                            let [handle_observer_0, handle_observer_1] = self.telemetry_state.handle_request_observers();
-                            handler_factory.with_handler_observers(&mut self.telemetry_state, |mut observer_inventory| {
-                                for observer_iter in observer_inventory.handle_observers.iter_mut() {
-                                    debug!(context.host.record, "TileServer::call_handlers - calling observer {:p}", *observer_iter);
-                                    (*observer_iter).on_handle(&context, request, &handle_outcome, handler_name, read_outcome);
-                                }
-                            });
-                            */
                             handle_outcome
-                        } else {
-                            HandleOutcome::Ignored
-                        }
+                        },
+                        None => HandleOutcome::Ignored,
                     }
                 },
                 Err(err) => {
@@ -345,30 +288,6 @@ impl<'p> TileProxy<'p> {
                         );
                         (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);
                     }
-                    /*
-                    let [
-                        write_observer_0,
-                        write_observer_1,
-                        write_observer_2,
-                        write_observer_3,
-                    ] = self.telemetry_state.write_response_observers();
-                    let mut write_observers: [&mut dyn WriteResponseObserver; 3] = match &mut self.write_observers {
-                        // TODO: find a nicer way to copy self.write_observers, clone method doesn't work with trait object elements
-                        Some([observer_0, observer_1, observer_2]) => [*observer_0, *observer_1, *observer_2],
-                        None => [
-                            write_observer_0,
-                            write_observer_1,
-                            write_observer_2,
-                        ],
-                    };
-                    for observer_iter in write_observers.iter_mut() {
-                        debug!(
-                            context.host.record,
-                            "TileServer::write_response - calling observer {:p}", *observer_iter
-                        );
-                        (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);
-                    }
-                    */
                     outcome
                 }
                 Err(_) => WriteOutcome::Processed(
