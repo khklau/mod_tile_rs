@@ -237,7 +237,7 @@ impl<'p> TileProxy<'p> {
         read_outcome: &ReadOutcome,
     ) -> (HandleOutcome, &mut Self) {
         debug!(record.server, "TileServer::call_handlers - start");
-        let use_v2 = false;
+        let use_v2 = true;
         let before_timestamp = Utc::now();
         let outcome = match read_outcome {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
@@ -264,15 +264,11 @@ impl<'p> TileProxy<'p> {
                             telemetry_state,
                             handler_state,
                             handler_factory,
-                            comms_state,
-                            storage_state,
                         ) = (
                             &self.config,
                             &self.telemetry_state,
                             &mut self.handler_state,
                             &mut self.handler_factory,
-                            &mut self.comms_state,
-                            &mut self.storage_state,
                         );
                         let context = HandleContext::new(record, module_config);
                         let outcome_option = handler_factory.with_handler_inventory(
@@ -420,184 +416,124 @@ mod tests {
     use std::sync::{ Arc, Mutex, };
     use std::thread::{ ScopedJoinHandle, scope, } ;
 
-    struct MockEnv<'e> {
-        mock_config: ModuleConfig,
-        main_condition: Arc<Mutex<bool>>,
-        renderd_thread: ScopedJoinHandle<'e, ()>,
-    }
-
-    fn with_mock_env<R, F>(func: F, render: R) -> Result<(), Box<dyn Error>>
-        where F: FnOnce(&MockEnv) -> Result<(), Box<dyn Error>>,
-              R: FnOnce(Arc<Mutex<bool>>, ModuleConfig, Temp, UnixListener) -> () + Send {
-        let main_condition = Arc::new(Mutex::new(true));
-        let temp_ipc_dir = Temp::new_dir()?;
-        let mut ipc_path = temp_ipc_dir.to_path_buf();
-        ipc_path.push("renderd.sock");
-        let mut config = ModuleConfig::new();
-        config.renderd.ipc_uri = ipc_path.to_str().unwrap().to_string();
-        scope(|thread_scope| {
-            let thread_condition = Arc::clone(&main_condition);
-            let render_config_copy = config.clone();
-            let listener = UnixListener::bind(&ipc_path).expect("Failed to bind");
-            let env = MockEnv {
-                mock_config: config,
-                main_condition,
-                renderd_thread: thread_scope.spawn(move|| {
-                    render(thread_condition, render_config_copy, temp_ipc_dir, listener)
-                }),
-            };
-            let result = func(&env);
-            let mut renderd_persisting = true;
-            while renderd_persisting {
-                let lock = &(*env.main_condition);
-                if let Ok(mut guard) = lock.try_lock() {
-                    *guard = false;
-                    renderd_persisting = *guard;
-                }
-            }
-            return result;
-        })
-    }
-
-    fn render_no_op(
-        thread_condition: Arc<Mutex<bool>>,
-        _config: ModuleConfig,
-        _listener_dir: Temp,
-        listener: UnixListener
-    ) -> () {
-        let mut persist = true;
-        while persist {
-            let lock = &(*thread_condition);
-            if let Ok(guard) = lock.try_lock() {
-                persist = *guard;
-            }
-        }
-        drop(listener);
-        return ();
-    }
-
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
-        with_mock_env(|env| {
-            with_server_rec(|record| {
-                let proxy = TileProxy::new(record, env.mock_config.clone())?;
+        with_server_rec(|record| {
+            let module_config = ModuleConfig::new();
+            let proxy = TileProxy::new(record, module_config)?;
 
-                let expected_timeout = Duration::new(30, 50);
-                proxy.set_render_timeout(&expected_timeout);
-                let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-                expected_path.push("resources/test/tile/basic_valid.conf");
-                proxy.load_config(expected_path.clone(), record.get_host_name())?;
+            let expected_timeout = Duration::new(30, 50);
+            proxy.set_render_timeout(&expected_timeout);
+            let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            expected_path.push("resources/test/tile/basic_valid.conf");
+            proxy.load_config(expected_path.clone(), record.get_host_name())?;
 
-                let actual_timeout = proxy.config.renderd.render_timeout.clone();
-                assert_eq!(expected_timeout, actual_timeout, "Failed to preserve request timeout during reload");
-                assert!(proxy.config_file_path.is_some(), "Config file path is None");
-                if let Some(actual_path) = &proxy.config_file_path {
-                    assert_eq!(&expected_path, actual_path, "Failed to preserve config file path during reload");
-                }
-                Ok(())
-            })
-        }, render_no_op)
+            let actual_timeout = proxy.config.renderd.render_timeout.clone();
+            assert_eq!(expected_timeout, actual_timeout, "Failed to preserve request timeout during reload");
+            assert!(proxy.config_file_path.is_some(), "Config file path is None");
+            if let Some(actual_path) = &proxy.config_file_path {
+                assert_eq!(&expected_path, actual_path, "Failed to preserve config file path during reload");
+            }
+            Ok(())
+        })
     }
 
     #[test]
     fn test_read_request_calls_mock_observer() -> Result<(), Box<dyn Error>> {
-        with_mock_env(|env| {
-            with_server_rec(|server| {
-                with_request_rec(|request| {
-                    let proxy = TileProxy::new(server, env.mock_config.clone())?;
-                    let uri = CString::new("/mod_tile_rs")?;
-                    request.uri = uri.into_raw();
-                    let (outcome, _) = proxy.read_request(request);
-                    outcome.expect_processed().unwrap();
-                    let actual_count = proxy.telemetry_state.read_counter().count;
-                    assert_eq!(1, actual_count, "Read observer not called");
-                    Ok(())
-                })
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::new(server, module_config)?;
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let (outcome, _) = proxy.read_request(request);
+                outcome.expect_processed().unwrap();
+                let actual_count = proxy.telemetry_state.read_counter().count;
+                assert_eq!(1, actual_count, "Read observer not called");
+                Ok(())
             })
-        }, render_no_op)
+        })
     }
 
     #[test]
     fn test_call_handlers_calls_mock_observer() -> Result<(), Box<dyn Error>> {
-        with_mock_env(|env| {
-            with_server_rec(|server| {
-                with_request_rec(|request| {
-                    let proxy = TileProxy::new(server, env.mock_config.clone())?;
-                    let uri = CString::new("/mod_tile_rs")?;
-                    request.uri = uri.into_raw();
-                    let context = Apache2Request::create_with_tile_config(request)?;
-                    let read_outcome = ReadOutcome::Processed(
-                        Ok(
-                            request::SlippyRequest {
-                                header: request::Header::new(
-                                    context.record,
-                                ),
-                                body: request::BodyVariant::ReportStatistics,
-                            }
-                        )
-                    );
-                    let (handle_outcome, _) = proxy.call_handlers(request, &read_outcome);
-                    handle_outcome.expect_processed().result?;
-                    let actual_count = proxy.telemetry_state.handle_counter().count;
-                    assert_eq!(1, actual_count, "Handle observer not called");
-                    Ok(())
-                })
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::new(server, module_config)?;
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let context = Apache2Request::create_with_tile_config(request)?;
+                let read_outcome = ReadOutcome::Processed(
+                    Ok(
+                        request::SlippyRequest {
+                            header: request::Header::new(
+                                context.record,
+                            ),
+                            body: request::BodyVariant::ReportStatistics,
+                        }
+                    )
+                );
+                let (handle_outcome, _) = proxy.call_handlers(request, &read_outcome);
+                handle_outcome.expect_processed().result?;
+                let actual_count = proxy.telemetry_state.handle_counter().count;
+                assert_eq!(1, actual_count, "Handle observer not called");
+                Ok(())
             })
-        }, render_no_op)
+        })
     }
 
     #[test]
     fn test_write_response_calls_mock_observer() -> Result<(), Box<dyn Error>> {
-        with_mock_env(|env| {
-            with_server_rec(|server| {
-                with_request_rec(|request| {
-                    let proxy = TileProxy::new(server, env.mock_config.clone())?;
-                    let uri = CString::new("/mod_tile_rs")?;
-                    request.uri = uri.into_raw();
-                    let context = Apache2Request::create_with_tile_config(request)?;
-                    let read_outcome = ReadOutcome::Processed(
-                        Ok(
-                            request::SlippyRequest {
-                                header: request::Header::new(
-                                    context.record,
-                                ),
-                                body: request::BodyVariant::ReportStatistics,
-                            }
-                        )
-                    );
-                    let handle_result = HandleOutcome::Processed(
-                        HandleRequestResult {
-                            before_timestamp: Utc::now(),
-                            after_timestamp: Utc::now(),
-                            result: Ok(
-                                response::SlippyResponse {
-                                    header: response::Header::new(
-                                        context.record,
-                                        &mime::APPLICATION_JSON,
-                                    ),
-                                    body: response::BodyVariant::Description(
-                                        response::Description {
-                                            tilejson: "2.0.0",
-                                            schema: "xyz",
-                                            name: String::new(),
-                                            description: String::new(),
-                                            attribution: String::new(),
-                                            minzoom: 0,
-                                            maxzoom: 1,
-                                            tiles: Vec::new(),
-                                        }
-                                    ),
-                                }
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::new(server, module_config)?;
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let context = Apache2Request::create_with_tile_config(request)?;
+                let read_outcome = ReadOutcome::Processed(
+                    Ok(
+                        request::SlippyRequest {
+                            header: request::Header::new(
+                                context.record,
                             ),
+                            body: request::BodyVariant::ReportStatistics,
                         }
-                    );
-                    let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
-                    result.expect_processed().unwrap();
-                    let actual_count = proxy.telemetry_state.write_counter().count;
-                    assert_eq!(1, actual_count, "Write observer not called");
-                    Ok(())
-                })
+                    )
+                );
+                let handle_result = HandleOutcome::Processed(
+                    HandleRequestResult {
+                        before_timestamp: Utc::now(),
+                        after_timestamp: Utc::now(),
+                        result: Ok(
+                            response::SlippyResponse {
+                                header: response::Header::new(
+                                    context.record,
+                                    &mime::APPLICATION_JSON,
+                                ),
+                                body: response::BodyVariant::Description(
+                                    response::Description {
+                                        tilejson: "2.0.0",
+                                        schema: "xyz",
+                                        name: String::new(),
+                                        description: String::new(),
+                                        attribution: String::new(),
+                                        minzoom: 0,
+                                        maxzoom: 1,
+                                        tiles: Vec::new(),
+                                    }
+                                ),
+                            }
+                        ),
+                    }
+                );
+                let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
+                result.expect_processed().unwrap();
+                let actual_count = proxy.telemetry_state.write_counter().count;
+                assert_eq!(1, actual_count, "Write observer not called");
+                Ok(())
             })
-        }, render_no_op)
+        })
     }
 }

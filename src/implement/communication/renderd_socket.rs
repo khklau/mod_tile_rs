@@ -18,6 +18,7 @@ pub struct RenderdSocket {
 }
 
 impl RenderdSocket {
+    #[cfg(not(test))]
     pub fn new(config: &ModuleConfig) -> Result<RenderdSocket, InvalidConfigError> {
         let path = Path::new(&config.renderd.ipc_uri);
         match UnixStream::connect(path) {
@@ -56,6 +57,23 @@ impl RenderdSocket {
                     }
                 )
             }
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new(_config: &ModuleConfig) -> Result<RenderdSocket, InvalidConfigError> {
+        match UnixStream::pair() {
+            Err(ioerr) => Err(
+                InvalidConfigError {
+                    entry: String::from("ipc_uri"),
+                    reason: ioerr.to_string(),
+                }
+            ),
+            Ok((client_socket, _)) => Ok(
+                RenderdSocket {
+                    socket: client_socket
+                }
+            )
         }
     }
 }
