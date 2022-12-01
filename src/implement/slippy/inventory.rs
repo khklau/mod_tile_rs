@@ -1,5 +1,3 @@
-use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::apache2::error::InvalidConfigError;
 use crate::interface::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };

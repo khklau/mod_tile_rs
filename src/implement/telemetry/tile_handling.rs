@@ -2,15 +2,13 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request;
-use crate::schema::slippy::response::{ self, TileResponse };
-use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
+use crate::schema::slippy::response;
+use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::interface::apache2::HttpResponseWriter;
-use crate::interface::slippy::{
-    WriteContext, WriteResponseFunc, WriteResponseObserver,
-};
+use crate::interface::slippy::{WriteContext, WriteResponseObserver,};
 use crate::interface::telemetry::TileHandlingMetrics;
 
 use chrono::Duration;
@@ -25,7 +23,7 @@ pub struct TileHandlingAnalysis {
 }
 
 impl TileHandlingAnalysis {
-    pub fn new(config: &ModuleConfig) -> Result<TileHandlingAnalysis, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<TileHandlingAnalysis, InvalidConfigError> {
         Ok(
             TileHandlingAnalysis {
                 analysis_by_layer: HashMap::new(),
@@ -45,7 +43,7 @@ impl TileHandlingAnalysis {
         &mut self,
         context: &WriteContext,
         request: &request::SlippyRequest,
-        response: &TileResponse,
+        response: &response::TileResponse,
         handle_duration: &Duration,
     ) -> () {
         self.increase_tile_handle_count(context, request, response);
@@ -56,7 +54,7 @@ impl TileHandlingAnalysis {
         &mut self,
         _context: &WriteContext,
         request: &request::SlippyRequest,
-        response: &TileResponse,
+        response: &response::TileResponse,
     ) -> () {
         let counter = self.mut_layer(request).tile_handle_count_by_source_and_age.update(
             &response.source,
@@ -69,7 +67,7 @@ impl TileHandlingAnalysis {
         &mut self,
         _context: &WriteContext,
         request: &request::SlippyRequest,
-        response: &TileResponse,
+        response: &response::TileResponse,
         handle_duration: &Duration,
     ) -> () {
         let tally = self.mut_layer(request).tile_handle_duration_by_source_and_age.update(

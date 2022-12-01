@@ -15,7 +15,7 @@ use crate::interface::slippy::{
 pub struct TransactionTrace {}
 
 impl TransactionTrace {
-    pub fn new(config: &ModuleConfig) -> Result<TransactionTrace, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<TransactionTrace, InvalidConfigError> {
         Ok(
             TransactionTrace { }
         )

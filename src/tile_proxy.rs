@@ -7,32 +7,25 @@ use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::error::HandleError;
-use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
-use crate::schema::slippy::error::{ ReadError, WriteError };
-use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
-use crate::interface::apache2::{ PoolStored, HttpResponseWriter, };
+use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
+use crate::schema::slippy::error::{ReadError, WriteError,};
+use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
+use crate::interface::apache2::{PoolStored, HttpResponseWriter,};
 use crate::interface::handler::{
-    HandleContext, HandleContext2, HandleIOContext, HandlerInventory2, HandleRequestObserver, RequestHandler,
+    HandleContext2, HandleIOContext, HandlerInventory2, HandleRequestObserver,
 };
 use crate::interface::slippy::{
     ReadContext, ReadRequestObserver,
     WriteContext, WriteResponseObserver,
 };
-use crate::interface::telemetry::TelemetryInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::communication::state::CommunicationState;
-use crate::implement::handler::description::{ DescriptionHandler, DescriptionHandlerState, };
 use crate::implement::handler::inventory::{HandlerObserverInventory, HandlerState,};
-use crate::implement::handler::statistics::{ StatisticsHandler, StatisticsHandlerState, };
-use crate::implement::handler::tile::{ TileHandler, TileHandlerState, };
 use crate::implement::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
-use crate::implement::slippy::reader::SlippyRequestReader;
-use crate::implement::slippy::writer::SlippyResponseWriter;
 use crate::implement::storage::state::StorageState;
 use crate::implement::telemetry::inventory::TelemetryState;
-use crate::utility::debugging::function_name;
 
 use chrono::Utc;
 

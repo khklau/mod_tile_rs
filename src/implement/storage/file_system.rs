@@ -21,7 +21,7 @@ pub struct FileSystem {
 }
 
 impl FileSystem {
-    pub fn new(config: &ModuleConfig) -> Result<FileSystem, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<FileSystem, InvalidConfigError> {
         Ok(
             FileSystem {
                 cache: HashMap::new(),

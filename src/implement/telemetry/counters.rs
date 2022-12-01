@@ -16,7 +16,7 @@ pub struct ReadCounter {
 }
 
 impl ReadCounter {
-    pub fn new(config: &ModuleConfig) -> Result<ReadCounter, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<ReadCounter, InvalidConfigError> {
         Ok(
             ReadCounter { count: 0 }
         )
@@ -40,7 +40,7 @@ pub struct HandleCounter {
 }
 
 impl HandleCounter {
-    pub fn new(config: &ModuleConfig) -> Result<HandleCounter, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<HandleCounter, InvalidConfigError> {
         Ok(
             HandleCounter { count: 0 }
         )
@@ -75,7 +75,7 @@ pub struct WriteCounter {
 }
 
 impl WriteCounter {
-    pub fn new(config: &ModuleConfig) -> Result<WriteCounter, InvalidConfigError> {
+    pub fn new(_config: &ModuleConfig) -> Result<WriteCounter, InvalidConfigError> {
         Ok(
             WriteCounter { count: 0 }
         )
