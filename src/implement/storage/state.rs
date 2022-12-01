@@ -8,7 +8,7 @@ use std::result::Result;
 
 
 pub struct StorageState {
-    file_system: FileSystem,
+    primary_tile_store: StorageVariant,
 }
 
 impl<'i> StorageState {
@@ -17,7 +17,10 @@ impl<'i> StorageState {
     ) -> Result<StorageState, InvalidConfigError> {
         Ok(
             StorageState {
-                file_system: FileSystem::new(config)?,
+                // TODO: pick the right variant based on config
+                primary_tile_store: StorageVariant::FileSystem(
+                    FileSystem::new(config)?,
+                ),
             }
         )
     }
@@ -25,6 +28,9 @@ impl<'i> StorageState {
 
 impl StorageInventory for StorageState {
     fn primary_tile_store(&mut self) -> &mut dyn TileStorage {
-        &mut self.file_system
+        match &mut self.primary_tile_store {
+            StorageVariant::FileSystem(store) => &mut *store,
+            StorageVariant::Memcached(store) => &mut *store,
+        }
     }
 }
