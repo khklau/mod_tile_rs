@@ -1,18 +1,12 @@
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::interface::handler::{HandleContext, HandleContext2,};
+use crate::interface::handler::HandleContext2;
 use crate::interface::tile::TileRef;
 
 use std::result::Result;
 
 
 pub trait TileStorage {
-    fn read_tile(
-        &mut self,
-        context: &HandleContext,
-        id: &TileIdentity,
-    ) -> Result<TileRef, TileReadError>;
-
     fn read_tile2(
         &mut self,
         context: &HandleContext2,
@@ -50,22 +44,6 @@ pub mod test_utils {
     }
 
     impl TileStorage for BlankTileStorage {
-        fn read_tile(
-            &mut self,
-            _context: &HandleContext,
-            _id: &TileIdentity,
-        ) -> Result<TileRef, TileReadError> {
-            Ok(
-                TileRef {
-                    raw_bytes: Rc::downgrade(&self.blank_tile),
-                    begin: 0,
-                    end: 0,
-                    media_type: mime::IMAGE_PNG,
-                    encoding: ContentEncoding::NotCompressed,
-                }
-            )
-        }
-
         fn read_tile2(
             &mut self,
             _context: &HandleContext2,

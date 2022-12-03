@@ -68,47 +68,7 @@ pub trait HandlerInventory2 {
     fn request_handlers(&mut self) -> [&mut dyn RequestHandler2; 3];
 }
 
-pub struct HandleContext<'c> {
-    pub module_config: &'c ModuleConfig,
-    pub host: &'c VirtualHost<'c>,
-    pub connection: &'c Connection<'c>,
-    pub request: &'c mut Apache2Request<'c>,
-}
-
-impl<'c> HandleContext<'c> {
-    pub fn new(
-        record: &'c mut request_rec,
-        module_config: &'c ModuleConfig,
-    ) -> HandleContext<'c> {
-        HandleContext {
-            module_config,
-            host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_allocate_new(record).unwrap(),
-        }
-    }
-}
-
-pub trait RequestHandler {
-    fn handle(
-        &mut self,
-        context: &HandleContext,
-        request: &SlippyRequest,
-    ) -> HandleOutcome;
-
-    fn type_name(&self) -> &'static str;
-}
-
 pub trait HandleRequestObserver {
-    fn on_handle(
-        &mut self,
-        context: &HandleContext,
-        request: &SlippyRequest,
-        handle_outcome: &HandleOutcome,
-        handler_name: &'static str,
-        read_outcome: &ReadOutcome,
-    ) -> ();
-
     fn on_handle2(
         &mut self,
         request: &SlippyRequest,
@@ -126,20 +86,6 @@ pub mod test_utils {
 
 
     pub struct NoOpRequestHandler { }
-
-    impl RequestHandler for NoOpRequestHandler {
-        fn handle(
-            &mut self,
-            _context: &HandleContext,
-            _request: &request::SlippyRequest,
-        ) -> HandleOutcome {
-            HandleOutcome::Ignored
-        }
-
-        fn type_name(&self) -> &'static str {
-            std::any::type_name::<Self>()
-        }
-    }
 
     impl RequestHandler2 for NoOpRequestHandler {
         fn handle2(
@@ -165,16 +111,6 @@ pub mod test_utils {
     }
 
     impl HandleRequestObserver for NoOpHandleRequestObserver {
-        fn on_handle(
-            &mut self,
-            _context: &HandleContext,
-            _request: &SlippyRequest,
-            _handle_outcome: &HandleOutcome,
-            _handler_name: &'static str,
-            _read_outcome: &ReadOutcome,
-        ) -> () {
-        }
-
         fn on_handle2(
             &mut self,
             _request: &SlippyRequest,

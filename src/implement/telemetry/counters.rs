@@ -8,7 +8,7 @@ use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::apache2::HttpResponseWriter;
 use crate::interface::slippy::{
     ReadContext, ReadRequestObserver, WriteContext, WriteResponseObserver};
-use crate::interface::handler::{HandleContext, HandleRequestObserver};
+use crate::interface::handler::HandleRequestObserver;
 
 
 pub struct ReadCounter {
@@ -48,17 +48,6 @@ impl HandleCounter {
 }
 
 impl HandleRequestObserver for HandleCounter {
-    fn on_handle(
-        &mut self,
-        _context: &HandleContext,
-        _request: &SlippyRequest,
-        _handle_outcome: &HandleOutcome,
-        _handler_name: &'static str,
-        _read_outcome: &ReadOutcome,
-    ) -> () {
-        self.count += 1;
-    }
-
     fn on_handle2(
         &mut self,
         _request: &SlippyRequest,

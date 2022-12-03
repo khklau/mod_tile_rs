@@ -1,4 +1,4 @@
-use crate::interface::handler::HandleContext;
+use crate::interface::handler::HandleContext2;
 
 use std::option::Option;
 use std::result::Result;
@@ -25,7 +25,7 @@ pub enum RenderResponse {
 pub trait BidirectionalChannel {
     fn send_blocking_request(
         &mut self,
-        context: &HandleContext,
+        context: &HandleContext2,
         request: &[u8],
         response_buffer: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, CommunicationError>;
@@ -48,7 +48,7 @@ pub mod test_utils {
     impl BidirectionalChannel for EmptyResultBiChannel {
         fn send_blocking_request(
             &mut self,
-            context: &HandleContext,
+            context: &HandleContext2,
             request: &[u8],
             response_buffer: Option<Vec<u8>>,
         ) -> Result<Vec<u8>, CommunicationError> {

@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
 use crate::interface::handler::{
-    HandleContext, HandleContext2, HandleIOContext, RequestHandler, RequestHandler2,
+    HandleContext2, HandleIOContext, RequestHandler2,
 };
 
 use chrono::Utc;
@@ -61,56 +61,6 @@ impl RequestHandler2 for DescriptionHandlerState {
     }
 }
 
-pub struct DescriptionHandler<'h> {
-    _state: &'h mut DescriptionHandlerState,
-}
-
-impl<'h> DescriptionHandler<'h> {
-    pub fn new(
-        state: &'h mut DescriptionHandlerState,
-    ) -> DescriptionHandler<'h> {
-        DescriptionHandler {
-            _state: state,
-        }
-    }
-}
-
-impl<'h> RequestHandler for DescriptionHandler<'h> {
-    fn handle(
-        &mut self,
-        context: &HandleContext,
-        request: &request::SlippyRequest,
-    ) -> HandleOutcome {
-        let before_timestamp = Utc::now();
-        let layer = match request.body {
-            request::BodyVariant::DescribeLayer => &request.header.layer,
-            _ => {
-                return HandleOutcome::Ignored;
-            },
-        };
-        let description = describe(context.module_config, layer);
-        let response = response::SlippyResponse {
-            header: response::Header::new(
-                context.request.record,
-                &mime::APPLICATION_JSON,
-            ),
-            body: response::BodyVariant::Description(description),
-        };
-        let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
-    }
-
-    fn type_name(&self) -> &'static str {
-        type_name::<Self>()
-    }
-}
-
 fn describe(config: &ModuleConfig, layer: &LayerName) -> response::Description {
     let layer_config = &config.layers[layer];
     let mut value = response::Description {
@@ -152,35 +102,6 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn test_not_handled() -> Result<(), Box<dyn Error>> {
-        let module_config = ModuleConfig::new();
-        let mut description_state = DescriptionHandlerState::new(&module_config)?;
-        let mut description_handler = DescriptionHandler::new(&mut description_state);
-        let layer_name = LayerName::from("default");
-        let layer_config = module_config.layers.get(&layer_name).unwrap();
-        with_request_rec(|request| {
-            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.into_raw();
-            let handle_context = HandleContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(request)?,
-                connection: Connection::find_or_allocate_new(request)?,
-                request: Apache2Request::create_with_tile_config(request)?,
-            };
-            let request = request::SlippyRequest {
-                header: request::Header::new_with_layer(
-                    handle_context.request.record,
-                    &layer_name,
-                ),
-                body: request::BodyVariant::ReportStatistics,
-            };
-
-            assert!(description_handler.handle(&handle_context, &request).is_ignored(), "Expected to not handle");
-            Ok(())
-        })
-    }
-
-    #[test]
     fn test_not_handled2() -> Result<(), Box<dyn Error>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
@@ -210,53 +131,6 @@ mod tests {
             };
 
             assert!(description_state.handle2(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
-            Ok(())
-        })
-    }
-
-    #[test]
-    fn test_default_config_json() -> Result<(), Box<dyn Error>> {
-        let module_config = ModuleConfig::new();
-        let mut description_state = DescriptionHandlerState::new(&module_config)?;
-        let mut layer_handler = DescriptionHandler::new(&mut description_state);
-        let layer_name = LayerName::from("default");
-        let layer_config = module_config.layers.get(&layer_name).unwrap();
-        with_request_rec(|request| {
-            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.into_raw();
-            let handle_context = HandleContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(request)?,
-                connection: Connection::find_or_allocate_new(request)?,
-                request: Apache2Request::create_with_tile_config(request)?,
-            };
-            let request = request::SlippyRequest {
-                header: request::Header::new_with_layer(
-                    handle_context.request.record,
-                    &layer_name,
-                ),
-                body: request::BodyVariant::DescribeLayer,
-            };
-
-            let actual_response = layer_handler.handle(&handle_context, &request).expect_processed().result?;
-            let expected_data = response::Description {
-                tilejson: "2.0.0",
-                schema: "xyz",
-                name: String::from(layer_name.as_str()),
-                description: layer_config.description.clone(),
-                attribution: layer_config.attribution.clone(),
-                minzoom: layer_config.min_zoom,
-                maxzoom: layer_config.max_zoom,
-                tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
-            };
-            let expected_response = response::SlippyResponse {
-                header: response::Header::new(
-                    handle_context.request.record,
-                    &mime::APPLICATION_JSON,
-                ),
-                body: response::BodyVariant::Description(expected_data),
-            };
-            assert_eq!(expected_response, actual_response, "Incorrect handling");
             Ok(())
         })
     }
