@@ -10,7 +10,6 @@ use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{
     HandleContext2, HandleIOContext, RequestHandler2,
 };
-use crate::interface::storage::{ TileStorage, TileStorageInventory, };
 use crate::implement::communication::renderd_socket::RenderdSocket;
 use crate::implement::storage::file_system::FileSystem;
 use crate::implement::storage::variant::StorageVariant;
@@ -19,7 +18,6 @@ use chrono::Utc;
 
 use std::any::type_name;
 use std::collections::HashMap;
-use std::option::Option;
 use std::result::Result;
 
 

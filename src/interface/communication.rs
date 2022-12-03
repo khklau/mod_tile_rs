@@ -48,9 +48,9 @@ pub mod test_utils {
     impl BidirectionalChannel for EmptyResultBiChannel {
         fn send_blocking_request(
             &mut self,
-            context: &HandleContext2,
-            request: &[u8],
-            response_buffer: Option<Vec<u8>>,
+            _context: &HandleContext2,
+            _request: &[u8],
+            _response_buffer: Option<Vec<u8>>,
         ) -> Result<Vec<u8>, CommunicationError> {
             Ok(Vec::new())
         }

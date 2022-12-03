@@ -37,35 +37,6 @@ impl TelemetryState {
             }
         )
     }
-
-    pub fn read_counter(&self) -> &ReadCounter {
-        &&self.read_counter
-    }
-
-    pub fn handle_counter(&self) -> &HandleCounter {
-        &self.handle_counter
-    }
-
-    pub fn write_counter(&self) -> &WriteCounter {
-        &self.write_counter
-    }
-
-    pub fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2] {
-        [&mut self.trans_trace, &mut self.read_counter]
-    }
-
-    pub fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
-        [&mut self.trans_trace, &mut self.handle_counter]
-    }
-
-    pub fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4] {
-        [
-            &mut self.trans_trace,
-            &mut self.response_analysis,
-            &mut self.tile_handling_analysis,
-            &mut self.write_counter,
-        ]
-    }
 }
 
 impl TelemetryInventory for TelemetryState {
@@ -92,5 +63,21 @@ impl TelemetryInventory for TelemetryState {
             &mut self.tile_handling_analysis,
             &mut self.write_counter,
         ]
+    }
+}
+
+
+#[cfg(test)]
+impl TelemetryState {
+    pub fn read_counter(&self) -> &ReadCounter {
+        &&self.read_counter
+    }
+
+    pub fn handle_counter(&self) -> &HandleCounter {
+        &self.handle_counter
+    }
+
+    pub fn write_counter(&self) -> &WriteCounter {
+        &self.write_counter
     }
 }
