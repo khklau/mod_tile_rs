@@ -10,7 +10,6 @@ use std::io::Write;
 use std::io::ErrorKind::TimedOut;
 use std::option::Option;
 use std::os::unix::net::UnixStream;
-use std::path::Path;
 use std::result::Result;
 
 pub struct RenderdSocket {

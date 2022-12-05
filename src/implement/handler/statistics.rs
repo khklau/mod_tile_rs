@@ -130,10 +130,9 @@ mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::tile::identity::LayerName;
-    use crate::interface::apache2::PoolStored;
     use crate::interface::communication::test_utils::EmptyResultCommunicationInventory;
     use crate::interface::storage::test_utils::BlankStorageInventory;
-    use crate::interface::telemetry::test_utils::{with_mock_zero_metrics, NoOpZeroTelemetryInventory,};
+    use crate::interface::telemetry::test_utils::NoOpZeroTelemetryInventory;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use std::error::Error;
@@ -141,37 +140,35 @@ mod tests {
 
     #[test]
     fn test_not_handled2() -> Result<(), Box<dyn Error>> {
-        with_mock_zero_metrics(|response_metrics, tile_handling_metrics| {
-            let telemetry = NoOpZeroTelemetryInventory::new();
-            let mut communication = EmptyResultCommunicationInventory::new();
-            let mut storage = BlankStorageInventory::new();
-            let module_config = ModuleConfig::new();
-            let mut stat_state = StatisticsHandlerState::new(&module_config)?;
-            let layer_name = LayerName::from("default");
-            let layer_config = module_config.layers.get(&layer_name).unwrap();
-            with_request_rec(|request| {
-                let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-                request.uri = uri.into_raw();
-                let handle_context = HandleContext2::new(
-                    request,
-                    &module_config,
-                    &telemetry,
-                );
-                let mut io_context = HandleIOContext::new(
-                    &mut communication,
-                    &mut storage,
-                );
-                let request = request::SlippyRequest {
-                    header: request::Header::new_with_layer(
-                        handle_context.request.record,
-                        &layer_name,
-                    ),
-                    body: request::BodyVariant::DescribeLayer,
-                };
+        let telemetry = NoOpZeroTelemetryInventory::new();
+        let mut communication = EmptyResultCommunicationInventory::new();
+        let mut storage = BlankStorageInventory::new();
+        let module_config = ModuleConfig::new();
+        let mut stat_state = StatisticsHandlerState::new(&module_config)?;
+        let layer_name = LayerName::from("default");
+        let layer_config = module_config.layers.get(&layer_name).unwrap();
+        with_request_rec(|request| {
+            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
+            request.uri = uri.into_raw();
+            let handle_context = HandleContext2::new(
+                request,
+                &module_config,
+                &telemetry,
+            );
+            let mut io_context = HandleIOContext::new(
+                &mut communication,
+                &mut storage,
+            );
+            let request = request::SlippyRequest {
+                header: request::Header::new_with_layer(
+                    handle_context.request.record,
+                    &layer_name,
+                ),
+                body: request::BodyVariant::DescribeLayer,
+            };
 
-                assert!(stat_state.handle2(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
-                Ok(())
-            })
+            assert!(stat_state.handle2(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
+            Ok(())
         })
     }
 }

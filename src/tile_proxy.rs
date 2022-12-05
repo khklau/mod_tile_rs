@@ -12,12 +12,9 @@ use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::apache2::{PoolStored, HttpResponseWriter,};
 use crate::interface::handler::{
-    HandleContext2, HandleIOContext, HandlerInventory2, HandleRequestObserver,
+    HandleContext2, HandleIOContext, HandlerInventory2,
 };
-use crate::interface::slippy::{
-    ReadContext, ReadRequestObserver,
-    WriteContext, WriteResponseObserver,
-};
+use crate::interface::slippy::{ReadContext, WriteContext};
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -75,20 +72,17 @@ impl std::fmt::Display for HandleRequestError {
     }
 }
 
-pub struct TileProxy<'p> {
+pub struct TileProxy {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
     telemetry_state: TelemetryState,
     handler_state: HandlerState,
     comms_state: CommunicationState,
     storage_state: StorageState,
-    read_observers: Option<[&'p mut dyn ReadRequestObserver; 1]>,
-    handle_observers: Option<[&'p mut dyn HandleRequestObserver; 1]>,
-    write_observers: Option<[&'p mut dyn WriteResponseObserver; 3]>,
 }
 
-impl<'p> TileProxy<'p> {
-    pub fn find_or_allocate_new(record: &'p mut server_rec) -> Result<&'p mut Self, Box<dyn Error>> {
+impl TileProxy {
+    pub fn find_or_allocate_new(record: &mut server_rec) -> Result<&mut Self, Box<dyn Error>> {
         info!(record, "TileServer::find_or_create - start");
         let proxy = match retrieve(
             record.get_pool()?,
@@ -118,11 +112,11 @@ impl<'p> TileProxy<'p> {
     }
 
     pub fn new(
-        record: &'p server_rec,
+        record: &server_rec,
         module_config: ModuleConfig,
-    ) -> Result<&'p mut Self, Box<dyn Error>> {
+    ) -> Result<&mut Self, Box<dyn Error>> {
         info!(record, "TileServer::create - start");
-        let new_server = alloc::<TileProxy<'p>>(
+        let new_server = alloc::<TileProxy>(
             record.get_pool()?,
             &(Self::get_id(record)),
             Some(drop_tile_server),
@@ -133,9 +127,6 @@ impl<'p> TileProxy<'p> {
         new_server.handler_state = HandlerState::new(&new_server.config)?;
         new_server.comms_state = CommunicationState::new(&new_server.config)?;
         new_server.storage_state = StorageState::new(&new_server.config)?;
-        new_server.read_observers = None;
-        new_server.handle_observers = None;
-        new_server.write_observers = None;
         info!(record, "TileServer::create - finish");
         return Ok(new_server);
     }
@@ -317,16 +308,9 @@ mod tests {
     use crate::schema::slippy::response;
     use crate::framework::apache2::record::test_utils::{ with_request_rec, with_server_rec };
     use chrono::Utc;
-    use mktemp::Temp;
-    use thread_id;
     use std::boxed::Box;
     use std::error::Error;
-    use std::marker::Send;
-    use std::ops::FnOnce;
-    use std::os::unix::net::UnixListener;
     use std::string::String;
-    use std::sync::{ Arc, Mutex, };
-    use std::thread::{ ScopedJoinHandle, scope, } ;
 
     #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {

@@ -218,16 +218,16 @@ pub mod test_utils {
 
         fn count_handled_tile_by_source_and_age(
             &self,
-            source: &TileSource,
-            age: &TileAge,
+            _source: &TileSource,
+            _age: &TileAge,
         ) -> u64 {
             0
         }
 
         fn tally_tile_handle_duration_by_source_and_age(
             &self,
-            source: &TileSource,
-            age: &TileAge,
+            _source: &TileSource,
+            _age: &TileAge,
         ) -> u64 {
             0
         }
@@ -236,13 +236,13 @@ pub mod test_utils {
     impl WriteResponseObserver for MockNoOpTileHandlingAnalysis {
         fn on_write(
             &mut self,
-            context: &WriteContext,
+            _context: &WriteContext,
             _response: &response::SlippyResponse,
             _writer: &dyn HttpResponseWriter,
             _write_outcome: &WriteOutcome,
             _write_func_name: &'static str,
-            read_outcome: &ReadOutcome,
-            handle_outcome: &HandleOutcome,
+            _read_outcome: &ReadOutcome,
+            _handle_outcome: &HandleOutcome,
         ) -> () {
         }
     }
@@ -262,7 +262,7 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::WriteOutcome;
-    use crate::interface::apache2::{ PoolStored, HttpResponseWriter, };
+    use crate::interface::apache2::PoolStored;
     use crate::interface::tile::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::framework::apache2::writer::test_utils::MockWriter;

@@ -67,13 +67,9 @@ pub mod test_utils {
     use enum_iterator::IntoEnumIterator;
 
     use std::boxed::Box;
-    use std::default::Default;
-    use std::error::Error;
-    use std::result::Result;
 
     pub struct ZeroResponseMetrics {
         pub mock_status_codes: Vec<StatusCode>,
-        pub mock_zoom_levels: Vec<u32>,
         pub mock_layers: Vec<LayerName>,
     }
 
@@ -81,7 +77,6 @@ pub mod test_utils {
         fn new() -> ZeroResponseMetrics {
             ZeroResponseMetrics {
                 mock_status_codes: Vec::new(),
-                mock_zoom_levels: Vec::new(),
                 mock_layers: Vec::new(),
             }
         }
@@ -197,12 +192,5 @@ pub mod test_utils {
                 &mut self.write_observer_3,
             ]
         }
-    }
-
-    pub fn with_mock_zero_metrics<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&dyn ResponseMetrics, &dyn TileHandlingMetrics) -> Result<(), Box<dyn Error>> {
-        let response = ZeroResponseMetrics::new();
-        let tile = ZeroTileHandlingMetrics::new();
-        return func(&response, &tile);
     }
 }
