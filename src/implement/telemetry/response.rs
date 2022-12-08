@@ -279,9 +279,170 @@ impl ResponseMetrics for ResponseAnalysis {
     fn count_response_by_layer_and_status_code(&self, layer: &LayerName, status_code: &StatusCode) -> u64 {
         match self.analysis_by_layer.get(layer) {
             Some(layer_analysis) => {
-                layer_analysis.response_count_by_status_and_zoom[status_code].iter().sum()
+                if layer_analysis.response_count_by_status_and_zoom.contains_key(status_code) {
+                    layer_analysis.response_count_by_status_and_zoom[status_code].iter().sum()
+                } else {
+                    0
+                }
             },
             None => 0
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::schema::apache2::connection::Connection;
+    use crate::schema::apache2::request::Apache2Request;
+    use crate::schema::apache2::virtual_host::VirtualHost;
+    use crate::schema::handler::result::HandleRequestResult;
+    use crate::schema::http::encoding::ContentEncoding;
+    use crate::schema::http::response::HttpResponse;
+    use crate::schema::slippy::request;
+    use crate::schema::slippy::response;
+    use crate::schema::slippy::result::WriteOutcome;
+    use crate::schema::tile::age::TileAge;
+    use crate::schema::tile::source::TileSource;
+    use crate::interface::apache2::PoolStored;
+    use crate::interface::tile::TileRef;
+    use crate::framework::apache2::record::test_utils::with_request_rec;
+    use crate::framework::apache2::writer::test_utils::MockWriter;
+    use chrono::Utc;
+    use http::header::HeaderMap;
+    use http::status::StatusCode;
+    use std::error::Error;
+    use std::ffi::CString;
+    use std::rc::Rc;
+
+    #[test]
+    fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
+        with_request_rec(|request| {
+            let uri = CString::new("/mod_tile_rs")?;
+            request.uri = uri.into_raw();
+            let module_config = ModuleConfig::new();
+            let write_context = WriteContext {
+                module_config: &module_config,
+                connection: Connection::find_or_allocate_new(request)?,
+                host: VirtualHost::find_or_allocate_new(request)?,
+                request: Apache2Request::create_with_tile_config(request)?,
+            };
+            let layer_name = LayerName::from("default");
+            let read_outcome = ReadOutcome::Processed(
+                Ok(
+                    request::SlippyRequest {
+                        header: request::Header::new_with_layer(
+                            write_context.request.record,
+                            &layer_name,
+                        ),
+                        body: request::BodyVariant::ServeTileV3(
+                            request::ServeTileRequestV3 {
+                                parameter: String::from("foo"),
+                                x: 1,
+                                y: 2,
+                                z: 3,
+                                extension: String::from("jpg"),
+                                option: None,
+                            }
+                        ),
+                    }
+                )
+            );
+            let before_timestamp = Utc::now();
+            let response_duration = Duration::seconds(2);
+            let after_timestamp = before_timestamp + response_duration;
+            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let tile_ref = TileRef {
+                raw_bytes: Rc::downgrade(&empty_tile),
+                begin: 0,
+                end: 1,
+                media_type: mime::IMAGE_PNG,
+                encoding: ContentEncoding::NotCompressed,
+            };
+            let response = response::SlippyResponse {
+                header: response::Header::new(
+                    write_context.request.record,
+                    &mime::APPLICATION_JSON,
+                ),
+                body: response::BodyVariant::Tile(
+                    response::TileResponse {
+                        source: TileSource::Render,
+                        age: TileAge::Fresh,
+                        tile_ref,
+                    }
+                ),
+            };
+            let handle_outcome = HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp,
+                    result: Ok(response.clone()),
+                }
+            );
+            let write_outcome = WriteOutcome::Processed(
+                Ok(
+                    HttpResponse {
+                        status_code: StatusCode::OK,
+                        bytes_written: 508,
+                        http_headers: HeaderMap::new(),
+                    }
+                )
+            );
+            let mut analysis = ResponseAnalysis::new(&module_config)?;
+            let writer = MockWriter::new();
+            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            assert_eq!(
+                0,
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 5),
+                "Response count does not default to 0"
+            );
+            assert_eq!(
+                0,
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::BAD_REQUEST, 3),
+                "Response count does not default to 0"
+            );
+            assert_eq!(
+                1,
+                analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 3),
+                "Response count not incremented"
+            );
+            assert_eq!(
+                0,
+                analysis.count_tile_response_by_zoom_level(99),
+                "Tile response count not incremented"
+            );
+            assert_eq!(
+                1,
+                analysis.count_tile_response_by_zoom_level(3),
+                "Tile response count not incremented"
+            );
+            assert_eq!(
+                0,
+                analysis.tally_tile_response_duration_by_zoom_level(99),
+                "Tile response duration not tallied"
+            );
+            assert_eq!(
+                response_duration.num_seconds() as u64,
+                analysis.tally_tile_response_duration_by_zoom_level(3),
+                "Tile response duration not tallied"
+            );
+            assert_eq!(
+                0,
+                analysis.count_response_by_layer_and_status_code(&LayerName::from("foobar"), &StatusCode::OK),
+                "Response count not incremented"
+            );
+            assert_eq!(
+                0,
+                analysis.count_response_by_layer_and_status_code(&layer_name, &StatusCode::BAD_REQUEST),
+                "Response count not incremented"
+            );
+            assert_eq!(
+                1,
+                analysis.count_response_by_layer_and_status_code(&layer_name, &StatusCode::OK),
+                "Response count not incremented"
+            );
+            Ok(())
+        })
     }
 }
