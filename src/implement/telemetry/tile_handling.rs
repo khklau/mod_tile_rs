@@ -125,12 +125,12 @@ impl TileLayerHandlingAnalysis {
 }
 
 impl TileHandlingMetrics for TileHandlingAnalysis {
-    fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
-        Box::new(TileAge::into_enum_iter())
+    fn iterate_valid_cache_ages(&self) -> Vec<TileAge> {
+        TileAge::into_enum_iter().collect()
     }
 
-    fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
-        Box::new(TileAge::into_enum_iter())
+    fn iterate_valid_render_ages(&self) -> Vec<TileAge> {
+        TileAge::into_enum_iter().collect()
     }
 
     fn count_handled_tile_by_source_and_age(
@@ -208,12 +208,12 @@ pub mod test_utils {
     pub struct MockNoOpTileHandlingAnalysis {}
 
     impl TileHandlingMetrics for MockNoOpTileHandlingAnalysis {
-        fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
-            Box::new(TileAge::into_enum_iter())
+        fn iterate_valid_cache_ages(&self) -> Vec<TileAge> {
+            TileAge::into_enum_iter().collect()
         }
 
-        fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
-            Box::new(TileAge::into_enum_iter())
+        fn iterate_valid_render_ages(&self) -> Vec<TileAge> {
+            TileAge::into_enum_iter().collect()
         }
 
         fn count_handled_tile_by_source_and_age(

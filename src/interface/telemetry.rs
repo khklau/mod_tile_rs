@@ -5,18 +5,21 @@ use crate::interface::handler::HandleRequestObserver;
 use crate::interface::slippy::{ReadRequestObserver, WriteResponseObserver,};
 
 use http::status::StatusCode;
+#[cfg(test)]
+use mockall::{automock, mock, predicate::*};
 
-use std::boxed::Box;
 use std::iter::Iterator;
 use std::ops::Range;
+use std::vec::Vec;
 
 
+#[cfg_attr(test, automock)]
 pub trait ResponseMetrics {
-    fn iterate_status_codes_responded(&self) -> Box<dyn Iterator<Item = &'_ StatusCode> + '_>;
+    fn iterate_status_codes_responded(&self) -> Vec<StatusCode>;
 
     fn iterate_valid_zoom_levels(&self) -> Range<u32>;
 
-    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_>;
+    fn iterate_layers_responded(&self) -> Vec<LayerName>;
 
     fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64;
 
@@ -35,10 +38,11 @@ pub trait ResponseMetrics {
     fn count_response_by_layer_and_status_code(&self, layer: &LayerName, status_code: &StatusCode) -> u64;
 }
 
+#[cfg_attr(test, automock)]
 pub trait TileHandlingMetrics {
-    fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
+    fn iterate_valid_cache_ages(&self) -> Vec<TileAge>;
 
-    fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>>;
+    fn iterate_valid_render_ages(&self) -> Vec<TileAge>;
 
     fn count_handled_tile_by_source_and_age(&self, source: &TileSource, age: &TileAge) -> u64;
 
@@ -83,8 +87,8 @@ pub mod test_utils {
     }
 
     impl ResponseMetrics for ZeroResponseMetrics {
-        fn iterate_status_codes_responded(&self) -> Box<dyn Iterator<Item = &'_ StatusCode> + '_> {
-            Box::new(self.mock_status_codes.iter())
+        fn iterate_status_codes_responded(&self) -> Vec<StatusCode> {
+            self.mock_status_codes.iter().cloned().collect()
         }
 
         fn iterate_valid_zoom_levels(&self) -> Range<u32> {
@@ -94,8 +98,8 @@ pub mod test_utils {
             }
         }
 
-        fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_> {
-            Box::new(self.mock_layers.iter())
+        fn iterate_layers_responded(&self) -> Vec<LayerName> {
+            self.mock_layers.iter().cloned().collect()
         }
 
         fn count_response_by_status_code(&self, _status_code: &StatusCode) -> u64 { 0 }
@@ -124,12 +128,12 @@ pub mod test_utils {
     }
 
     impl TileHandlingMetrics for ZeroTileHandlingMetrics {
-        fn iterate_valid_cache_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
-            Box::new(TileAge::into_enum_iter())
+        fn iterate_valid_cache_ages(&self) -> Vec<TileAge> {
+            TileAge::into_enum_iter().collect()
         }
 
-        fn iterate_valid_render_ages(&self) -> Box<dyn Iterator<Item = TileAge>> {
-            Box::new(TileAge::into_enum_iter())
+        fn iterate_valid_render_ages(&self) -> Vec<TileAge> {
+            TileAge::into_enum_iter().collect()
         }
 
         fn count_handled_tile_by_source_and_age(&self, _source: &TileSource, _age: &TileAge) -> u64 { 0 }

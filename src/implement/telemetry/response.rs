@@ -187,16 +187,16 @@ impl WriteResponseObserver for ResponseAnalysis {
 }
 
 impl ResponseMetrics for ResponseAnalysis {
-    fn iterate_status_codes_responded(&self) -> Box<dyn Iterator<Item = &'_ StatusCode> + '_> {
-        Box::new(self.status_codes_responded.iter())
+    fn iterate_status_codes_responded(&self) -> Vec<StatusCode> {
+        self.status_codes_responded.iter().cloned().collect()
     }
 
     fn iterate_valid_zoom_levels(&self) -> Range<u32> {
         VALID_ZOOM_RANGE.clone()
     }
 
-    fn iterate_layers_responded(&self) -> Box<dyn Iterator<Item = &'_ LayerName> + '_> {
-        Box::new(self.analysis_by_layer.keys())
+    fn iterate_layers_responded(&self) -> Vec<LayerName> {
+        self.analysis_by_layer.keys().cloned().collect()
     }
 
     fn count_response_by_status_code(&self, status_code: &StatusCode) -> u64 {

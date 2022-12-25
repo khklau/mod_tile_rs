@@ -16,8 +16,10 @@ pub struct RenderdSocket {
     socket: UnixStream,
 }
 
+#[cfg(not(test))]
+use std::path::Path;
+#[cfg(not(test))]
 impl RenderdSocket {
-    #[cfg(not(test))]
     pub fn new(config: &ModuleConfig) -> Result<RenderdSocket, InvalidConfigError> {
         let path = Path::new(&config.renderd.ipc_uri);
         match UnixStream::connect(path) {
@@ -58,8 +60,10 @@ impl RenderdSocket {
             }
         }
     }
+}
 
-    #[cfg(test)]
+#[cfg(test)]
+impl RenderdSocket {
     pub fn new(_config: &ModuleConfig) -> Result<RenderdSocket, InvalidConfigError> {
         match UnixStream::pair() {
             Err(ioerr) => Err(
