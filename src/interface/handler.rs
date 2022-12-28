@@ -29,7 +29,7 @@ impl<'c> HandleIOContext<'c> {
     }
 }
 
-pub struct HandleContext2<'c> {
+pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub connection: &'c Connection<'c>,
@@ -37,13 +37,13 @@ pub struct HandleContext2<'c> {
     pub telemetry: &'c dyn TelemetryInventory,
 }
 
-impl<'c> HandleContext2<'c> {
+impl<'c> HandleContext<'c> {
     pub fn new(
         record: &'c mut request_rec,
         module_config: &'c ModuleConfig,
         telemetry: &'c dyn TelemetryInventory,
-    ) -> HandleContext2<'c> {
-        HandleContext2 {
+    ) -> HandleContext<'c> {
+        HandleContext {
             module_config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             connection: Connection::find_or_allocate_new(record).unwrap(),
@@ -56,7 +56,7 @@ impl<'c> HandleContext2<'c> {
 pub trait RequestHandler {
     fn handle(
         &mut self,
-        context: &HandleContext2,
+        context: &HandleContext,
         io: &mut HandleIOContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
@@ -90,7 +90,7 @@ pub mod test_utils {
     impl RequestHandler for NoOpRequestHandler {
         fn handle(
             &mut self,
-            _context: &HandleContext2,
+            _context: &HandleContext,
             _io: &mut HandleIOContext,
             _request: &request::SlippyRequest,
         ) -> HandleOutcome {

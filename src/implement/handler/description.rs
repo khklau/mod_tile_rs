@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
 use crate::interface::handler::{
-    HandleContext2, HandleIOContext, RequestHandler,
+    HandleContext, HandleIOContext, RequestHandler,
 };
 
 use chrono::Utc;
@@ -27,7 +27,7 @@ impl DescriptionHandlerState {
 impl RequestHandler for DescriptionHandlerState {
     fn handle(
         &mut self,
-        context: &HandleContext2,
+        context: &HandleContext,
         _io: &mut HandleIOContext,
         request: &request::SlippyRequest,
     ) -> HandleOutcome {
@@ -113,7 +113,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             request.uri = uri.into_raw();
-            let handle_context = HandleContext2::new(
+            let handle_context = HandleContext::new(
                 request,
                 &module_config,
                 &telemetry,
@@ -147,7 +147,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             request.uri = uri.into_raw();
-            let handle_context = HandleContext2 {
+            let handle_context = HandleContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 connection: Connection::find_or_allocate_new(request)?,

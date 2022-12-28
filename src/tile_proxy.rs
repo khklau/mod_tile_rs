@@ -12,7 +12,7 @@ use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::apache2::{PoolStored, HttpResponseWriter,};
 use crate::interface::handler::{
-    HandleContext2, HandleIOContext, HandlerInventory2,
+    HandleContext, HandleIOContext, HandlerInventory2,
 };
 use crate::interface::slippy::{ReadContext, WriteContext};
 use crate::framework::apache2::config::Loadable;
@@ -212,7 +212,7 @@ impl TileProxy {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let context = HandleContext2::new(record, &self.config, &self.telemetry_state);
+                    let context = HandleContext::new(record, &self.config, &self.telemetry_state);
                     let mut io = HandleIOContext::new(&mut self.comms_state, &mut self.storage_state);
                     let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
                         (*handler).handle(&context, &mut io, request).as_some_when_processed(handler.type_name())

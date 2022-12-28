@@ -2,7 +2,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::interface::handler::HandleContext2;
+use crate::interface::handler::HandleContext;
 use crate::interface::storage::TileStorage;
 use crate::interface::tile::TileRef;
 use crate::implement::storage::meta_tile::MetaTile;
@@ -33,7 +33,7 @@ impl FileSystem {
 impl TileStorage for FileSystem {
     fn read_tile2(
         &mut self,
-        context: &HandleContext2,
+        context: &HandleContext,
         id: &TileIdentity,
     ) -> Result<TileRef, TileReadError> {
         let path = MetaTile::identity_to_path(context.module_config, id);
