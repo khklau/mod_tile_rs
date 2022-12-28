@@ -64,7 +64,7 @@ pub trait RequestHandler {
     fn type_name(&self) -> &'static str;
 }
 
-pub trait HandlerInventory2 {
+pub trait HandlerInventory {
     fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 3];
 }
 
