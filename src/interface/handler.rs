@@ -69,7 +69,7 @@ pub trait HandlerInventory2 {
 }
 
 pub trait HandleRequestObserver {
-    fn on_handle2(
+    fn on_handle(
         &mut self,
         request: &SlippyRequest,
         handle_outcome: &HandleOutcome,
@@ -111,7 +111,7 @@ pub mod test_utils {
     }
 
     impl HandleRequestObserver for NoOpHandleRequestObserver {
-        fn on_handle2(
+        fn on_handle(
             &mut self,
             _request: &SlippyRequest,
             _handle_outcome: &HandleOutcome,

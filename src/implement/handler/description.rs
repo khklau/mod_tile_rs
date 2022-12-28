@@ -102,7 +102,7 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn test_not_handled2() -> Result<(), Box<dyn Error>> {
+    fn test_not_handled() -> Result<(), Box<dyn Error>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");

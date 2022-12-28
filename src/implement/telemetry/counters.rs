@@ -48,7 +48,7 @@ impl HandleCounter {
 }
 
 impl HandleRequestObserver for HandleCounter {
-    fn on_handle2(
+    fn on_handle(
         &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,

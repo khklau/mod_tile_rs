@@ -220,7 +220,7 @@ impl TileProxy {
                     match outcome_option {
                         Some((handle_outcome, handler_name)) => {
                             for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                                (*observer_iter).on_handle2(request, &handle_outcome, handler_name, read_outcome);
+                                (*observer_iter).on_handle(request, &handle_outcome, handler_name, read_outcome);
                             }
                             handle_outcome
                         },
