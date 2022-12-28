@@ -10,7 +10,7 @@ use crate::implement::storage::meta_tile::MetaTile;
 pub struct Memcached { }
 
 impl TileStorage for Memcached {
-    fn read_tile2(
+    fn read_tile(
         &mut self,
         context: &HandleContext,
         id: &TileIdentity,

@@ -7,7 +7,7 @@ use std::result::Result;
 
 
 pub trait TileStorage {
-    fn read_tile2(
+    fn read_tile(
         &mut self,
         context: &HandleContext,
         id: &TileIdentity,
@@ -40,7 +40,7 @@ pub mod test_utils {
     }
 
     impl TileStorage for BlankTileStorage {
-        fn read_tile2(
+        fn read_tile(
             &mut self,
             _context: &HandleContext,
             _id: &TileIdentity,

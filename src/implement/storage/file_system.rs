@@ -31,7 +31,7 @@ impl FileSystem {
 }
 
 impl TileStorage for FileSystem {
-    fn read_tile2(
+    fn read_tile(
         &mut self,
         context: &HandleContext,
         id: &TileIdentity,
