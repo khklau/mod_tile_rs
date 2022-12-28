@@ -53,19 +53,19 @@ impl<'c> HandleContext2<'c> {
     }
 }
 
-pub trait RequestHandler2 {
-    fn handle2(
+pub trait RequestHandler {
+    fn handle(
         &mut self,
         context: &HandleContext2,
         io: &mut HandleIOContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
 
-    fn type_name2(&self) -> &'static str;
+    fn type_name(&self) -> &'static str;
 }
 
 pub trait HandlerInventory2 {
-    fn request_handlers(&mut self) -> [&mut dyn RequestHandler2; 3];
+    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 3];
 }
 
 pub trait HandleRequestObserver {
@@ -87,8 +87,8 @@ pub mod test_utils {
 
     pub struct NoOpRequestHandler { }
 
-    impl RequestHandler2 for NoOpRequestHandler {
-        fn handle2(
+    impl RequestHandler for NoOpRequestHandler {
+        fn handle(
             &mut self,
             _context: &HandleContext2,
             _io: &mut HandleIOContext,
@@ -97,7 +97,7 @@ pub mod test_utils {
             HandleOutcome::Ignored
         }
 
-        fn type_name2(&self) -> &'static str {
+        fn type_name(&self) -> &'static str {
             std::any::type_name::<Self>()
         }
     }

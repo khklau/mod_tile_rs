@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
 use crate::interface::handler::{
-    HandleContext2, HandleIOContext, RequestHandler2,
+    HandleContext2, HandleIOContext, RequestHandler,
 };
 
 use chrono::Utc;
@@ -24,8 +24,8 @@ impl DescriptionHandlerState {
     }
 }
 
-impl RequestHandler2 for DescriptionHandlerState {
-    fn handle2(
+impl RequestHandler for DescriptionHandlerState {
+    fn handle(
         &mut self,
         context: &HandleContext2,
         _io: &mut HandleIOContext,
@@ -56,7 +56,7 @@ impl RequestHandler2 for DescriptionHandlerState {
         );
     }
 
-    fn type_name2(&self) -> &'static str {
+    fn type_name(&self) -> &'static str {
         type_name::<Self>()
     }
 }
@@ -130,7 +130,7 @@ mod tests {
                 body: request::BodyVariant::ReportStatistics,
             };
 
-            assert!(description_state.handle2(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
+            assert!(description_state.handle(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
             Ok(())
         })
     }
@@ -166,7 +166,7 @@ mod tests {
                 body: request::BodyVariant::DescribeLayer,
             };
 
-            let actual_response = description_state.handle2(&handle_context, &mut io_context, &request).expect_processed().result?;
+            let actual_response = description_state.handle(&handle_context, &mut io_context, &request).expect_processed().result?;
             let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",

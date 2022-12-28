@@ -215,7 +215,7 @@ impl TileProxy {
                     let context = HandleContext2::new(record, &self.config, &self.telemetry_state);
                     let mut io = HandleIOContext::new(&mut self.comms_state, &mut self.storage_state);
                     let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
-                        (*handler).handle2(&context, &mut io, request).as_some_when_processed(handler.type_name2())
+                        (*handler).handle(&context, &mut io, request).as_some_when_processed(handler.type_name())
                     });
                     match outcome_option {
                         Some((handle_outcome, handler_name)) => {

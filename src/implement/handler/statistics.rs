@@ -6,7 +6,7 @@ use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{
-    HandleContext2, HandleIOContext, RequestHandler2,
+    HandleContext2, HandleIOContext, RequestHandler,
 };
 
 use chrono::Utc;
@@ -87,8 +87,8 @@ impl StatisticsHandlerState {
     }
 }
 
-impl RequestHandler2 for StatisticsHandlerState {
-    fn handle2(
+impl RequestHandler for StatisticsHandlerState {
+    fn handle(
         &mut self,
         context: &HandleContext2,
         _io: &mut HandleIOContext,
@@ -119,7 +119,7 @@ impl RequestHandler2 for StatisticsHandlerState {
         );
     }
 
-    fn type_name2(&self) -> &'static str {
+    fn type_name(&self) -> &'static str {
         type_name::<Self>()
     }
 }
@@ -181,7 +181,7 @@ mod tests {
                 body: request::BodyVariant::DescribeLayer,
             };
 
-            assert!(stat_state.handle2(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
+            assert!(stat_state.handle(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
             Ok(())
         })
     }
@@ -372,7 +372,7 @@ mod tests {
                 body: request::BodyVariant::ReportStatistics,
             };
 
-            let actual_response = handler_state.handle2(&handle_context, &mut io_context, &request).expect_processed().result?;
+            let actual_response = handler_state.handle(&handle_context, &mut io_context, &request).expect_processed().result?;
             let mut expected_data = response::Statistics::new();
             expected_data.number_response_200 = 5;
             expected_data.number_fresh_cache = 2;

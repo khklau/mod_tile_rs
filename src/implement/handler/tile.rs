@@ -8,7 +8,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::{
-    HandleContext2, HandleIOContext, RequestHandler2,
+    HandleContext2, HandleIOContext, RequestHandler,
 };
 use crate::implement::communication::renderd_socket::RenderdSocket;
 use crate::implement::storage::file_system::FileSystem;
@@ -40,8 +40,8 @@ impl TileHandlerState {
     }
 }
 
-impl RequestHandler2 for TileHandlerState {
-    fn handle2(
+impl RequestHandler for TileHandlerState {
+    fn handle(
         &mut self,
         context: &HandleContext2,
         io: &mut HandleIOContext,
@@ -99,7 +99,7 @@ impl RequestHandler2 for TileHandlerState {
         );
     }
 
-    fn type_name2(&self) -> &'static str {
+    fn type_name(&self) -> &'static str {
         type_name::<Self>()
     }
 }

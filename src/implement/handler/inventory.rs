@@ -2,7 +2,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::interface::telemetry::TelemetryInventory;
 use crate::interface::handler::{
-    HandlerInventory2, HandleRequestObserver, RequestHandler2
+    HandlerInventory2, HandleRequestObserver, RequestHandler
 };
 use crate::implement::handler::description::DescriptionHandlerState;
 use crate::implement::handler::statistics::StatisticsHandlerState;
@@ -28,7 +28,7 @@ impl HandlerState {
 }
 
 impl HandlerInventory2 for HandlerState {
-    fn request_handlers(&mut self) -> [&mut dyn RequestHandler2; 3] {
+    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 3] {
         [
             &mut self.description,
             &mut self.statistics,
