@@ -240,7 +240,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_after_tile_render2() -> Result<(), Box<dyn Error>> {
+    fn test_handle_after_tile_render() -> Result<(), Box<dyn Error>> {
         let module_config = ModuleConfig::new();
         let mut handler_state = StatisticsHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");

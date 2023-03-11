@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn test_default_config_json2() -> Result<(), Box<dyn Error>> {
+    fn test_default_config_json() -> Result<(), Box<dyn Error>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");
