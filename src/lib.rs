@@ -86,6 +86,7 @@ mod implement {
         pub mod state;
         pub mod variant;
         mod meta_tile;
+        mod planet;
     }
     pub mod telemetry{
         pub mod counters;
