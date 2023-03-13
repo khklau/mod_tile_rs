@@ -75,6 +75,9 @@ mod implement {
         pub mod statistics;
         pub mod tile;
     }
+    pub mod renderd {
+        pub mod status;
+    }
     pub mod slippy {
         pub mod inventory;
         pub mod reader;
@@ -86,7 +89,6 @@ mod implement {
         pub mod state;
         pub mod variant;
         mod meta_tile;
-        mod planet;
     }
     pub mod telemetry{
         pub mod counters;
