@@ -10,8 +10,8 @@ pub fn import_completion_time(
     config: &RenderdConfig,
     layer_name: &LayerName,
 ) -> Option<SystemTime> {
-    let path = PathBuf::new();
-    path.push(config.store_uri);
+    let mut path = PathBuf::new();
+    path.push(config.store_uri.as_str());
     path.push(layer_name.as_str());
     path.push(IMPORT_COMPLETE_FILE);
     File::open(path.as_path())
