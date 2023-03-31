@@ -52,6 +52,7 @@ mod utility {
     pub mod debugging;
     #[macro_use]
     pub mod logging;
+    pub mod type_meta;
 }
 mod framework {
     pub mod apache2 {
