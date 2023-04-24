@@ -6,11 +6,13 @@ use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
 use crate::schema::slippy::request::{
-    BodyVariant, Header, SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
+    BodyVariant, Header, MAX_EXTENSION_LEN,
+    SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::slippy::ReadContext;
 
+use const_format::concatcp;
 use scan_fmt::scan_fmt;
 
 use std::string::String;
@@ -183,7 +185,7 @@ impl ServeTileV3RequestParser {
         // try match with option
         match scan_fmt!(
             request_url,
-            "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
+            concatcp!("/{40[^/]}/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}/{10[^/]}"),
             String, i32, i32, i32, String, String
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
@@ -229,7 +231,7 @@ impl ServeTileV3RequestParser {
         // try match no option
         match scan_fmt!(
             request_url,
-            "/{40[^/]}/{d}/{d}/{d}.{255[a-z]}{///?/}",
+            concatcp!("/{40[^/]}/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}{///?/}"),
             String, i32, i32, i32, String
         ) {
             Ok((parameter, x, y, z, extension)) => {
@@ -289,7 +291,7 @@ impl ServeTileV2RequestParser {
     // try match with option
     match scan_fmt!(
         request_url,
-        "/{d}/{d}/{d}.{255[a-z]}/{10[^/]}",
+        concatcp!("/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}/{10[^/]}"),
         i32, i32, i32, String, String
     ) {
         Ok((x, y, z, extension, option)) => {
@@ -334,7 +336,7 @@ impl ServeTileV2RequestParser {
     // try match no option
     match scan_fmt!(
         request_url,
-        "/{d}/{d}/{d}.{255[a-z]}{///?/}",
+        concatcp!("/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}{///?/}"),
         i32, i32, i32, String
     ) {
         Ok((x, y, z, extension)) => {

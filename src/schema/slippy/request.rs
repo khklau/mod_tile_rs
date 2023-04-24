@@ -10,6 +10,8 @@ use std::option::Option;
 use std::string::String;
 
 
+pub const MAX_EXTENSION_LEN: usize = crate::schema::renderd::request::MAX_MIME_TYPE_LEN;
+
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub struct SlippyRequest {
