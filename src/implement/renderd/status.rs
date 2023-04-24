@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 
-pub fn import_completion_time(
+pub fn data_import_completion_time(
     config: &RenderdConfig,
     layer_name: &LayerName,
 ) -> Option<SystemTime> {

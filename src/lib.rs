@@ -33,6 +33,10 @@ mod schema {
         pub mod request;
         pub mod response;
     }
+    pub mod renderd {
+        pub mod request;
+        pub mod response;
+    }
     pub mod handler {
         pub mod error;
         pub mod result;
@@ -42,6 +46,7 @@ mod interface {
     pub mod apache2;
     pub mod communication;
     pub mod handler;
+    pub mod renderd;
     pub mod slippy;
     pub mod storage;
     pub mod telemetry;
@@ -77,7 +82,8 @@ mod implement {
         pub mod tile;
     }
     pub mod renderd {
-        pub mod status;
+        pub mod protocol;
+        mod status;
     }
     pub mod slippy {
         pub mod inventory;
