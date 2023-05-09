@@ -34,6 +34,7 @@ mod schema {
         pub mod response;
     }
     pub mod renderd {
+        pub mod error;
         pub mod request;
         pub mod response;
     }
