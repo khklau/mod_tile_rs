@@ -27,6 +27,9 @@ mod schema {
         pub mod request;
         pub mod virtual_host;
     }
+    pub mod communication {
+        pub mod error;
+    }
     pub mod slippy {
         pub mod error;
         pub mod result;

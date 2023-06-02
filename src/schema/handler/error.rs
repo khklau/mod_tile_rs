@@ -1,3 +1,4 @@
+use crate::schema::communication::error::CommunicationError;
 use crate::schema::slippy::error::ReadError;
 use crate::schema::tile::error::TileReadError;
 
@@ -12,6 +13,7 @@ pub enum HandleError {
     Timeout(TimeoutError),
     Io(std::io::Error),
     TileRead(TileReadError),
+    Communication(CommunicationError),
 }
 
 impl Error for HandleError {
@@ -21,6 +23,7 @@ impl Error for HandleError {
             HandleError::Timeout(err) => return Some(err),
             HandleError::Io(err) => return Some(err),
             HandleError::TileRead(err) => return Some(err),
+            HandleError::Communication(err) => return Some(err),
         }
     }
 }
@@ -32,6 +35,7 @@ impl fmt::Display for HandleError {
             HandleError::Timeout(err) => return write!(f, "{}", err),
             HandleError::Io(err) => return write!(f, "{}", err),
             HandleError::TileRead(err) => return write!(f, "{}", err),
+            HandleError::Communication(err) => return write!(f, "{}", err),
         }
     }
 }
@@ -45,6 +49,12 @@ impl From<std::io::Error> for HandleError {
 impl From<TileReadError> for HandleError {
     fn from(error: TileReadError) -> Self {
         return HandleError::TileRead(error);
+    }
+}
+
+impl From<CommunicationError> for HandleError {
+    fn from(error: CommunicationError) -> Self {
+        return HandleError::Communication(error);
     }
 }
 
