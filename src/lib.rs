@@ -18,6 +18,7 @@ mod schema {
         pub mod error;
         pub mod identity;
         pub mod source;
+        pub mod status;
     }
     #[macro_use]
     pub mod apache2 {
