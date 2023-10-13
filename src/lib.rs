@@ -41,6 +41,7 @@ mod schema {
         pub mod error;
         pub mod request;
         pub mod response;
+        pub mod status;
     }
     pub mod handler {
         pub mod error;
@@ -88,6 +89,7 @@ mod implement {
     }
     pub mod renderd {
         pub mod protocol;
+        pub mod state;
         mod status;
     }
     pub mod slippy {
