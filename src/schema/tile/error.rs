@@ -121,3 +121,34 @@ impl std::fmt::Display for TileOffsetOutOfBoundsError {
         write!(f, "Invalid tile offset {}", self.tile_offset)
     }
 }
+
+
+#[derive(Debug)]
+pub enum TileGetStatusError {
+    Io(std::io::Error),
+    NotFound(PathBuf),
+}
+
+impl Error for TileGetStatusError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            TileGetStatusError::Io(err) => return Some(err),
+            TileGetStatusError::NotFound(_) => return None,
+        }
+    }
+}
+
+impl std::fmt::Display for TileGetStatusError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TileGetStatusError::Io(err) => return write!(f, "{}", err),
+            TileGetStatusError::NotFound(path) => return write!(f, "{}", path.to_str().unwrap()),
+        }
+    }
+}
+
+impl From<std::io::Error> for TileGetStatusError {
+    fn from(error: std::io::Error) -> Self {
+        return TileGetStatusError::Io(error);
+    }
+}

@@ -1,7 +1,11 @@
 use crate::binding::renderd_protocol::{protocol, protoCmd};
 use crate::schema::apache2::config::RenderdConfig;
+use crate::schema::renderd::error::RenderError;
 use crate::schema::renderd::request::{RenderRequestCommand, RenderRequestVersion};
+use crate::schema::renderd::status::DataImportStatus;
 use crate::schema::slippy::request::SlippyRequest;
+use crate::schema::tile::identity::{LayerName, TileIdentity,};
+use crate::interface::communication::CommunicationInventory;
 
 
 pub fn create_request(
@@ -19,4 +23,19 @@ pub fn create_request(
         options: [0; 41usize],
     };
     result
+}
+
+pub trait TileRenderer {
+    fn render_tile(
+        communication: &mut dyn CommunicationInventory,
+        tile_id: TileIdentity,
+        request: &protocol,
+        response: &mut protocol,
+    ) -> Result<(), RenderError>;
+
+    fn get_data_import_status(
+        communication: &mut dyn CommunicationInventory,
+        config: &RenderdConfig,
+        layer_name: &LayerName,
+    ) -> DataImportStatus;
 }
