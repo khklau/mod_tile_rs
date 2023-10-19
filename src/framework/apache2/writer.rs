@@ -4,9 +4,9 @@ use crate::binding::apache2::{
     ap_rwrite, ap_rflush, ap_set_content_type, ap_set_content_length,
     apr_psprintf, apr_table_setn, apr_table_mergen,
 };
-use crate::schema::apache2::error::ResponseWriteError;
+use crate::schema::communication::error::ResponseWriteError;
 use crate::schema::http::encoding::ContentEncoding;
-use crate::interface::apache2::HttpResponseWriter;
+use crate::interface::communication::HttpResponseWriter;
 #[cfg(not(test))]
 use crate::framework::apache2::record::RequestRecord;
 
@@ -196,7 +196,7 @@ impl HttpResponseWriter for request_rec {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
-    use crate::interface::apache2::HttpResponseWriter;
+    use crate::interface::communication::HttpResponseWriter;
     use std::cmp::min;
     use std::collections::VecDeque;
     use std::slice;

@@ -10,7 +10,8 @@ use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
 use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
-use crate::interface::apache2::{PoolStored, HttpResponseWriter,};
+use crate::interface::apache2::PoolStored;
+use crate::interface::communication::HttpResponseWriter;
 use crate::interface::handler::{
     HandleContext, HandleIOContext, HandlerInventory,
 };

@@ -31,3 +31,16 @@ impl From<std::io::Error> for CommunicationError {
         return CommunicationError::Io(error);
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct ResponseWriteError {
+    pub error_code: i32,
+}
+
+impl Error for ResponseWriteError {}
+
+impl fmt::Display for ResponseWriteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Error on writing response: code {}", self.error_code)
+    }
+}

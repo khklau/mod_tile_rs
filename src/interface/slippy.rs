@@ -5,7 +5,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
-use crate::interface::apache2::HttpResponseWriter;
+use crate::interface::communication::HttpResponseWriter;
 
 
 pub struct ReadContext<'c> {

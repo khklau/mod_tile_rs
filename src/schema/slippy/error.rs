@@ -1,4 +1,4 @@
-use crate::schema::apache2::error::ResponseWriteError;
+use crate::schema::communication::error::ResponseWriteError;
 
 use mime::Mime;
 

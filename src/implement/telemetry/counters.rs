@@ -5,7 +5,7 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
-use crate::interface::apache2::HttpResponseWriter;
+use crate::interface::communication::HttpResponseWriter;
 use crate::interface::slippy::{
     ReadContext, ReadRequestObserver, WriteContext, WriteResponseObserver};
 use crate::interface::handler::HandleRequestObserver;

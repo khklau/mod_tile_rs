@@ -7,7 +7,7 @@ use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
-use crate::interface::apache2::HttpResponseWriter;
+use crate::interface::communication::HttpResponseWriter;
 use crate::interface::slippy::{WriteContext, WriteResponseObserver,};
 use crate::interface::telemetry::TileHandlingMetrics;
 

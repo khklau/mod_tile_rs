@@ -4,7 +4,7 @@ use crate::schema::slippy::response::{
     BodyVariant, Header, Description, SlippyResponse, Statistics, TileResponse,
 };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
-use crate::interface::apache2::HttpResponseWriter;
+use crate::interface::communication::HttpResponseWriter;
 use crate::interface::slippy::WriteContext;
 
 use chrono::{ TimeZone, Utc, };
