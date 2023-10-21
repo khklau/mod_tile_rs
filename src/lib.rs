@@ -73,11 +73,11 @@ mod framework {
         pub mod record;
         pub mod request;
         pub mod virtual_host;
-        pub mod writer;
     }
 }
 mod implement {
     pub mod communication {
+        pub mod http_exchange;
         pub mod renderd_socket;
         pub mod state;
     }

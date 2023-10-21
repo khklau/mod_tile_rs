@@ -308,7 +308,7 @@ mod tests {
     use crate::interface::apache2::PoolStored;
     use crate::interface::tile::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::framework::apache2::writer::test_utils::MockWriter;
+    use crate::implement::communication::http_exchange::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
