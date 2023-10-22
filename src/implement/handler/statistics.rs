@@ -356,7 +356,6 @@ mod tests {
             let handle_context = HandleContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
-                connection: Connection::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
                 telemetry: &telemetry,
             };

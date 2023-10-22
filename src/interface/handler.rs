@@ -1,6 +1,5 @@
 use crate::binding::apache2::request_rec;
 use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::apache2::connection::Connection;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
@@ -32,7 +31,6 @@ impl<'c> HandleIOContext<'c> {
 pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
-    pub connection: &'c Connection<'c>,
     pub request: &'c mut Apache2Request<'c>,
     pub telemetry: &'c dyn TelemetryInventory,
 }
@@ -46,7 +44,6 @@ impl<'c> HandleContext<'c> {
         HandleContext {
             module_config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
             telemetry,
         }
