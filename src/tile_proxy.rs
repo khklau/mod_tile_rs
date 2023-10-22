@@ -190,7 +190,6 @@ impl TileProxy {
         let context = ReadContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_allocate_new(record).unwrap(),
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_outcome = read(&context, request);
@@ -259,7 +258,6 @@ impl TileProxy {
         let context = WriteContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            connection: Connection::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
         };
         let write_outcome = match handle_outcome {

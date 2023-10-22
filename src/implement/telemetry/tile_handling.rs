@@ -281,7 +281,6 @@ mod tests {
             let module_config = ModuleConfig::new();
             let write_context = WriteContext {
                 module_config: &module_config,
-                connection: Connection::find_or_allocate_new(request)?,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
@@ -369,7 +368,6 @@ mod tests {
             let write_context = WriteContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
-                connection: Connection::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
             let read_outcome = ReadOutcome::Processed(
@@ -456,7 +454,6 @@ mod tests {
             let write_context = WriteContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
-                connection: Connection::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
             };
             let read_outcome = ReadOutcome::Processed(

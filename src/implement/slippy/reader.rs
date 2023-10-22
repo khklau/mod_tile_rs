@@ -387,7 +387,6 @@ impl ServeTileV2RequestParser {
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
-    use crate::schema::apache2::connection::Connection;
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::tile::identity::LayerName;
@@ -406,7 +405,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -432,7 +430,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -463,7 +460,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -503,7 +499,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -532,7 +527,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -572,7 +566,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -611,7 +604,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -649,7 +641,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -677,7 +668,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
@@ -715,7 +705,6 @@ mod tests {
             let context = ReadContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
-                connection: Connection::find_or_allocate_new(record)?,
             };
             let request = Apache2Request::create_with_tile_config(record)?;
             let request_url= request.uri;
