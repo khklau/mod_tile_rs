@@ -50,6 +50,7 @@ mod schema {
 }
 mod interface {
     pub mod apache2;
+    pub mod context;
     pub mod communication;
     pub mod handler;
     pub mod renderd;

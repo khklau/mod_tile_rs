@@ -10,7 +10,7 @@ use crate::schema::slippy::request::{
     SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
-use crate::interface::slippy::HostContext;
+use crate::interface::context::HostContext;
 
 use const_format::concatcp;
 use scan_fmt::scan_fmt;

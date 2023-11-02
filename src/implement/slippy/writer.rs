@@ -5,7 +5,7 @@ use crate::schema::slippy::response::{
 };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::interface::communication::HttpResponseWriter;
-use crate::interface::slippy::RequestContext;
+use crate::interface::context::RequestContext;
 
 use chrono::{ TimeZone, Utc, };
 use http::header::{ CACHE_CONTROL, EXPIRES, ETAG, HeaderMap, HeaderValue };

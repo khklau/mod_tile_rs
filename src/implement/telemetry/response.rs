@@ -7,13 +7,13 @@ use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::identity::LayerName;
 use crate::interface::communication::HttpResponseWriter;
-use crate::interface::slippy::{RequestContext, WriteResponseObserver,};
+use crate::interface::context::RequestContext;
+use crate::interface::slippy::WriteResponseObserver;
 use crate::interface::telemetry::ResponseMetrics;
 
 use chrono::Duration;
 use http::status::StatusCode;
 
-use std::boxed::Box;
 use std::collections::hash_map::HashMap;
 use std::collections::hash_set::HashSet;
 use std::ops::Range;
@@ -312,6 +312,7 @@ mod tests {
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
+    use std::boxed::Box;
     use std::error::Error;
     use std::ffi::CString;
     use std::rc::Rc;
