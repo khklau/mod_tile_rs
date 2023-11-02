@@ -5,7 +5,7 @@ use crate::schema::slippy::response::{
 };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::interface::communication::HttpResponseWriter;
-use crate::interface::slippy::WriteContext;
+use crate::interface::slippy::RequestContext;
 
 use chrono::{ TimeZone, Utc, };
 use http::header::{ CACHE_CONTROL, EXPIRES, ETAG, HeaderMap, HeaderValue };
@@ -16,7 +16,7 @@ use mime;
 pub struct SlippyResponseWriter { }
 impl SlippyResponseWriter {
     pub fn write(
-        context: &WriteContext,
+        context: &RequestContext,
         response: &SlippyResponse,
         writer: &mut dyn HttpResponseWriter,
     ) -> WriteOutcome {
@@ -43,7 +43,7 @@ impl SlippyResponseWriter {
 struct DescriptionWriter { }
 impl DescriptionWriter {
     pub fn write(
-        context: &WriteContext,
+        context: &RequestContext,
         header: &Header,
         description: &Description,
         writer: &mut dyn HttpResponseWriter,
@@ -100,7 +100,7 @@ impl DescriptionWriter {
 struct StatisticsWriter { }
 impl StatisticsWriter {
     pub fn write(
-        context: &WriteContext,
+        context: &RequestContext,
         header: &Header,
         statistics: &Statistics,
         writer: &mut dyn HttpResponseWriter,
@@ -140,7 +140,7 @@ impl StatisticsWriter {
 struct TileWriter {}
 impl TileWriter {
     pub fn write(
-        context: &WriteContext,
+        context: &RequestContext,
         header: &Header,
         tile: &TileResponse,
         writer: &mut dyn HttpResponseWriter,

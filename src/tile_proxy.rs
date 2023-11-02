@@ -15,7 +15,7 @@ use crate::interface::communication::HttpResponseWriter;
 use crate::interface::handler::{
     HandleContext, HandleIOContext, HandlerInventory,
 };
-use crate::interface::slippy::{ReadContext, WriteContext};
+use crate::interface::slippy::{HostContext, RequestContext};
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -187,7 +187,7 @@ impl TileProxy {
     ) -> (ReadOutcome, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
         let (read, read_func_name) = SlippyInventory::read_request_func();
-        let context = ReadContext {
+        let context = HostContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
         };
@@ -255,7 +255,7 @@ impl TileProxy {
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
         let writer: &mut dyn HttpResponseWriter = unsafe { write_record.as_mut().unwrap() };
-        let context = WriteContext {
+        let context = RequestContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),

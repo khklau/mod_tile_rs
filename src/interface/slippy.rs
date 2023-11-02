@@ -7,25 +7,25 @@ use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::communication::HttpResponseWriter;
 
 
-pub struct ReadContext<'c> {
+pub struct HostContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
 }
 
-pub struct WriteContext<'c> {
+pub struct RequestContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub request: &'c Apache2Request<'c>,
 }
 
-pub type ReadRequestFunc = fn(&ReadContext, &Apache2Request) -> ReadOutcome;
+pub type ReadRequestFunc = fn(&HostContext, &Apache2Request) -> ReadOutcome;
 
-pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteOutcome;
+pub type WriteResponseFunc = fn(&RequestContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteOutcome;
 
 pub trait ReadRequestObserver {
     fn on_read(
         &mut self,
-        context: &ReadContext,
+        context: &HostContext,
         request: &Apache2Request,
         read_outcome: &ReadOutcome,
         read_func_name: &'static str,
@@ -35,7 +35,7 @@ pub trait ReadRequestObserver {
 pub trait WriteResponseObserver {
     fn on_write(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         response: &SlippyResponse,
         writer: &dyn HttpResponseWriter,
         write_outcome: &WriteOutcome,
@@ -61,7 +61,7 @@ pub mod test_utils {
     impl ReadRequestObserver for NoOpReadRequestObserver {
         fn on_read(
             &mut self,
-            _context: &ReadContext,
+            _context: &HostContext,
             _request: &Apache2Request,
             _read_outcome: &ReadOutcome,
             _read_func_name: &'static str,
@@ -80,7 +80,7 @@ pub mod test_utils {
     impl WriteResponseObserver for NoOpWriteResponseObserver {
         fn on_write(
             &mut self,
-            _context: &WriteContext,
+            _context: &RequestContext,
             _response: &SlippyResponse,
             _writer: &dyn HttpResponseWriter,
             _write_outcome: &WriteOutcome,

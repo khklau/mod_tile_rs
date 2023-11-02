@@ -7,7 +7,7 @@ use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::interface::communication::HttpResponseWriter;
 use crate::interface::slippy::{
-    ReadContext, ReadRequestObserver, WriteContext, WriteResponseObserver};
+    HostContext, ReadRequestObserver, RequestContext, WriteResponseObserver};
 use crate::interface::handler::HandleRequestObserver;
 
 
@@ -26,7 +26,7 @@ impl ReadCounter {
 impl ReadRequestObserver for ReadCounter {
     fn on_read(
         &mut self,
-        _context: &ReadContext,
+        _context: &HostContext,
         _request: &Apache2Request,
         _outcome: &ReadOutcome,
         _read_func_name: &'static str,
@@ -74,7 +74,7 @@ impl WriteCounter {
 impl WriteResponseObserver for WriteCounter {
     fn on_write(
         &mut self,
-        _context: &WriteContext,
+        _context: &RequestContext,
         _response: &SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,

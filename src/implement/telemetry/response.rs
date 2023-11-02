@@ -7,7 +7,7 @@ use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::identity::LayerName;
 use crate::interface::communication::HttpResponseWriter;
-use crate::interface::slippy::{WriteContext, WriteResponseObserver,};
+use crate::interface::slippy::{RequestContext, WriteResponseObserver,};
 use crate::interface::telemetry::ResponseMetrics;
 
 use chrono::Duration;
@@ -47,7 +47,7 @@ impl ResponseAnalysis {
 
     fn on_tile_write(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         request: &request::SlippyRequest,
         response: &response::SlippyResponse,
         response_duration: &Duration,
@@ -58,7 +58,7 @@ impl ResponseAnalysis {
 
     fn accrue_tile_response_duration(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         request: &request::SlippyRequest,
         _response: &response::SlippyResponse,
         response_duration: &Duration,
@@ -84,7 +84,7 @@ impl ResponseAnalysis {
 
     fn increment_tile_response_count(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         request: &request::SlippyRequest,
         _response: &response::SlippyResponse,
     ) -> () {
@@ -108,7 +108,7 @@ impl ResponseAnalysis {
 
     fn on_http_response_write(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         request: &request::SlippyRequest,
         http_response: &HttpResponse,
     ) -> () {
@@ -155,7 +155,7 @@ impl LayerResponseAnalysis {
 impl WriteResponseObserver for ResponseAnalysis {
     fn on_write(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         write_outcome: &WriteOutcome,
@@ -322,7 +322,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let write_context = WriteContext {
+            let context = RequestContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
@@ -332,7 +332,7 @@ mod tests {
                 Ok(
                     request::SlippyRequest {
                         header: request::Header::new_with_layer(
-                            write_context.request.record,
+                            context.request.record,
                             &layer_name,
                         ),
                         body: request::BodyVariant::ServeTileV3(
@@ -361,7 +361,7 @@ mod tests {
             };
             let response = response::SlippyResponse {
                 header: response::Header::new(
-                    write_context.request.record,
+                    context.request.record,
                     &mime::APPLICATION_JSON,
                 ),
                 body: response::BodyVariant::Tile(
@@ -390,7 +390,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 5),

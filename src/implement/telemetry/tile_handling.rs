@@ -8,7 +8,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::interface::communication::HttpResponseWriter;
-use crate::interface::slippy::{WriteContext, WriteResponseObserver,};
+use crate::interface::slippy::{RequestContext, WriteResponseObserver,};
 use crate::interface::telemetry::TileHandlingMetrics;
 
 use chrono::Duration;
@@ -41,7 +41,7 @@ impl TileHandlingAnalysis {
 
     fn on_handled_tile(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         request: &request::SlippyRequest,
         response: &response::TileResponse,
         handle_duration: &Duration,
@@ -52,7 +52,7 @@ impl TileHandlingAnalysis {
 
     fn increase_tile_handle_count(
         &mut self,
-        _context: &WriteContext,
+        _context: &RequestContext,
         request: &request::SlippyRequest,
         response: &response::TileResponse,
     ) -> () {
@@ -65,7 +65,7 @@ impl TileHandlingAnalysis {
 
     fn accrue_tile_handle_duration(
         &mut self,
-        _context: &WriteContext,
+        _context: &RequestContext,
         request: &request::SlippyRequest,
         response: &response::TileResponse,
         handle_duration: &Duration,
@@ -81,7 +81,7 @@ impl TileHandlingAnalysis {
 impl WriteResponseObserver for TileHandlingAnalysis {
     fn on_write(
         &mut self,
-        context: &WriteContext,
+        context: &RequestContext,
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,
@@ -236,7 +236,7 @@ pub mod test_utils {
     impl WriteResponseObserver for MockNoOpTileHandlingAnalysis {
         fn on_write(
             &mut self,
-            _context: &WriteContext,
+            _context: &RequestContext,
             _response: &response::SlippyResponse,
             _writer: &dyn HttpResponseWriter,
             _write_outcome: &WriteOutcome,
@@ -279,7 +279,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let write_context = WriteContext {
+            let context = RequestContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
@@ -288,7 +288,7 @@ mod tests {
                 Ok(
                     request::SlippyRequest {
                         header: request::Header::new(
-                            write_context.request.record,
+                            context.request.record,
                         ),
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
@@ -315,7 +315,7 @@ mod tests {
             };
             let response = response::SlippyResponse {
                 header: response::Header::new(
-                    write_context.request.record,
+                    context.request.record,
                     &mime::APPLICATION_JSON,
                 ),
                 body: response::BodyVariant::Tile(
@@ -344,7 +344,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -365,7 +365,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let write_context = WriteContext {
+            let context = RequestContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
@@ -374,7 +374,7 @@ mod tests {
                 Ok(
                     request::SlippyRequest {
                         header: request::Header::new(
-                            write_context.request.record,
+                            context.request.record,
                         ),
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
@@ -401,7 +401,7 @@ mod tests {
             };
             let response = response::SlippyResponse {
                 header: response::Header::new(
-                    write_context.request.record,
+                    context.request.record,
                     &mime::APPLICATION_JSON,
                 ),
                 body: response::BodyVariant::Tile(
@@ -430,7 +430,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -451,7 +451,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let write_context = WriteContext {
+            let context = RequestContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
@@ -460,7 +460,7 @@ mod tests {
                 Ok(
                     request::SlippyRequest {
                         header: request::Header::new(
-                            write_context.request.record,
+                            context.request.record,
                         ),
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
@@ -501,7 +501,7 @@ mod tests {
                     };
                     let response = response::SlippyResponse {
                         header: response::Header::new(
-                            write_context.request.record,
+                            context.request.record,
                             &mime::APPLICATION_JSON,
                         ),
                         body: response::BodyVariant::Tile(
@@ -520,8 +520,8 @@ mod tests {
                         }
                     );
                     let writer = MockWriter::new();
-                    analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
-                    analysis.on_write(&write_context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+                    analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+                    analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
                 }
             }
             for age in &all_ages {

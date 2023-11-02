@@ -10,7 +10,7 @@ use crate::schema::slippy::request::{
     SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
-use crate::interface::slippy::ReadContext;
+use crate::interface::slippy::HostContext;
 
 use const_format::concatcp;
 use scan_fmt::scan_fmt;
@@ -21,7 +21,7 @@ use std::string::String;
 pub struct SlippyRequestReader;
 impl SlippyRequestReader {
     pub fn read(
-        context: &ReadContext,
+        context: &HostContext,
         request: &Apache2Request,
     ) -> ReadOutcome {
         let request_url= request.uri;
@@ -32,7 +32,7 @@ impl SlippyRequestReader {
 pub struct SlippyRequestParser;
 impl SlippyRequestParser {
     pub fn parse(
-        context: &ReadContext,
+        context: &HostContext,
         request: &Apache2Request,
         request_url: &str,
     ) -> ReadOutcome {
@@ -77,10 +77,10 @@ impl LayerParserCombinator {
     fn try_else<F, G>(
         func1: F,
         func2: G,
-    ) -> impl Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome
+    ) -> impl Fn(&HostContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome
     where
-        F: Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
-        G: Fn(&ReadContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
+        F: Fn(&HostContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
+        G: Fn(&HostContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
     {
         move |context, config, request, request_url| {
             let outcome = func1(context, config, request, request_url);
@@ -96,7 +96,7 @@ impl LayerParserCombinator {
 struct StatisticsRequestParser;
 impl StatisticsRequestParser {
     fn parse(
-        context: &ReadContext,
+        context: &HostContext,
         request: &Apache2Request,
         request_url: &str,
     ) -> ReadOutcome {
@@ -124,7 +124,7 @@ impl StatisticsRequestParser {
 struct DescribeLayerRequestParser;
 impl DescribeLayerRequestParser {
     fn parse(
-        context: &ReadContext,
+        context: &HostContext,
         layer_config: &LayerConfig,
         request: &Apache2Request,
         request_url: &str,
@@ -152,7 +152,7 @@ impl DescribeLayerRequestParser {
 struct ServeTileV3RequestParser;
 impl ServeTileV3RequestParser {
     fn parse(
-        context: &ReadContext,
+        context: &HostContext,
         layer_config: &LayerConfig,
         request: &Apache2Request,
         request_url: &str,
@@ -282,7 +282,7 @@ impl ServeTileV3RequestParser {
 struct ServeTileV2RequestParser;
 impl ServeTileV2RequestParser {
     fn parse(
-        context: &ReadContext,
+        context: &HostContext,
         layer_config: &LayerConfig,
         request: &Apache2Request,
         request_url: &str,
@@ -402,7 +402,7 @@ mod tests {
             let module_config = ModuleConfig::new();
             let uri = CString::new("/mod_tile_rs")?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -427,7 +427,7 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -457,7 +457,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -496,7 +496,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/999.png/bar", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -524,7 +524,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -563,7 +563,7 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -601,7 +601,7 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -638,7 +638,7 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/999.jpg/blah", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -665,7 +665,7 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
@@ -702,7 +702,7 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.into_raw();
-            let context = ReadContext {
+            let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };

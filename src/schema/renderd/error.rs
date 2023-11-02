@@ -21,4 +21,5 @@ impl fmt::Display for InvalidParameterError {
 
 pub enum RenderError {
     InvalidParameter(InvalidParameterError),
+    Communication(CommunicationError)
 }
