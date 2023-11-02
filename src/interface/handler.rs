@@ -11,17 +11,17 @@ use crate::interface::storage::StorageInventory;
 use crate::interface::telemetry::TelemetryInventory;
 
 
-pub struct HandleIOContext<'c> {
+pub struct IOContext<'c> {
     pub communication: &'c mut dyn CommunicationInventory,
     pub storage: &'c mut dyn StorageInventory,
 }
 
-impl<'c> HandleIOContext<'c> {
+impl<'c> IOContext<'c> {
     pub fn new(
         communication: &'c mut dyn CommunicationInventory,
         storage: &'c mut dyn StorageInventory,
-    ) -> HandleIOContext<'c> {
-        HandleIOContext {
+    ) -> IOContext<'c> {
+        IOContext {
             communication,
             storage,
         }
@@ -54,7 +54,7 @@ pub trait RequestHandler {
     fn handle(
         &mut self,
         context: &HandleContext,
-        io: &mut HandleIOContext,
+        io: &mut IOContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
 
@@ -88,7 +88,7 @@ pub mod test_utils {
         fn handle(
             &mut self,
             _context: &HandleContext,
-            _io: &mut HandleIOContext,
+            _io: &mut IOContext,
             _request: &request::SlippyRequest,
         ) -> HandleOutcome {
             HandleOutcome::Ignored

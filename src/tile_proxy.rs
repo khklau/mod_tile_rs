@@ -14,7 +14,7 @@ use crate::interface::apache2::PoolStored;
 use crate::interface::communication::HttpResponseWriter;
 use crate::interface::context::{HostContext, RequestContext};
 use crate::interface::handler::{
-    HandleContext, HandleIOContext, HandlerInventory,
+    HandleContext, IOContext, HandlerInventory,
 };
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
@@ -213,7 +213,7 @@ impl TileProxy {
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
                     let context = HandleContext::new(record, &self.config, &self.telemetry_state);
-                    let mut io = HandleIOContext::new(&mut self.comms_state, &mut self.storage_state);
+                    let mut io = IOContext::new(&mut self.comms_state, &mut self.storage_state);
                     let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
                         (*handler).handle(&context, &mut io, request).as_some_when_processed(handler.type_name())
                     });

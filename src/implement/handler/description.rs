@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
 use crate::interface::handler::{
-    HandleContext, HandleIOContext, RequestHandler,
+    HandleContext, IOContext, RequestHandler,
 };
 
 use chrono::Utc;
@@ -28,7 +28,7 @@ impl RequestHandler for DescriptionHandlerState {
     fn handle(
         &mut self,
         context: &HandleContext,
-        _io: &mut HandleIOContext,
+        _io: &mut IOContext,
         request: &request::SlippyRequest,
     ) -> HandleOutcome {
         let before_timestamp = Utc::now();
@@ -118,7 +118,7 @@ mod tests {
                 &module_config,
                 &telemetry,
             );
-            let mut io_context = HandleIOContext::new(
+            let mut io_context = IOContext::new(
                 &mut communication,
                 &mut storage,
             );
@@ -153,7 +153,7 @@ mod tests {
                 request: Apache2Request::create_with_tile_config(request)?,
                 telemetry: &telemetry,
             };
-            let mut io_context = HandleIOContext::new(
+            let mut io_context = IOContext::new(
                 &mut communication,
                 &mut storage,
             );
