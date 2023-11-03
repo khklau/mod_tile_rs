@@ -7,7 +7,6 @@ use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::apache2::PoolStored;
 use crate::interface::context::{IOContext, ServicesContext,};
-use crate::interface::telemetry::TelemetryInventory;
 
 
 pub struct HandleContext<'c> {
@@ -20,7 +19,6 @@ impl<'c> HandleContext<'c> {
     pub fn new(
         record: &'c mut request_rec,
         module_config: &'c ModuleConfig,
-        telemetry: &'c dyn TelemetryInventory,
     ) -> HandleContext<'c> {
         HandleContext {
             module_config,

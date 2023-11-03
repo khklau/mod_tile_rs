@@ -215,7 +215,7 @@ impl TileProxy {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let context = HandleContext::new(record, &self.config, &self.telemetry_state);
+                    let context = HandleContext::new(record, &self.config);
                     let mut io = IOContext {
                         communication: &mut self.comms_state,
                         storage: &mut self.storage_state

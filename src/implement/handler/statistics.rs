@@ -168,7 +168,6 @@ mod tests {
             let handle_context = HandleContext::new(
                 request,
                 &module_config,
-                &telemetry,
             );
             let mut io_context = IOContext {
                 communication: &mut communication,
