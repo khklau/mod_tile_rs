@@ -5,9 +5,8 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::interface::handler::{
-    HandleContext, IOContext, RequestHandler,
-};
+use crate::interface::context::IOContext;
+use crate::interface::handler::{HandleContext, RequestHandler,};
 
 use chrono::Utc;
 use http::status::StatusCode;

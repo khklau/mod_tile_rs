@@ -6,27 +6,9 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::apache2::PoolStored;
-use crate::interface::communication::CommunicationInventory;
-use crate::interface::storage::StorageInventory;
+use crate::interface::context::IOContext;
 use crate::interface::telemetry::TelemetryInventory;
 
-
-pub struct IOContext<'c> {
-    pub communication: &'c mut dyn CommunicationInventory,
-    pub storage: &'c mut dyn StorageInventory,
-}
-
-impl<'c> IOContext<'c> {
-    pub fn new(
-        communication: &'c mut dyn CommunicationInventory,
-        storage: &'c mut dyn StorageInventory,
-    ) -> IOContext<'c> {
-        IOContext {
-            communication,
-            storage,
-        }
-    }
-}
 
 pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,

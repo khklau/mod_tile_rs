@@ -12,10 +12,12 @@ use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::apache2::PoolStored;
 use crate::interface::communication::HttpResponseWriter;
-use crate::interface::context::{HostContext, RequestContext};
-use crate::interface::handler::{
-    HandleContext, IOContext, HandlerInventory,
+use crate::interface::context::{
+    HostContext,
+    IOContext,
+    RequestContext,
 };
+use crate::interface::handler::{HandleContext, HandlerInventory,};
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;

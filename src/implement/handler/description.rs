@@ -4,9 +4,8 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
-use crate::interface::handler::{
-    HandleContext, IOContext, RequestHandler,
-};
+use crate::interface::context::IOContext;
+use crate::interface::handler::{HandleContext, RequestHandler,};
 
 use chrono::Utc;
 use mime;
