@@ -1,6 +1,6 @@
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::interface::handler::HandleContext;
+use crate::interface::context::RequestContext;
 use crate::interface::tile::TileRef;
 
 use std::result::Result;
@@ -9,7 +9,7 @@ use std::result::Result;
 pub trait TileStorage {
     fn read_tile(
         &mut self,
-        context: &HandleContext,
+        context: &RequestContext,
         id: &TileIdentity,
     ) -> Result<TileRef, TileReadError>;
 
@@ -42,7 +42,7 @@ pub mod test_utils {
     impl TileStorage for BlankTileStorage {
         fn read_tile(
             &mut self,
-            _context: &HandleContext,
+            _context: &RequestContext,
             _id: &TileIdentity,
         ) -> Result<TileRef, TileReadError> {
             Ok(

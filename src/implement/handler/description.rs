@@ -4,8 +4,8 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
-use crate::interface::context::{IOContext, ServicesContext,};
-use crate::interface::handler::{HandleContext, RequestHandler,};
+use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
+use crate::interface::handler::RequestHandler;
 
 use chrono::Utc;
 use mime;
@@ -26,7 +26,7 @@ impl DescriptionHandlerState {
 impl RequestHandler for DescriptionHandlerState {
     fn handle(
         &mut self,
-        context: &HandleContext,
+        context: &RequestContext,
         _io: &mut IOContext,
         _services: &mut ServicesContext,
         request: &request::SlippyRequest,
@@ -113,7 +113,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             request.uri = uri.into_raw();
-            let handle_context = HandleContext::new(
+            let handle_context = RequestContext::new(
                 request,
                 &module_config,
             );
@@ -157,7 +157,7 @@ mod tests {
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             request.uri = uri.into_raw();
-            let handle_context = HandleContext {
+            let handle_context = RequestContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,

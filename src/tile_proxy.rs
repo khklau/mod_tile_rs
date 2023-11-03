@@ -18,7 +18,7 @@ use crate::interface::context::{
     RequestContext,
     ServicesContext,
 };
-use crate::interface::handler::{HandleContext, HandlerInventory,};
+use crate::interface::handler::HandlerInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -215,7 +215,7 @@ impl TileProxy {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let context = HandleContext::new(record, &self.config);
+                    let context = RequestContext::new(record, &self.config);
                     let mut io = IOContext {
                         communication: &mut self.comms_state,
                         storage: &mut self.storage_state

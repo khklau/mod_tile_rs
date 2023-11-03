@@ -1,37 +1,13 @@
-use crate::binding::apache2::request_rec;
-use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::apache2::request::Apache2Request;
-use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
-use crate::interface::apache2::PoolStored;
-use crate::interface::context::{IOContext, ServicesContext,};
+use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
 
-
-pub struct HandleContext<'c> {
-    pub module_config: &'c ModuleConfig,
-    pub host: &'c VirtualHost<'c>,
-    pub request: &'c mut Apache2Request<'c>,
-}
-
-impl<'c> HandleContext<'c> {
-    pub fn new(
-        record: &'c mut request_rec,
-        module_config: &'c ModuleConfig,
-    ) -> HandleContext<'c> {
-        HandleContext {
-            module_config,
-            host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_allocate_new(record).unwrap(),
-        }
-    }
-}
 
 pub trait RequestHandler {
     fn handle(
         &mut self,
-        context: &HandleContext,
+        context: &RequestContext,
         io: &mut IOContext,
         services: &mut ServicesContext,
         request: &SlippyRequest,
@@ -66,7 +42,7 @@ pub mod test_utils {
     impl RequestHandler for NoOpRequestHandler {
         fn handle(
             &mut self,
-            _context: &HandleContext,
+            _context: &RequestContext,
             _io: &mut IOContext,
             _services: &mut ServicesContext,
             _request: &request::SlippyRequest,

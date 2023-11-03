@@ -1,6 +1,6 @@
 use crate::schema::communication::error::ResponseWriteError;
 use crate::schema::http::encoding::ContentEncoding;
-use crate::interface::handler::HandleContext;
+use crate::interface::context::RequestContext;
 
 use http::header::{ HeaderName, HeaderValue, ToStrError, };
 use mime::Mime;
@@ -31,7 +31,7 @@ pub enum RenderResponse {
 pub trait BidirectionalChannel {
     fn send_blocking_request(
         &mut self,
-        context: &HandleContext,
+        context: &RequestContext,
         request: &[u8],
         response_buffer: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, CommunicationError>;
@@ -112,7 +112,7 @@ pub mod test_utils {
     impl BidirectionalChannel for EmptyResultBiChannel {
         fn send_blocking_request(
             &mut self,
-            _context: &HandleContext,
+            _context: &RequestContext,
             _request: &[u8],
             _response_buffer: Option<Vec<u8>>,
         ) -> Result<Vec<u8>, CommunicationError> {
