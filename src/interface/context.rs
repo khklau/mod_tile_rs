@@ -21,3 +21,7 @@ pub struct IOContext<'c> {
     pub communication: &'c mut dyn CommunicationInventory,
     pub storage: &'c mut dyn StorageInventory,
 }
+
+pub struct ServicesContext<'c> {
+    pub telemetry: &'c dyn TelemetryInventory,
+}

@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::interface::context::IOContext;
+use crate::interface::context::{IOContext, ServicesContext,};
 use crate::interface::handler::{HandleContext, RequestHandler,};
 
 use chrono::Utc;
@@ -26,11 +26,12 @@ impl StatisticsHandlerState {
 
     fn report(
         &self,
-        context: &HandleContext
+        context: &HandleContext,
+        services: &mut ServicesContext,
     ) -> response::Statistics {
         let mut result = response::Statistics::new();
-        let response_metrics = context.telemetry.response_metrics();
-        let tile_handling_metrics = context.telemetry.tile_handling_metrics();
+        let response_metrics = services.telemetry.response_metrics();
+        let tile_handling_metrics = services.telemetry.tile_handling_metrics();
         for status_code in response_metrics.iterate_status_codes_responded() {
             let count = response_metrics.count_response_by_status_code(&status_code);
             match &status_code {
@@ -91,6 +92,7 @@ impl RequestHandler for StatisticsHandlerState {
         &mut self,
         context: &HandleContext,
         _io: &mut IOContext,
+        services: &mut ServicesContext,
         request: &request::SlippyRequest,
     ) -> HandleOutcome {
         let before_timestamp = Utc::now();
@@ -100,7 +102,7 @@ impl RequestHandler for StatisticsHandlerState {
                 return HandleOutcome::Ignored;
             },
         };
-        let statistics = self.report(context);
+        let statistics = self.report(context, services);
         let response = response::SlippyResponse {
             header: response::Header::new(
                 context.request.record,
@@ -172,6 +174,9 @@ mod tests {
                 communication: &mut communication,
                 storage: &mut storage,
             };
+            let mut services = ServicesContext {
+                telemetry: &telemetry,
+            };
             let request = request::SlippyRequest {
                 header: request::Header::new_with_layer(
                     handle_context.request.record,
@@ -180,7 +185,15 @@ mod tests {
                 body: request::BodyVariant::DescribeLayer,
             };
 
-            assert!(stat_state.handle(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
+            assert!(
+                stat_state.handle(
+                    &handle_context,
+                    &mut io_context,
+                    &mut services,
+                    &request
+                ).is_ignored(),
+                "Expected to not handle"
+            );
             Ok(())
         })
     }
@@ -356,11 +369,13 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
-                telemetry: &telemetry,
             };
             let mut io_context = IOContext {
                 communication: &mut communication,
                 storage: &mut storage,
+            };
+            let mut services = ServicesContext {
+                telemetry: &telemetry,
             };
             let request = request::SlippyRequest {
                 header: request::Header::new_with_layer(
@@ -370,7 +385,12 @@ mod tests {
                 body: request::BodyVariant::ReportStatistics,
             };
 
-            let actual_response = handler_state.handle(&handle_context, &mut io_context, &request).expect_processed().result?;
+            let actual_response = handler_state.handle(
+                &handle_context,
+                &mut io_context,
+                &mut services,
+                &request
+            ).expect_processed().result?;
             let mut expected_data = response::Statistics::new();
             expected_data.number_response_200 = 5;
             expected_data.number_fresh_cache = 2;

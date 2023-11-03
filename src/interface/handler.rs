@@ -6,7 +6,7 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::apache2::PoolStored;
-use crate::interface::context::IOContext;
+use crate::interface::context::{IOContext, ServicesContext,};
 use crate::interface::telemetry::TelemetryInventory;
 
 
@@ -14,7 +14,6 @@ pub struct HandleContext<'c> {
     pub module_config: &'c ModuleConfig,
     pub host: &'c VirtualHost<'c>,
     pub request: &'c mut Apache2Request<'c>,
-    pub telemetry: &'c dyn TelemetryInventory,
 }
 
 impl<'c> HandleContext<'c> {
@@ -27,7 +26,6 @@ impl<'c> HandleContext<'c> {
             module_config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
             request: Apache2Request::find_or_allocate_new(record).unwrap(),
-            telemetry,
         }
     }
 }
@@ -37,6 +35,7 @@ pub trait RequestHandler {
         &mut self,
         context: &HandleContext,
         io: &mut IOContext,
+        services: &mut ServicesContext,
         request: &SlippyRequest,
     ) -> HandleOutcome;
 
@@ -71,6 +70,7 @@ pub mod test_utils {
             &mut self,
             _context: &HandleContext,
             _io: &mut IOContext,
+            _services: &mut ServicesContext,
             _request: &request::SlippyRequest,
         ) -> HandleOutcome {
             HandleOutcome::Ignored

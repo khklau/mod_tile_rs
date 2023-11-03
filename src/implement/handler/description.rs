@@ -4,7 +4,7 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
-use crate::interface::context::IOContext;
+use crate::interface::context::{IOContext, ServicesContext,};
 use crate::interface::handler::{HandleContext, RequestHandler,};
 
 use chrono::Utc;
@@ -28,6 +28,7 @@ impl RequestHandler for DescriptionHandlerState {
         &mut self,
         context: &HandleContext,
         _io: &mut IOContext,
+        _services: &mut ServicesContext,
         request: &request::SlippyRequest,
     ) -> HandleOutcome {
         let before_timestamp = Utc::now();
@@ -121,6 +122,9 @@ mod tests {
                 communication: &mut communication,
                 storage: &mut storage,
             };
+            let mut services = ServicesContext {
+                telemetry: &telemetry,
+            };
             let request = request::SlippyRequest {
                 header: request::Header::new_with_layer(
                     handle_context.request.record,
@@ -129,7 +133,15 @@ mod tests {
                 body: request::BodyVariant::ReportStatistics,
             };
 
-            assert!(description_state.handle(&handle_context, &mut io_context, &request).is_ignored(), "Expected to not handle");
+            assert!(
+                description_state.handle(
+                    &handle_context,
+                    &mut io_context,
+                    &mut services,
+                    &request
+                ).is_ignored(),
+                "Expected to not handle"
+            );
             Ok(())
         })
     }
@@ -150,11 +162,13 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(request)?,
                 request: Apache2Request::create_with_tile_config(request)?,
-                telemetry: &telemetry,
             };
             let mut io_context = IOContext {
                 communication: &mut communication,
                 storage: &mut storage,
+            };
+            let mut services = ServicesContext {
+                telemetry: &telemetry,
             };
             let request = request::SlippyRequest {
                 header: request::Header::new_with_layer(
@@ -164,7 +178,12 @@ mod tests {
                 body: request::BodyVariant::DescribeLayer,
             };
 
-            let actual_response = description_state.handle(&handle_context, &mut io_context, &request).expect_processed().result?;
+            let actual_response = description_state.handle(
+                &handle_context,
+                &mut io_context,
+                &mut services,
+                &request
+            ).expect_processed().result?;
             let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",
