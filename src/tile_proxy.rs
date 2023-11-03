@@ -215,7 +215,10 @@ impl TileProxy {
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
                     let context = HandleContext::new(record, &self.config, &self.telemetry_state);
-                    let mut io = IOContext::new(&mut self.comms_state, &mut self.storage_state);
+                    let mut io = IOContext{
+                        communication: &mut self.comms_state,
+                        storage: &mut self.storage_state
+                    };
                     let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
                         (*handler).handle(&context, &mut io, request).as_some_when_processed(handler.type_name())
                     });

@@ -3,6 +3,7 @@ use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::interface::communication::CommunicationInventory;
 use crate::interface::storage::StorageInventory;
+use crate::interface::telemetry::TelemetryInventory;
 
 
 pub struct HostContext<'c> {
@@ -19,16 +20,4 @@ pub struct RequestContext<'c> {
 pub struct IOContext<'c> {
     pub communication: &'c mut dyn CommunicationInventory,
     pub storage: &'c mut dyn StorageInventory,
-}
-
-impl<'c> IOContext<'c> {
-    pub fn new(
-        communication: &'c mut dyn CommunicationInventory,
-        storage: &'c mut dyn StorageInventory,
-    ) -> IOContext<'c> {
-        IOContext {
-            communication,
-            storage,
-        }
-    }
 }

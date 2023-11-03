@@ -168,10 +168,10 @@ mod tests {
                 &module_config,
                 &telemetry,
             );
-            let mut io_context = IOContext::new(
-                &mut communication,
-                &mut storage,
-            );
+            let mut io_context = IOContext {
+                communication: &mut communication,
+                storage: &mut storage,
+            };
             let request = request::SlippyRequest {
                 header: request::Header::new_with_layer(
                     handle_context.request.record,
@@ -358,10 +358,10 @@ mod tests {
                 request: Apache2Request::create_with_tile_config(request)?,
                 telemetry: &telemetry,
             };
-            let mut io_context = IOContext::new(
-                &mut communication,
-                &mut storage,
-            );
+            let mut io_context = IOContext {
+                communication: &mut communication,
+                storage: &mut storage,
+            };
             let request = request::SlippyRequest {
                 header: request::Header::new_with_layer(
                     handle_context.request.record,
