@@ -1,4 +1,4 @@
-use crate::interface::slippy::{
+use crate::interface::adapter::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
 use crate::interface::telemetry::TelemetryInventory;

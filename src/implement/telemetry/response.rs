@@ -8,7 +8,7 @@ use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::identity::LayerName;
 use crate::interface::communication::HttpResponseWriter;
 use crate::interface::context::RequestContext;
-use crate::interface::slippy::WriteResponseObserver;
+use crate::interface::adapter::slippy::WriteResponseObserver;
 use crate::interface::telemetry::ResponseMetrics;
 
 use chrono::Duration;

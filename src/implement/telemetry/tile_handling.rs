@@ -9,7 +9,7 @@ use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::interface::communication::HttpResponseWriter;
 use crate::interface::context::RequestContext;
-use crate::interface::slippy::WriteResponseObserver;
+use crate::interface::adapter::slippy::WriteResponseObserver;
 use crate::interface::telemetry::TileHandlingMetrics;
 
 use chrono::Duration;

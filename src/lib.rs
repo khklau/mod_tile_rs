@@ -49,12 +49,14 @@ mod schema {
     }
 }
 mod interface {
+    pub mod adapter {
+        pub mod slippy;
+    }
     pub mod apache2;
     pub mod context;
     pub mod communication;
     pub mod handler;
     pub mod renderd;
-    pub mod slippy;
     pub mod storage;
     pub mod telemetry;
     pub mod tile;
