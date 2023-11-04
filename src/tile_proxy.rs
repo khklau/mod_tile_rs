@@ -23,7 +23,7 @@ use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::implement::communication::state::CommunicationState;
 use crate::implement::handler::inventory::{HandlerObserverInventory, HandlerState,};
-use crate::implement::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
+use crate::implement::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::implement::storage::state::StorageState;
 use crate::implement::telemetry::inventory::TelemetryState;
 

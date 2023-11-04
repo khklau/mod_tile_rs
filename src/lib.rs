@@ -79,6 +79,13 @@ mod framework {
     }
 }
 mod implement {
+    pub mod adapter {
+        pub mod slippy {
+            pub mod inventory;
+            pub mod reader;
+            pub mod writer;
+        }
+    }
     pub mod communication {
         pub mod http_exchange;
         pub mod renderd_socket;
@@ -94,11 +101,6 @@ mod implement {
         pub mod protocol;
         pub mod state;
         mod status;
-    }
-    pub mod slippy {
-        pub mod inventory;
-        pub mod reader;
-        pub mod writer;
     }
     pub mod storage {
         pub mod file_system;

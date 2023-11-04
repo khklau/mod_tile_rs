@@ -2,8 +2,8 @@ use crate::interface::adapter::slippy::{
     ReadRequestFunc, ReadRequestObserver, WriteResponseFunc, WriteResponseObserver,
 };
 use crate::interface::telemetry::TelemetryInventory;
-use crate::implement::slippy::reader::SlippyRequestReader;
-use crate::implement::slippy::writer::SlippyResponseWriter;
+use crate::implement::adapter::slippy::reader::SlippyRequestReader;
+use crate::implement::adapter::slippy::writer::SlippyResponseWriter;
 use crate::utility::debugging::function_name;
 
 
