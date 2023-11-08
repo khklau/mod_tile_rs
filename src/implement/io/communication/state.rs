@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::interface::communication::{BidirectionalChannel, CommunicationInventory,};
-use crate::implement::communication::renderd_socket::RenderdSocket;
+use crate::interface::io::communication::{BidirectionalChannel, CommunicationInventory,};
+use crate::implement::io::communication::renderd_socket::RenderdSocket;
 
 
 pub struct CommunicationState {

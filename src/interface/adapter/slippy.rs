@@ -2,7 +2,7 @@ use crate::schema::apache2::request::Apache2Request;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
-use crate::interface::communication::HttpResponseWriter;
+use crate::interface::io::communication::HttpResponseWriter;
 use crate::interface::context::{HostContext, RequestContext,};
 
 

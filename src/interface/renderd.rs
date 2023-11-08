@@ -5,7 +5,7 @@ use crate::schema::renderd::request::{RenderRequestCommand, RenderRequestVersion
 use crate::schema::renderd::status::DataImportStatus;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::tile::identity::{LayerName, TileIdentity,};
-use crate::interface::communication::CommunicationInventory;
+use crate::interface::io::communication::CommunicationInventory;
 
 
 pub fn create_request(

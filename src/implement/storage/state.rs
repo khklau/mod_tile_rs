@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::interface::storage::{StorageInventory, TileStorage,};
+use crate::interface::io::storage::{StorageInventory, TileStorage,};
 use crate::implement::storage::file_system::FileSystem;
 use crate::implement::storage::variant::StorageVariant;
 

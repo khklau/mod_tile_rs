@@ -6,7 +6,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::identity::LayerName;
-use crate::interface::communication::HttpResponseWriter;
+use crate::interface::io::communication::HttpResponseWriter;
 use crate::interface::context::RequestContext;
 use crate::interface::adapter::slippy::WriteResponseObserver;
 use crate::interface::telemetry::ResponseMetrics;
@@ -308,7 +308,7 @@ mod tests {
     use crate::interface::apache2::PoolStored;
     use crate::interface::tile::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::implement::communication::http_exchange::test_utils::MockWriter;
+    use crate::implement::io::communication::http_exchange::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;

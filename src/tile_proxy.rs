@@ -10,7 +10,7 @@ use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
 use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::apache2::PoolStored;
-use crate::interface::communication::HttpResponseWriter;
+use crate::interface::io::communication::HttpResponseWriter;
 use crate::interface::context::{
     HostContext,
     IOContext,
@@ -21,7 +21,7 @@ use crate::interface::handler::HandlerInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
-use crate::implement::communication::state::CommunicationState;
+use crate::implement::io::communication::state::CommunicationState;
 use crate::implement::handler::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::implement::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::implement::storage::state::StorageState;

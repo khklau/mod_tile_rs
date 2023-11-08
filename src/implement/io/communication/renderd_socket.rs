@@ -1,4 +1,4 @@
-use crate::interface::communication::{
+use crate::interface::io::communication::{
     CommunicationError, BidirectionalChannel,
 };
 use crate::interface::context::RequestContext;
