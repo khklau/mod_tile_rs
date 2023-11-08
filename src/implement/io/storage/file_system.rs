@@ -5,7 +5,7 @@ use crate::schema::tile::identity::TileIdentity;
 use crate::interface::context::RequestContext;
 use crate::interface::io::storage::TileStorage;
 use crate::interface::tile::TileRef;
-use crate::implement::storage::meta_tile::MetaTile;
+use crate::implement::io::storage::meta_tile::MetaTile;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;

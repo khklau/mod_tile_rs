@@ -10,8 +10,8 @@ use crate::schema::tile::source::TileSource;
 use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
 use crate::interface::handler::RequestHandler;
 use crate::implement::io::communication::renderd_socket::RenderdSocket;
-use crate::implement::storage::file_system::FileSystem;
-use crate::implement::storage::variant::StorageVariant;
+use crate::implement::io::storage::file_system::FileSystem;
+use crate::implement::io::storage::variant::StorageVariant;
 
 use chrono::Utc;
 

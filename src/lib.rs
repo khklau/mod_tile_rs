@@ -94,6 +94,13 @@ mod implement {
             pub mod renderd_socket;
             pub mod state;
         }
+        pub mod storage {
+            pub mod file_system;
+            pub mod memcached;
+            pub mod state;
+            pub mod variant;
+            mod meta_tile;
+        }
     }
     pub mod handler {
         pub mod description;
@@ -105,13 +112,6 @@ mod implement {
         pub mod protocol;
         pub mod state;
         mod status;
-    }
-    pub mod storage {
-        pub mod file_system;
-        pub mod memcached;
-        pub mod state;
-        pub mod variant;
-        mod meta_tile;
     }
     pub mod telemetry{
         pub mod counters;
