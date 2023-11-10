@@ -176,10 +176,9 @@ mod tests {
                 telemetry: &telemetry,
             };
             let request = request::SlippyRequest {
-                header: request::Header::new_with_layer(
-                    handle_context.request.record,
-                    &layer_name,
-                ),
+                header: request::Header {
+                    layer: layer_name.clone(),
+                },
                 body: request::BodyVariant::DescribeLayer,
             };
 
@@ -376,10 +375,9 @@ mod tests {
                 telemetry: &telemetry,
             };
             let request = request::SlippyRequest {
-                header: request::Header::new_with_layer(
-                    handle_context.request.record,
-                    &layer_name,
-                ),
+                header: request::Header {
+                    layer: layer_name.clone(),
+                },
                 body: request::BodyVariant::ReportStatistics,
             };
 

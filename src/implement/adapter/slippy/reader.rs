@@ -10,6 +10,7 @@ use crate::schema::slippy::request::{
     SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
 };
 use crate::schema::slippy::result::ReadOutcome;
+use crate::schema::tile::identity::LayerName;
 use crate::interface::context::HostContext;
 
 use const_format::concatcp;
@@ -107,9 +108,9 @@ impl StatisticsRequestParser {
             ProcessOutcome::Processed(
                 Ok(
                     SlippyRequest {
-                        header: Header::new(
-                            request.record,
-                        ),
+                        header: Header {
+                            layer: LayerName::new(),
+                        },
                         body: BodyVariant::ReportStatistics,
                     }
                 )
@@ -134,10 +135,9 @@ impl DescribeLayerRequestParser {
             ProcessOutcome::Processed(
                 Ok(
                     SlippyRequest {
-                        header: Header::new_with_layer(
-                            request.record,
-                            &(layer_config.name),
-                        ),
+                        header: Header {
+                            layer: layer_config.name.clone(),
+                        },
                         body: BodyVariant::DescribeLayer
                     }
                 )
@@ -194,10 +194,9 @@ impl ServeTileV3RequestParser {
                     return ProcessOutcome::Processed(
                         Ok(
                             SlippyRequest {
-                                header: Header::new_with_layer(
-                                    request.record,
-                                    &(layer_config.name),
-                                ),
+                                header: Header {
+                                    layer: layer_config.name.clone(),
+                                },
                                 body: BodyVariant::ServeTileV3(
                                     ServeTileRequestV3 {
                                         parameter,
@@ -240,10 +239,9 @@ impl ServeTileV3RequestParser {
                     return ProcessOutcome::Processed(
                         Ok(
                             SlippyRequest {
-                                header: Header::new_with_layer(
-                                    request.record,
-                                    &(layer_config.name),
-                                ),
+                                header: Header {
+                                    layer: layer_config.name.clone(),
+                                },
                                 body: BodyVariant::ServeTileV3(
                                     ServeTileRequestV3 {
                                         parameter,
@@ -300,10 +298,9 @@ impl ServeTileV2RequestParser {
                 return ProcessOutcome::Processed(
                     Ok(
                         SlippyRequest {
-                            header: Header::new_with_layer(
-                                request.record,
-                                &(layer_config.name),
-                            ),
+                            header: Header {
+                                layer: layer_config.name.clone(),
+                            },
                             body: BodyVariant::ServeTileV2(
                                 ServeTileRequestV2 {
                                     x,
@@ -345,10 +342,9 @@ impl ServeTileV2RequestParser {
                 return ProcessOutcome::Processed(
                     Ok(
                         SlippyRequest {
-                            header: Header::new_with_layer(
-                                request.record,
-                                &(layer_config.name),
-                            ),
+                            header: Header {
+                                layer: layer_config.name.clone(),
+                            },
                             body: BodyVariant::ServeTileV2(
                                 ServeTileRequestV2 {
                                     x,
@@ -389,7 +385,6 @@ mod tests {
     use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
-    use crate::schema::tile::identity::LayerName;
     use crate::interface::apache2::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use std::boxed::Box;
@@ -410,9 +405,9 @@ mod tests {
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
-            let expected_header = Header::new(
-                request.record,
-            );
+            let expected_header = Header {
+                layer: LayerName::new(),
+            };
             assert_eq!(expected_header, actual_request.header, "Wrong header generated");
             assert!(matches!(actual_request.body, BodyVariant::ReportStatistics));
             Ok(())
@@ -437,10 +432,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::DescribeLayer,
             };
             assert_eq!(expected_request, actual_request, "Incorrect parsing");
@@ -467,10 +461,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::ServeTileV3(
                     ServeTileRequestV3 {
                         parameter: String::from("foo"),
@@ -534,10 +527,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::ServeTileV3(
                     ServeTileRequestV3 {
                         parameter: String::from("foo"),
@@ -573,10 +565,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::ServeTileV3(
                     ServeTileRequestV3 {
                         parameter: String::from("foo"),
@@ -611,10 +602,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::ServeTileV2(
                     ServeTileRequestV2 {
                         x: 1,
@@ -675,10 +665,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::ServeTileV2(
                     ServeTileRequestV2 {
                         x: 1,
@@ -712,10 +701,9 @@ mod tests {
             let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_request = SlippyRequest {
-                header: Header::new_with_layer(
-                    request.record,
-                    &expected_layer,
-                ),
+                header: Header {
+                    layer: expected_layer.clone(),
+                },
                 body: BodyVariant::ServeTileV2(
                     ServeTileRequestV2 {
                         x: 1,

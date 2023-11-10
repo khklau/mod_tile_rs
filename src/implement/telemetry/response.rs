@@ -332,10 +332,9 @@ mod tests {
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
-                        header: request::Header::new_with_layer(
-                            context.request.record,
-                            &layer_name,
-                        ),
+                        header: request::Header {
+                            layer: layer_name.clone(),
+                        },
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
                                 parameter: String::from("foo"),

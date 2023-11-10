@@ -318,6 +318,7 @@ mod tests {
     use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
+    use crate::schema::tile::identity::LayerName;
     use crate::framework::apache2::record::test_utils::{ with_request_rec, with_server_rec };
     use chrono::Utc;
     use std::boxed::Box;
@@ -375,9 +376,9 @@ mod tests {
                 let read_outcome = ReadOutcome::Processed(
                     Ok(
                         request::SlippyRequest {
-                            header: request::Header::new(
-                                context.record,
-                            ),
+                            header: request::Header {
+                                layer: LayerName::new(),
+                            },
                             body: request::BodyVariant::ReportStatistics,
                         }
                     )
@@ -403,9 +404,9 @@ mod tests {
                 let read_outcome = ReadOutcome::Processed(
                     Ok(
                         request::SlippyRequest {
-                            header: request::Header::new(
-                                context.record,
-                            ),
+                            header: request::Header {
+                                layer: LayerName::new(),
+                            },
                             body: request::BodyVariant::ReportStatistics,
                         }
                     )

@@ -288,9 +288,9 @@ mod tests {
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
-                        header: request::Header::new(
-                            context.request.record,
-                        ),
+                        header: request::Header {
+                            layer: LayerName::new(),
+                        },
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
                                 parameter: String::from("foo"),
@@ -373,9 +373,9 @@ mod tests {
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
-                        header: request::Header::new(
-                            context.request.record,
-                        ),
+                        header: request::Header {
+                            layer: LayerName::new(),
+                        },
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
                                 parameter: String::from("foo"),
@@ -458,9 +458,9 @@ mod tests {
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
-                        header: request::Header::new(
-                            context.request.record,
-                        ),
+                        header: request::Header {
+                            layer: LayerName::new(),
+                        },
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {
                                 parameter: String::from("foo"),
