@@ -1,11 +1,6 @@
-use crate::binding::apache2::request_rec;
 use crate::schema::apache2::config::MAX_ZOOM_SERVER;
-use crate::schema::apache2::request::Apache2Request;
-use crate::schema::apache2::connection::Connection;
-use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::interface::apache2::PoolStored;
 use crate::interface::tile::TileRef;
 
 use mime::Mime;
@@ -14,7 +9,6 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::clone::Clone;
 use std::default::Default;
-use std::ffi::CString;
 use std::string::String;
 use std::vec::Vec;
 
@@ -27,24 +21,7 @@ pub struct SlippyResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Header {
-    pub host_key: CString,
-    pub connection_key: CString,
-    pub request_key: CString,
     pub mime_type: Mime,
-}
-
-impl Header {
-    pub fn new(
-        request: &request_rec,
-        mime_type: &Mime,
-    ) -> Header {
-        Header {
-            host_key: VirtualHost::search_pool_key(request),
-            connection_key: Connection::search_pool_key(request),
-            request_key: Apache2Request::search_pool_key(request),
-            mime_type: mime_type.clone(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

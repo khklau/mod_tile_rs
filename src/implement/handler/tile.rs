@@ -77,10 +77,9 @@ impl RequestHandler for TileHandlerState {
             },
         };
         let response = response::SlippyResponse {
-            header: response::Header::new(
-                context.request.record,
-                &tile_ref.media_type,
-            ),
+            header: response::Header {
+                mime_type: tile_ref.media_type.clone(),
+            },
             body: response::BodyVariant::Tile(
                 response::TileResponse {
                     source: TileSource::Cache,

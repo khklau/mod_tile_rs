@@ -361,10 +361,9 @@ mod tests {
                 encoding: ContentEncoding::NotCompressed,
             };
             let response = response::SlippyResponse {
-                header: response::Header::new(
-                    context.request.record,
-                    &mime::APPLICATION_JSON,
-                ),
+                header: response::Header {
+                    mime_type: mime::APPLICATION_JSON.clone(),
+                },
                 body: response::BodyVariant::Tile(
                     response::TileResponse {
                         source: TileSource::Render,

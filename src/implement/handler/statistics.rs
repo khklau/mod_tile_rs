@@ -104,10 +104,9 @@ impl RequestHandler for StatisticsHandlerState {
         };
         let statistics = self.report(context, services);
         let response = response::SlippyResponse {
-            header: response::Header::new(
-                context.request.record,
-                &mime::TEXT_PLAIN,
-            ),
+            header: response::Header {
+                mime_type: mime::TEXT_PLAIN.clone(),
+            },
             body: response::BodyVariant::Statistics(statistics),
         };
         let after_timestamp = Utc::now();
@@ -407,10 +406,9 @@ mod tests {
             expected_data.number_response_200_by_layer.insert(String::from(layer_name.as_str()), 5);
             expected_data.number_response_404_by_layer.insert(String::from(layer_name.as_str()), 1);
             let expected_response = response::SlippyResponse {
-                header: response::Header::new(
-                    handle_context.request.record,
-                    &mime::TEXT_PLAIN,
-                ),
+                header: response::Header {
+                    mime_type: mime::TEXT_PLAIN.clone(),
+                },
                 body: response::BodyVariant::Statistics(expected_data),
             };
             assert_eq!(expected_response, actual_response, "Incorrect handling");

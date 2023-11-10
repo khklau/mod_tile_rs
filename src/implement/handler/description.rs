@@ -40,10 +40,9 @@ impl RequestHandler for DescriptionHandlerState {
         };
         let description = describe(context.module_config, layer);
         let response = response::SlippyResponse {
-            header: response::Header::new(
-                context.request.record,
-                &mime::APPLICATION_JSON,
-            ),
+            header: response::Header {
+                mime_type: mime::APPLICATION_JSON.clone(),
+            },
             body: response::BodyVariant::Description(description),
         };
         let after_timestamp = Utc::now();
@@ -194,10 +193,9 @@ mod tests {
                 tiles: vec![String::from("http://localhost/osm/{z}/{x}/{y}.png")],
             };
             let expected_response = response::SlippyResponse {
-                header: response::Header::new(
-                    handle_context.request.record,
-                    &mime::APPLICATION_JSON,
-                ),
+                header: response::Header {
+                    mime_type: mime::APPLICATION_JSON.clone(),
+                },
                 body: response::BodyVariant::Description(expected_data),
             };
             assert_eq!(expected_response, actual_response, "Incorrect handling");

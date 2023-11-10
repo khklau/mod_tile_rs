@@ -416,10 +416,9 @@ mod tests {
                         after_timestamp: Utc::now(),
                         result: Ok(
                             response::SlippyResponse {
-                                header: response::Header::new(
-                                    context.record,
-                                    &mime::APPLICATION_JSON,
-                                ),
+                                header: response::Header {
+                                    mime_type: mime::APPLICATION_JSON.clone(),
+                                },
                                 body: response::BodyVariant::Description(
                                     response::Description {
                                         tilejson: "2.0.0",
