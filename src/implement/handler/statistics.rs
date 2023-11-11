@@ -140,11 +140,11 @@ mod tests {
     use crate::interface::adapter::slippy::{ReadRequestObserver, WriteResponseObserver,};
     use crate::interface::adapter::slippy::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
     use crate::interface::io::storage::test_utils::BlankStorageInventory;
-    use crate::interface::telemetry::{
+    use crate::interface::service::telemetry::{
         MockResponseMetrics, MockTileHandlingMetrics,
         ResponseMetrics, TileHandlingMetrics, TelemetryInventory
     };
-    use crate::interface::telemetry::test_utils::NoOpZeroTelemetryInventory;
+    use crate::interface::service::telemetry::test_utils::NoOpZeroTelemetryInventory;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use mockall::predicate::eq;

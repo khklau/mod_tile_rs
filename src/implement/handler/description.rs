@@ -94,7 +94,7 @@ mod tests {
     use crate::interface::apache2::PoolStored;
     use crate::interface::io::communication::test_utils::EmptyResultCommunicationInventory;
     use crate::interface::io::storage::test_utils::BlankStorageInventory;
-    use crate::interface::telemetry::test_utils::NoOpZeroTelemetryInventory;
+    use crate::interface::service::telemetry::test_utils::NoOpZeroTelemetryInventory;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use std::error::Error;

@@ -57,11 +57,13 @@ mod interface {
         pub mod communication;
         pub mod storage;
     }
+    pub mod service {
+        pub mod telemetry;
+    }
     pub mod apache2;
     pub mod context;
     pub mod handler;
     pub mod renderd;
-    pub mod telemetry;
 }
 #[macro_use]
 mod utility {
@@ -102,6 +104,15 @@ mod implement {
             mod meta_tile;
         }
     }
+    pub mod service {
+        pub mod telemetry{
+            pub mod counters;
+            pub mod inventory;
+            pub mod response;
+            pub mod tile_handling;
+            pub mod transaction;
+        }
+    }
     pub mod handler {
         pub mod description;
         pub mod inventory;
@@ -112,13 +123,6 @@ mod implement {
         pub mod protocol;
         pub mod state;
         mod status;
-    }
-    pub mod telemetry{
-        pub mod counters;
-        pub mod inventory;
-        pub mod response;
-        pub mod tile_handling;
-        pub mod transaction;
     }
 }
 mod tile_proxy;

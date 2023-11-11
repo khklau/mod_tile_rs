@@ -2,15 +2,15 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::interface::handler::HandleRequestObserver;
 use crate::interface::adapter::slippy::{ReadRequestObserver, WriteResponseObserver,};
-use crate::interface::telemetry::{
+use crate::interface::service::telemetry::{
     ResponseMetrics, TelemetryInventory, TileHandlingMetrics,
 };
-use crate::implement::telemetry::counters::{
+use crate::implement::service::telemetry::counters::{
     HandleCounter, ReadCounter, WriteCounter,
 };
-use crate::implement::telemetry::response::ResponseAnalysis;
-use crate::implement::telemetry::tile_handling::TileHandlingAnalysis;
-use crate::implement::telemetry::transaction::TransactionTrace;
+use crate::implement::service::telemetry::response::ResponseAnalysis;
+use crate::implement::service::telemetry::tile_handling::TileHandlingAnalysis;
+use crate::implement::service::telemetry::transaction::TransactionTrace;
 
 use std::result::Result;
 
