@@ -19,6 +19,7 @@ mod schema {
         pub mod identity;
         pub mod source;
         pub mod status;
+        pub mod tile_ref;
     }
     #[macro_use]
     pub mod apache2 {
@@ -61,7 +62,6 @@ mod interface {
     pub mod handler;
     pub mod renderd;
     pub mod telemetry;
-    pub mod tile;
 }
 #[macro_use]
 mod utility {

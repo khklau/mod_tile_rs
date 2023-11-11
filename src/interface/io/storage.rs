@@ -1,7 +1,7 @@
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
 use crate::interface::context::RequestContext;
-use crate::interface::tile::TileRef;
+use crate::schema::tile::tile_ref::TileRef;
 
 use std::result::Result;
 

@@ -306,7 +306,7 @@ mod tests {
     use crate::schema::tile::age::TileAge;
     use crate::schema::tile::source::TileSource;
     use crate::interface::apache2::PoolStored;
-    use crate::interface::tile::TileRef;
+    use crate::schema::tile::tile_ref::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::implement::io::communication::http_exchange::test_utils::MockWriter;
     use chrono::Utc;

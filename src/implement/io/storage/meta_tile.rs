@@ -7,7 +7,7 @@ use crate::schema::tile::error::{
     InvalidMetaTileError, InvalidCompressionError, TileOffsetOutOfBoundsError,
 };
 use crate::schema::tile::identity::TileIdentity;
-use crate::interface::tile::TileRef;
+use crate::schema::tile::tile_ref::TileRef;
 
 use mime::Mime;
 

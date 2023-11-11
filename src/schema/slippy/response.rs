@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::MAX_ZOOM_SERVER;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::interface::tile::TileRef;
+use crate::schema::tile::tile_ref::TileRef;
 
 use mime::Mime;
 use serde::Serialize;
