@@ -59,11 +59,11 @@ mod interface {
     }
     pub mod service {
         pub mod telemetry;
+        pub mod renderer;
     }
     pub mod apache2;
     pub mod context;
     pub mod handler;
-    pub mod renderd;
 }
 #[macro_use]
 mod utility {
@@ -112,17 +112,17 @@ mod implement {
             pub mod tile_handling;
             pub mod transaction;
         }
+        pub mod renderer {
+            pub mod protocol;
+            pub mod state;
+            mod status;
+        }
     }
     pub mod handler {
         pub mod description;
         pub mod inventory;
         pub mod statistics;
         pub mod tile;
-    }
-    pub mod renderd {
-        pub mod protocol;
-        pub mod state;
-        mod status;
     }
 }
 mod tile_proxy;

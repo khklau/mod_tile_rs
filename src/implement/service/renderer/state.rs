@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::interface::renderd::TileRenderer;
+use crate::interface::service::renderer::TileRenderer;
 
 use chrono::{DateTime, Duration, Utc};
 
