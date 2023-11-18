@@ -1,6 +1,5 @@
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
-use crate::schema::slippy::result::ReadOutcome;
 use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
 
 
@@ -26,7 +25,6 @@ pub trait HandleRequestObserver {
         request: &SlippyRequest,
         handle_outcome: &HandleOutcome,
         handler_name: &'static str,
-        read_outcome: &ReadOutcome,
     ) -> ();
 }
 
@@ -69,7 +67,6 @@ pub mod test_utils {
             _request: &SlippyRequest,
             _handle_outcome: &HandleOutcome,
             _handler_name: &'static str,
-            _read_outcome: &ReadOutcome,
         ) -> () {
         }
     }

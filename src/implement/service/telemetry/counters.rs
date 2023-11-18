@@ -53,7 +53,6 @@ impl HandleRequestObserver for HandleCounter {
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,
         _handler_name: &'static str,
-        _read_outcome: &ReadOutcome,
     ) -> () {
         self.count += 1;
     }

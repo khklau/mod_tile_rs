@@ -38,7 +38,6 @@ impl HandleRequestObserver for TransactionTrace {
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,
         _handler_name: &'static str,
-        _read_outcome: &ReadOutcome,
     ) -> () {
     }
 }
