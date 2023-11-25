@@ -7,6 +7,7 @@ use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
+use crate::schema::slippy::request::{BodyVariant, SlippyRequest};
 use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::apache2::PoolStored;
@@ -17,6 +18,7 @@ use crate::interface::context::{
     RequestContext,
     ServicesContext,
 };
+use crate::interface::handler::RequestHandler;
 use crate::interface::handler::HandlerInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
@@ -214,30 +216,16 @@ impl TileProxy {
             ReadOutcome::Ignored => HandleOutcome::Ignored,
             ReadOutcome::Processed(result) => match result {
                 Ok(request) => {
-                    let context = RequestContext::new(record, &self.config);
-                    let mut io = IOContext {
-                        communication: &mut self.comms_state,
-                        storage: &mut self.storage_state
-                    };
-                    let mut services = ServicesContext {
-                        telemetry: &self.telemetry_state,
-                    };
-                    let outcome_option = self.handler_state.request_handlers().iter_mut().find_map(|handler| {
-                        (*handler).handle(
-                            &context,
-                            &mut io,
-                            &mut services,
-                            request
-                        ).as_some_when_processed(handler.type_name())
-                    });
-                    match outcome_option {
-                        Some((handle_outcome, handler_name)) => {
-                            for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                                (*observer_iter).on_handle(request, &handle_outcome, handler_name, read_outcome);
-                            }
-                            handle_outcome
+                    match &(request.body) {
+                        BodyVariant::DescribeLayer => {
+                            self.call_description_handler(record, request)
                         },
-                        None => HandleOutcome::Ignored,
+                        BodyVariant::ReportStatistics => {
+                            self.call_statistics_handler(record, request)
+                        },
+                        BodyVariant::ServeTileV2(_) | BodyVariant::ServeTileV3(_) => {
+                            self.call_tile_handler(record, request)
+                        }
                     }
                 },
                 Err(err) => {
@@ -255,6 +243,114 @@ impl TileProxy {
         };
         debug!(record.server, "TileServer::call_handlers - finish");
         return (outcome, self);
+    }
+
+    fn call_description_handler(
+        &mut self,
+        record: &mut request_rec,
+        request: &SlippyRequest,
+    ) -> HandleOutcome {
+        debug!(record.server, "TileServer::call_description_handler - start");
+        let context = RequestContext::new(record, &self.config);
+        let mut io = IOContext {
+            communication: &mut self.comms_state,
+            storage: &mut self.storage_state
+        };
+        let mut services = ServicesContext {
+            telemetry: &self.telemetry_state,
+        };
+        let outcome_option = {
+            let handler: &mut dyn RequestHandler = &mut self.handler_state.description;
+            (*handler).handle(
+                &context,
+                &mut io,
+                &mut services,
+                request,
+            ).as_some_when_processed(handler.type_name())
+        };
+        let outcome = match outcome_option {
+            Some((handle_outcome, handler_name)) => {
+                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
+                    (*observer_iter).on_handle(request, &handle_outcome, handler_name);
+                }
+                handle_outcome
+            },
+            None => HandleOutcome::Ignored,
+        };
+        debug!(context.request.record.server, "TileServer::call_description_handler - finish");
+        return outcome;
+    }
+
+    fn call_statistics_handler(
+        &mut self,
+        record: &mut request_rec,
+        request: &SlippyRequest,
+    ) -> HandleOutcome {
+        debug!(record.server, "TileServer::call_statistics_handler - start");
+        let context = RequestContext::new(record, &self.config);
+        let mut io = IOContext {
+            communication: &mut self.comms_state,
+            storage: &mut self.storage_state
+        };
+        let mut services = ServicesContext {
+            telemetry: &self.telemetry_state,
+        };
+        let outcome_option = {
+            let handler: &mut dyn RequestHandler = &mut self.handler_state.statistics;
+            (*handler).handle(
+                &context,
+                &mut io,
+                &mut services,
+                request,
+            ).as_some_when_processed(handler.type_name())
+        };
+        let outcome = match outcome_option {
+            Some((handle_outcome, handler_name)) => {
+                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
+                    (*observer_iter).on_handle(request, &handle_outcome, handler_name);
+                }
+                handle_outcome
+            },
+            None => HandleOutcome::Ignored,
+        };
+        debug!(context.request.record.server, "TileServer::call_statistics_handler - finish");
+        return outcome;
+    }
+
+    fn call_tile_handler(
+        &mut self,
+        record: &mut request_rec,
+        request: &SlippyRequest,
+    ) -> HandleOutcome {
+        debug!(record.server, "TileServer::call_tile_handler - start");
+        let context = RequestContext::new(record, &self.config);
+        let mut io = IOContext {
+            communication: &mut self.comms_state,
+            storage: &mut self.storage_state
+        };
+        let mut services = ServicesContext {
+            telemetry: &self.telemetry_state,
+        };
+        let outcome_option = {
+            let handler: &mut dyn RequestHandler = &mut self.handler_state.tile;
+            (*handler).handle(
+                &context,
+                &mut io,
+                &mut services,
+                request,
+            ).as_some_when_processed(handler.type_name())
+        };
+        let outcome = match outcome_option {
+            Some((handle_outcome, handler_name)) => {
+                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
+                    (*observer_iter).on_handle(request, &handle_outcome, handler_name);
+                }
+                handle_outcome
+            },
+            None => HandleOutcome::Ignored,
+        };
+        debug!(context.request.record.server, "TileServer::call_tile_handler - finish");
+        return outcome;
     }
 
     fn write_response(
@@ -372,7 +468,6 @@ mod tests {
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let context = Apache2Request::create_with_tile_config(request)?;
                 let read_outcome = ReadOutcome::Processed(
                     Ok(
                         request::SlippyRequest {
@@ -384,6 +479,52 @@ mod tests {
                     )
                 );
                 let (handle_outcome, _) = proxy.call_handlers(request, &read_outcome);
+                handle_outcome.expect_processed().result?;
+                let actual_count = proxy.telemetry_state.handle_counter().count;
+                assert_eq!(1, actual_count, "Handle observer not called");
+                Ok(())
+            })
+        })
+    }
+
+    #[test]
+    fn test_call_description_handler_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::new(server, module_config)?;
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let slippy_request = request::SlippyRequest {
+                    header: request::Header {
+                        layer: LayerName::from("default"),
+                    },
+                    body: request::BodyVariant::DescribeLayer,
+                };
+                let handle_outcome = proxy.call_description_handler(request, &slippy_request);
+                handle_outcome.expect_processed().result?;
+                let actual_count = proxy.telemetry_state.handle_counter().count;
+                assert_eq!(1, actual_count, "Handle observer not called");
+                Ok(())
+            })
+        })
+    }
+
+    #[test]
+    fn test_call_statistics_handler_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|server| {
+            with_request_rec(|request| {
+                let module_config = ModuleConfig::new();
+                let proxy = TileProxy::new(server, module_config)?;
+                let uri = CString::new("/mod_tile_rs")?;
+                request.uri = uri.into_raw();
+                let slippy_request = request::SlippyRequest {
+                    header: request::Header {
+                        layer: LayerName::from("default"),
+                    },
+                    body: request::BodyVariant::ReportStatistics,
+                };
+                let handle_outcome = proxy.call_statistics_handler(request, &slippy_request);
                 handle_outcome.expect_processed().result?;
                 let actual_count = proxy.telemetry_state.handle_counter().count;
                 assert_eq!(1, actual_count, "Handle observer not called");
