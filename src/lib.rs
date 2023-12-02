@@ -101,17 +101,15 @@ mod io {
 mod service {
     pub mod telemetry{
         pub mod interface;
+        pub mod counters;
+        pub mod inventory;
+        pub mod response;
+        pub mod tile_handling;
+        pub mod transaction;
     }
 }
 mod implement {
     pub mod service {
-        pub mod telemetry{
-            pub mod counters;
-            pub mod inventory;
-            pub mod response;
-            pub mod tile_handling;
-            pub mod transaction;
-        }
         pub mod renderer {
             pub mod protocol;
             pub mod state;
