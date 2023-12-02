@@ -10,7 +10,7 @@ use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
 use crate::schema::slippy::request::{BodyVariant, SlippyRequest};
 use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
-use crate::interface::apache2::PoolStored;
+use crate::core::memory::PoolStored;
 use crate::interface::io::communication::HttpResponseWriter;
 use crate::interface::context::{
     HostContext,

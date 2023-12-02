@@ -2,7 +2,7 @@ use crate::binding::apache2::request_rec;
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::interface::apache2::PoolStored;
+use crate::core::memory::PoolStored;
 use crate::interface::io::communication::CommunicationInventory;
 use crate::interface::io::storage::StorageInventory;
 use crate::interface::service::telemetry::TelemetryInventory;

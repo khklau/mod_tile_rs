@@ -263,7 +263,7 @@ mod tests {
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::slippy::result::WriteOutcome;
-    use crate::interface::apache2::PoolStored;
+    use crate::core::memory::PoolStored;
     use crate::schema::tile::tile_ref::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::implement::io::communication::http_exchange::test_utils::MockWriter;

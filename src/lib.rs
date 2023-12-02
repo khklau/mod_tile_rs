@@ -10,6 +10,7 @@ mod core {
     pub mod debugging;
     #[macro_use]
     pub mod logging;
+    pub mod memory;
     pub mod type_meta;
 }
 mod schema {
@@ -68,7 +69,6 @@ mod interface {
         pub mod telemetry;
         pub mod renderer;
     }
-    pub mod apache2;
     pub mod context;
     pub mod handler;
 }

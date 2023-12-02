@@ -4,7 +4,7 @@ use crate::binding::apache2::{
 };
 use crate::schema::apache2::error::InvalidRecordError;
 use crate::schema::apache2::request::Apache2Request;
-use crate::interface::apache2::PoolStored;
+use crate::core::memory::PoolStored;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::framework::apache2::record::RequestRecord;
 
@@ -84,7 +84,7 @@ extern "C" fn drop_request(request_void: *mut c_void) -> apr_status_t {
 pub mod test_utils {
     use super::Apache2Request;
     use crate::binding::apache2::request_rec;
-    use crate::interface::apache2::PoolStored;
+    use crate::core::memory::PoolStored;
     use std::boxed::Box;
     use std::error::Error;
 
