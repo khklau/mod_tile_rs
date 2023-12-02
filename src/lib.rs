@@ -110,16 +110,12 @@ mod service {
         mod status;
     }
 }
-mod implement {
-    pub mod handler {
-        pub mod description;
-        pub mod inventory;
-        pub mod statistics;
-        pub mod tile;
-    }
-}
 mod use_case {
     pub mod interface;
+    pub mod description;
+    pub mod inventory;
+    pub mod statistics;
+    pub mod tile;
 }
 mod tile_proxy;
 
