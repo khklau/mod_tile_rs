@@ -5,6 +5,13 @@ mod binding {
     pub mod meta_tile;
     pub mod renderd_protocol;
 }
+#[macro_use]
+mod core {
+    pub mod debugging;
+    #[macro_use]
+    pub mod logging;
+    pub mod type_meta;
+}
 mod schema {
     pub mod core {
         pub mod processed;
@@ -49,10 +56,6 @@ mod schema {
         pub mod result;
     }
 }
-mod core {
-    pub mod debugging;
-    pub mod type_meta;
-}
 mod interface {
     pub mod adapter {
         pub mod slippy;
@@ -68,11 +71,6 @@ mod interface {
     pub mod apache2;
     pub mod context;
     pub mod handler;
-}
-#[macro_use]
-mod utility {
-    #[macro_use]
-    pub mod logging;
 }
 mod framework {
     pub mod apache2 {
