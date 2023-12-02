@@ -5,7 +5,7 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
 use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
-use crate::interface::handler::RequestHandler;
+use crate::use_case::interface::RequestHandler;
 
 use chrono::Utc;
 use mime;

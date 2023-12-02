@@ -59,7 +59,6 @@ mod schema {
 }
 mod interface {
     pub mod context;
-    pub mod handler;
 }
 mod framework {
     pub mod apache2 {
@@ -118,6 +117,9 @@ mod implement {
         pub mod statistics;
         pub mod tile;
     }
+}
+mod use_case {
+    pub mod interface;
 }
 mod tile_proxy;
 

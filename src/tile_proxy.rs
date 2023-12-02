@@ -18,8 +18,8 @@ use crate::interface::context::{
     RequestContext,
     ServicesContext,
 };
-use crate::interface::handler::RequestHandler;
-use crate::interface::handler::HandlerInventory;
+use crate::use_case::interface::RequestHandler;
+use crate::use_case::interface::HandlerInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;

@@ -6,7 +6,7 @@ use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
-use crate::interface::handler::RequestHandler;
+use crate::use_case::interface::RequestHandler;
 
 use chrono::Utc;
 use http::status::StatusCode;
@@ -135,8 +135,8 @@ mod tests {
     use crate::schema::tile::identity::LayerName;
     use crate::core::memory::PoolStored;
     use crate::io::communication::interface::test_utils::EmptyResultCommunicationInventory;
-    use crate::interface::handler::HandleRequestObserver;
-    use crate::interface::handler::test_utils::NoOpHandleRequestObserver;
+    use crate::use_case::interface::HandleRequestObserver;
+    use crate::use_case::interface::test_utils::NoOpHandleRequestObserver;
     use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
     use crate::adapter::slippy::interface::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
     use crate::io::storage::interface::test_utils::BlankStorageInventory;

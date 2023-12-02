@@ -8,7 +8,7 @@ use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::interface::context::{HostContext, RequestContext,};
 use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
-use crate::interface::handler::HandleRequestObserver;
+use crate::use_case::interface::HandleRequestObserver;
 
 
 pub struct ReadCounter {
