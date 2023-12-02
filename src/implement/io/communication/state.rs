@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::interface::io::communication::{BidirectionalChannel, CommunicationInventory,};
+use crate::io::communication::interface::{BidirectionalChannel, CommunicationInventory,};
 use crate::implement::io::communication::renderd_socket::RenderdSocket;
 
 

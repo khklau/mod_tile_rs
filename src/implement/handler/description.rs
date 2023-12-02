@@ -92,8 +92,8 @@ mod tests {
     use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::core::memory::PoolStored;
-    use crate::interface::io::communication::test_utils::EmptyResultCommunicationInventory;
-    use crate::interface::io::storage::test_utils::BlankStorageInventory;
+    use crate::io::communication::interface::test_utils::EmptyResultCommunicationInventory;
+    use crate::io::storage::interface::test_utils::BlankStorageInventory;
     use crate::interface::service::telemetry::test_utils::NoOpZeroTelemetryInventory;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 

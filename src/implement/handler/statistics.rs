@@ -134,12 +134,12 @@ mod tests {
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::schema::tile::identity::LayerName;
     use crate::core::memory::PoolStored;
-    use crate::interface::io::communication::test_utils::EmptyResultCommunicationInventory;
+    use crate::io::communication::interface::test_utils::EmptyResultCommunicationInventory;
     use crate::interface::handler::HandleRequestObserver;
     use crate::interface::handler::test_utils::NoOpHandleRequestObserver;
     use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
     use crate::adapter::slippy::interface::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
-    use crate::interface::io::storage::test_utils::BlankStorageInventory;
+    use crate::io::storage::interface::test_utils::BlankStorageInventory;
     use crate::interface::service::telemetry::{
         MockResponseMetrics, MockTileHandlingMetrics,
         ResponseMetrics, TileHandlingMetrics, TelemetryInventory

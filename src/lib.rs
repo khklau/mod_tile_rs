@@ -58,10 +58,6 @@ mod schema {
     }
 }
 mod interface {
-    pub mod io {
-        pub mod communication;
-        pub mod storage;
-    }
     pub mod service {
         pub mod telemetry;
         pub mod renderer;
@@ -85,6 +81,14 @@ mod adapter {
         pub mod inventory;
         pub mod reader;
         pub mod writer;
+    }
+}
+mod io {
+    pub mod communication {
+        pub mod interface;
+    }
+    pub mod storage {
+        pub mod interface;
     }
 }
 mod implement {

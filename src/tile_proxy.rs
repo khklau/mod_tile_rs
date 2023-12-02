@@ -11,7 +11,7 @@ use crate::schema::slippy::request::{BodyVariant, SlippyRequest};
 use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::core::memory::PoolStored;
-use crate::interface::io::communication::HttpResponseWriter;
+use crate::io::communication::interface::HttpResponseWriter;
 use crate::interface::context::{
     HostContext,
     IOContext,

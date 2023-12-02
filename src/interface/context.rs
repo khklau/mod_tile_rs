@@ -3,8 +3,8 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::core::memory::PoolStored;
-use crate::interface::io::communication::CommunicationInventory;
-use crate::interface::io::storage::StorageInventory;
+use crate::io::communication::interface::CommunicationInventory;
+use crate::io::storage::interface::StorageInventory;
 use crate::interface::service::telemetry::TelemetryInventory;
 
 
