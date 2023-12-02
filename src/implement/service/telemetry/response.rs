@@ -9,7 +9,7 @@ use crate::schema::tile::identity::LayerName;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::interface::context::RequestContext;
 use crate::adapter::slippy::interface::WriteResponseObserver;
-use crate::interface::service::telemetry::ResponseMetrics;
+use crate::service::telemetry::interface::ResponseMetrics;
 
 use chrono::Duration;
 use http::status::StatusCode;

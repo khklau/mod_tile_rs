@@ -5,7 +5,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::core::memory::PoolStored;
 use crate::io::communication::interface::CommunicationInventory;
 use crate::io::storage::interface::StorageInventory;
-use crate::interface::service::telemetry::TelemetryInventory;
+use crate::service::telemetry::interface::TelemetryInventory;
 
 
 pub struct HostContext<'c> {

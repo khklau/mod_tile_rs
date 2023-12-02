@@ -10,7 +10,7 @@ use crate::schema::tile::source::TileSource;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::interface::context::RequestContext;
 use crate::adapter::slippy::interface::WriteResponseObserver;
-use crate::interface::service::telemetry::TileHandlingMetrics;
+use crate::service::telemetry::interface::TileHandlingMetrics;
 
 use chrono::Duration;
 use enum_iterator::IntoEnumIterator;

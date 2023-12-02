@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::interface::service::telemetry::TelemetryInventory;
+use crate::service::telemetry::interface::TelemetryInventory;
 use crate::interface::handler::{
     HandlerInventory, HandleRequestObserver, RequestHandler
 };

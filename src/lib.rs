@@ -59,7 +59,6 @@ mod schema {
 }
 mod interface {
     pub mod service {
-        pub mod telemetry;
         pub mod renderer;
     }
     pub mod context;
@@ -97,6 +96,11 @@ mod io {
         pub mod state;
         pub mod variant;
         mod meta_tile;
+    }
+}
+mod service {
+    pub mod telemetry{
+        pub mod interface;
     }
 }
 mod implement {
