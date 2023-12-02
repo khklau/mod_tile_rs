@@ -49,6 +49,9 @@ mod schema {
         pub mod result;
     }
 }
+mod core {
+    pub mod debugging;
+}
 mod interface {
     pub mod adapter {
         pub mod slippy;
@@ -67,7 +70,6 @@ mod interface {
 }
 #[macro_use]
 mod utility {
-    pub mod debugging;
     #[macro_use]
     pub mod logging;
     pub mod type_meta;

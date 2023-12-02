@@ -4,7 +4,7 @@ use crate::interface::adapter::slippy::{
 use crate::interface::service::telemetry::TelemetryInventory;
 use crate::implement::adapter::slippy::reader::SlippyRequestReader;
 use crate::implement::adapter::slippy::writer::SlippyResponseWriter;
-use crate::utility::debugging::function_name;
+use crate::core::debugging::function_name;
 
 
 pub struct SlippyInventory { }
