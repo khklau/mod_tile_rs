@@ -58,9 +58,6 @@ mod schema {
     }
 }
 mod interface {
-    pub mod service {
-        pub mod renderer;
-    }
     pub mod context;
     pub mod handler;
 }
@@ -106,6 +103,9 @@ mod service {
         pub mod response;
         pub mod tile_handling;
         pub mod transaction;
+    }
+    pub mod rendering {
+        pub mod interface;
     }
 }
 mod implement {
