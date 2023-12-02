@@ -26,7 +26,7 @@ use crate::framework::apache2::record::ServerRecord;
 use crate::io::communication::state::CommunicationState;
 use crate::implement::handler::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
-use crate::implement::io::storage::state::StorageState;
+use crate::io::storage::state::StorageState;
 use crate::implement::service::telemetry::inventory::TelemetryState;
 
 use chrono::Utc;

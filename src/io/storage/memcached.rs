@@ -3,7 +3,7 @@ use crate::schema::tile::identity::TileIdentity;
 use crate::interface::context::RequestContext;
 use crate::schema::tile::tile_ref::TileRef;
 use crate::io::storage::interface::TileStorage;
-use crate::implement::io::storage::meta_tile::MetaTile;
+use crate::io::storage::meta_tile::MetaTile;
 
 
 // TODO

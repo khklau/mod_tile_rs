@@ -92,18 +92,14 @@ mod io {
     }
     pub mod storage {
         pub mod interface;
+        pub mod file_system;
+        pub mod memcached;
+        pub mod state;
+        pub mod variant;
+        mod meta_tile;
     }
 }
 mod implement {
-    pub mod io {
-        pub mod storage {
-            pub mod file_system;
-            pub mod memcached;
-            pub mod state;
-            pub mod variant;
-            mod meta_tile;
-        }
-    }
     pub mod service {
         pub mod telemetry{
             pub mod counters;
