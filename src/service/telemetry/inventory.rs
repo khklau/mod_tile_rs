@@ -5,12 +5,12 @@ use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserv
 use crate::service::telemetry::interface::{
     ResponseMetrics, TelemetryInventory, TileHandlingMetrics,
 };
-use crate::implement::service::telemetry::counters::{
+use crate::service::telemetry::counters::{
     HandleCounter, ReadCounter, WriteCounter,
 };
-use crate::implement::service::telemetry::response::ResponseAnalysis;
-use crate::implement::service::telemetry::tile_handling::TileHandlingAnalysis;
-use crate::implement::service::telemetry::transaction::TransactionTrace;
+use crate::service::telemetry::response::ResponseAnalysis;
+use crate::service::telemetry::tile_handling::TileHandlingAnalysis;
+use crate::service::telemetry::transaction::TransactionTrace;
 
 use std::result::Result;
 

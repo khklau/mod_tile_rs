@@ -27,7 +27,7 @@ use crate::io::communication::state::CommunicationState;
 use crate::implement::handler::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::io::storage::state::StorageState;
-use crate::implement::service::telemetry::inventory::TelemetryState;
+use crate::service::telemetry::inventory::TelemetryState;
 
 use chrono::Utc;
 
