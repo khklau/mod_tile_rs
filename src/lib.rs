@@ -71,14 +71,6 @@ mod framework {
         pub mod virtual_host;
     }
 }
-mod adapter {
-    pub mod slippy {
-        pub mod interface;
-        pub mod inventory;
-        pub mod reader;
-        pub mod writer;
-    }
-}
 mod io {
     pub mod communication {
         pub mod interface;
@@ -95,6 +87,14 @@ mod io {
         mod meta_tile;
     }
 }
+mod adapter {
+    pub mod slippy {
+        pub mod interface;
+        pub mod inventory;
+        pub mod reader;
+        pub mod writer;
+    }
+}
 mod service {
     pub mod telemetry{
         pub mod interface;
@@ -106,16 +106,12 @@ mod service {
     }
     pub mod rendering {
         pub mod interface;
+        pub mod protocol;
+        pub mod state;
+        mod status;
     }
 }
 mod implement {
-    pub mod service {
-        pub mod renderer {
-            pub mod protocol;
-            pub mod state;
-            mod status;
-        }
-    }
     pub mod handler {
         pub mod description;
         pub mod inventory;
