@@ -2,7 +2,7 @@ use crate::binding::renderd_protocol::{protoCmd, protocol};
 use crate::schema::apache2::config::RenderdConfig;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::renderd::request::{RenderRequestCommand, RenderRequestVersion};
-use crate::implement::service::renderer::status::data_import_completion_time;
+use crate::service::rendering::status::data_import_completion_time;
 
 
 pub fn create_request(
