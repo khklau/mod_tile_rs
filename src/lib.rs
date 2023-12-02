@@ -82,16 +82,12 @@ mod framework {
 mod adapter {
     pub mod slippy {
         pub mod interface;
+        pub mod inventory;
+        pub mod reader;
+        pub mod writer;
     }
 }
 mod implement {
-    pub mod adapter {
-        pub mod slippy {
-            pub mod inventory;
-            pub mod reader;
-            pub mod writer;
-        }
-    }
     pub mod io {
         pub mod communication {
             pub mod http_exchange;
