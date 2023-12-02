@@ -12,11 +12,10 @@ use crate::schema::slippy::error::{ReadError, WriteError,};
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::core::memory::PoolStored;
 use crate::io::communication::interface::HttpResponseWriter;
+use crate::io::interface::IOContext;
 use crate::interface::context::{
     HostContext,
-    IOContext,
     RequestContext,
-    ServicesContext,
 };
 use crate::use_case::interface::RequestHandler;
 use crate::use_case::interface::HandlerInventory;
@@ -27,6 +26,7 @@ use crate::io::communication::state::CommunicationState;
 use crate::use_case::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::io::storage::state::StorageState;
+use crate::service::interface::ServicesContext;
 use crate::service::telemetry::inventory::TelemetryState;
 
 use chrono::Utc;

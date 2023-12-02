@@ -5,7 +5,9 @@ use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
-use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
+use crate::io::interface::IOContext;
+use crate::interface::context::RequestContext;
+use crate::service::interface::ServicesContext;
 use crate::use_case::interface::RequestHandler;
 
 use chrono::Utc;

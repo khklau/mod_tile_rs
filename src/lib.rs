@@ -85,6 +85,7 @@ mod io {
         pub mod variant;
         mod meta_tile;
     }
+    pub mod interface;
 }
 mod adapter {
     pub mod slippy {
@@ -109,6 +110,7 @@ mod service {
         pub mod state;
         mod status;
     }
+    pub mod interface;
 }
 mod use_case {
     pub mod interface;

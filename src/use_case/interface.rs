@@ -1,6 +1,8 @@
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
-use crate::interface::context::{IOContext, RequestContext, ServicesContext,};
+use crate::io::interface::IOContext;
+use crate::interface::context::RequestContext;
+use crate::service::interface::ServicesContext;
 
 
 pub trait RequestHandler {
