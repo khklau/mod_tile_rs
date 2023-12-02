@@ -2,7 +2,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::interface::handler::HandleRequestObserver;
-use crate::interface::adapter::slippy::{ReadRequestObserver, WriteResponseObserver,};
+use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
 
 use http::status::StatusCode;
 #[cfg(test)]
@@ -66,7 +66,7 @@ pub trait TelemetryInventory {
 pub mod test_utils {
     use super::*;
     use crate::interface::handler::test_utils::NoOpHandleRequestObserver;
-    use crate::interface::adapter::slippy::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
+    use crate::adapter::slippy::interface::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
 
     use enum_iterator::IntoEnumIterator;
 

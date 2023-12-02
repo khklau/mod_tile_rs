@@ -8,7 +8,7 @@ use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::interface::io::communication::HttpResponseWriter;
 use crate::interface::handler::HandleRequestObserver;
 use crate::interface::context::{HostContext, RequestContext,};
-use crate::interface::adapter::slippy::{ReadRequestObserver, WriteResponseObserver,};
+use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
 
 
 pub struct TransactionTrace {}

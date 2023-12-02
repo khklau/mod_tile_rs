@@ -58,9 +58,6 @@ mod schema {
     }
 }
 mod interface {
-    pub mod adapter {
-        pub mod slippy;
-    }
     pub mod io {
         pub mod communication;
         pub mod storage;
@@ -80,6 +77,11 @@ mod framework {
         pub mod record;
         pub mod request;
         pub mod virtual_host;
+    }
+}
+mod adapter {
+    pub mod slippy {
+        pub mod interface;
     }
 }
 mod implement {

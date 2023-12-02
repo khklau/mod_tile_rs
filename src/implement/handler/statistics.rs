@@ -137,8 +137,8 @@ mod tests {
     use crate::interface::io::communication::test_utils::EmptyResultCommunicationInventory;
     use crate::interface::handler::HandleRequestObserver;
     use crate::interface::handler::test_utils::NoOpHandleRequestObserver;
-    use crate::interface::adapter::slippy::{ReadRequestObserver, WriteResponseObserver,};
-    use crate::interface::adapter::slippy::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
+    use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
+    use crate::adapter::slippy::interface::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
     use crate::interface::io::storage::test_utils::BlankStorageInventory;
     use crate::interface::service::telemetry::{
         MockResponseMetrics, MockTileHandlingMetrics,
