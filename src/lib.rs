@@ -51,6 +51,7 @@ mod schema {
 }
 mod core {
     pub mod debugging;
+    pub mod type_meta;
 }
 mod interface {
     pub mod adapter {
@@ -72,7 +73,6 @@ mod interface {
 mod utility {
     #[macro_use]
     pub mod logging;
-    pub mod type_meta;
 }
 mod framework {
     pub mod apache2 {

@@ -9,7 +9,7 @@ use crate::binding::renderd_protocol::{
 };
 use crate::schema::tile::identity::{LayerName, TileIdentity};
 use crate::schema::renderd::error::InvalidParameterError;
-use crate::utility::type_meta::size_of_return_type;
+use crate::core::type_meta::size_of_return_type;
 
 use const_format::concatcp;
 
