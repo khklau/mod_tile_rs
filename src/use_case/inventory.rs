@@ -4,9 +4,9 @@ use crate::service::telemetry::interface::TelemetryInventory;
 use crate::use_case::interface::{
     HandlerInventory, HandleRequestObserver, RequestHandler
 };
-use crate::implement::handler::description::DescriptionHandlerState;
-use crate::implement::handler::statistics::StatisticsHandlerState;
-use crate::implement::handler::tile::TileHandlerState;
+use crate::use_case::description::DescriptionHandlerState;
+use crate::use_case::statistics::StatisticsHandlerState;
+use crate::use_case::tile::TileHandlerState;
 
 
 pub struct HandlerState {
