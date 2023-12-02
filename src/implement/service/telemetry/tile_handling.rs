@@ -280,11 +280,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(request)?,
-                request: Apache2Request::create_with_tile_config(request)?,
-            };
+            let context = RequestContext::new(request, &module_config);
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
@@ -365,11 +361,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(request)?,
-                request: Apache2Request::create_with_tile_config(request)?,
-            };
+            let context = RequestContext::new(request, &module_config);
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
@@ -450,11 +442,7 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(request)?,
-                request: Apache2Request::create_with_tile_config(request)?,
-            };
+            let context = RequestContext::new(request, &module_config);
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {

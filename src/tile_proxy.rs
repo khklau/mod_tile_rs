@@ -364,11 +364,7 @@ impl TileProxy {
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
         let writer: &mut dyn HttpResponseWriter = unsafe { write_record.as_mut().unwrap() };
-        let context = RequestContext {
-            module_config: &self.config,
-            host: VirtualHost::find_or_allocate_new(record).unwrap(),
-            request: Apache2Request::find_or_allocate_new(record).unwrap(),
-        };
+        let context = RequestContext::new(record, &self.config);
         let write_outcome = match handle_outcome {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {
