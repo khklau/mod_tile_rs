@@ -266,7 +266,7 @@ mod tests {
     use crate::core::memory::PoolStored;
     use crate::schema::tile::tile_ref::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
-    use crate::implement::io::communication::http_exchange::test_utils::MockWriter;
+    use crate::io::communication::http_exchange::test_utils::MockWriter;
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;

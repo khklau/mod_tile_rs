@@ -86,6 +86,9 @@ mod adapter {
 mod io {
     pub mod communication {
         pub mod interface;
+        pub mod http_exchange;
+        pub mod renderd_socket;
+        pub mod state;
     }
     pub mod storage {
         pub mod interface;
@@ -93,11 +96,6 @@ mod io {
 }
 mod implement {
     pub mod io {
-        pub mod communication {
-            pub mod http_exchange;
-            pub mod renderd_socket;
-            pub mod state;
-        }
         pub mod storage {
             pub mod file_system;
             pub mod memcached;
