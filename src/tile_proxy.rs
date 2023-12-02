@@ -371,7 +371,7 @@ impl TileProxy {
                     let outcome = write(&context, &response, writer);
                     for observer_iter in SlippyObserverInventory::write_observers(&mut self.telemetry_state).iter_mut() {
                         debug!(
-                            context.host.record,
+                            context.host().record,
                             "TileServer::write_response - calling observer {:p}", *observer_iter
                         );
                         (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);

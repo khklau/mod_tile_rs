@@ -74,7 +74,7 @@ impl ResponseAnalysis {
             *counter = *counter + *response_duration;
         } else {
             warn!(
-                context.host.record,
+                context.host().record,
                 "ResponseAnalysis::accrue_tile_handle_duration - requested zoom level {} exceeds limit {}",
                 zoom_level,
                 zoom_limit,
@@ -100,7 +100,7 @@ impl ResponseAnalysis {
             self.mut_layer(request).tile_response_count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.host.record,
+                context.host().record,
                 "ResponseAnalysis::on_tile_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }
@@ -129,7 +129,7 @@ impl ResponseAnalysis {
             count_by_zoom[zoom_level] += 1;
         } else {
             warn!(
-                context.host.record,
+                context.host().record,
                 "ResponseAnalysis::on_http_response_write - requested zoom level {} exceeds limit {}", zoom_level, zoom_limit
             );
         }

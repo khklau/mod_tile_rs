@@ -15,7 +15,7 @@ impl TileStorage for Memcached {
         context: &RequestContext,
         id: &TileIdentity,
     ) -> Result<TileRef, TileReadError> {
-        let path = MetaTile::identity_to_path(context.module_config, id);
+        let path = MetaTile::identity_to_path(context.module_config(), id);
         Err(
             TileReadError::NotFound(
                 path.meta_tile_path,

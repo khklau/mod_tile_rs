@@ -38,7 +38,7 @@ impl RequestHandler for DescriptionHandlerState {
                 return HandleOutcome::Ignored;
             },
         };
-        let description = describe(context.module_config, layer);
+        let description = describe(context.module_config(), layer);
         let response = response::SlippyResponse {
             header: response::Header {
                 mime_type: mime::APPLICATION_JSON.clone(),

@@ -36,7 +36,7 @@ impl TileStorage for FileSystem {
         context: &RequestContext,
         id: &TileIdentity,
     ) -> Result<TileRef, TileReadError> {
-        let path = MetaTile::identity_to_path(context.module_config, id);
+        let path = MetaTile::identity_to_path(context.module_config(), id);
         let meta_tile = MetaTile::read(&path.meta_tile_path)?;
         let cached_tile = match self.cache.entry(path.meta_tile_path.clone()) {
             Entry::Occupied(mut entry) => {

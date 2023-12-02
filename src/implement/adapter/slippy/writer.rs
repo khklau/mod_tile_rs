@@ -48,12 +48,12 @@ impl DescriptionWriter {
         description: &Description,
         writer: &mut dyn HttpResponseWriter,
     ) -> WriteResponseResult {
-        debug!(context.host.record, "DescriptionWriter::write - start");
+        debug!(context.host().record, "DescriptionWriter::write - start");
         let mut http_headers = HeaderMap::new();
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
             (mime::APPLICATION, mime::JSON) => {
                 writer.set_content_type(&mime::APPLICATION_JSON);
-                debug!(context.host.record, "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
+                debug!(context.host().record, "DescriptionWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
                 serde_json::to_string_pretty(description).unwrap()
             },
             _ => String::from(""),
@@ -85,7 +85,7 @@ impl DescriptionWriter {
         let written_length = writer.write_content(&text)?;
         writer.set_content_length(written_length);
         writer.flush_response()?;
-        debug!(context.host.record, "DescriptionWriter::write - finish");
+        debug!(context.host().record, "DescriptionWriter::write - finish");
 
         Ok(
             HttpResponse {
@@ -105,12 +105,12 @@ impl StatisticsWriter {
         statistics: &Statistics,
         writer: &mut dyn HttpResponseWriter,
     ) -> WriteResponseResult {
-        debug!(context.host.record, "StatisticsWriter::write - start");
+        debug!(context.host().record, "StatisticsWriter::write - start");
         let mut http_headers = HeaderMap::new();
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
             (mime::APPLICATION, mime::JSON) => {
                 writer.set_content_type(&mime::APPLICATION_JSON);
-                debug!(context.host.record, "StatisticsWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
+                debug!(context.host().record, "StatisticsWriter::write - setting content type to {}", mime::APPLICATION_JSON.essence_str());
                 serde_json::to_string_pretty(statistics).unwrap()
             },
             _ => String::from(""),
@@ -125,7 +125,7 @@ impl StatisticsWriter {
         let written_length = writer.write_content(&text)?;
         writer.set_content_length(written_length);
         writer.flush_response()?;
-        debug!(context.host.record, "StatisticsWriter::write - finish");
+        debug!(context.host().record, "StatisticsWriter::write - finish");
 
         Ok(
             HttpResponse {
@@ -145,11 +145,11 @@ impl TileWriter {
         tile: &TileResponse,
         writer: &mut dyn HttpResponseWriter,
     ) -> WriteResponseResult {
-        debug!(context.host.record, "TileWriter::write - start");
+        debug!(context.host().record, "TileWriter::write - start");
         let result = if let (mime::IMAGE, mime::PNG) = (header.mime_type.type_(), header.mime_type.subtype()) {
             let mut http_headers = HeaderMap::new();
             writer.set_content_type(&mime::IMAGE_PNG);
-            debug!(context.host.record, "TileWriter::write - setting content type to {}", mime::IMAGE_PNG.essence_str());
+            debug!(context.host().record, "TileWriter::write - setting content type to {}", mime::IMAGE_PNG.essence_str());
             tile.tile_ref.with_tile(|raw_bytes| {
                 let digest = format!("\"{:x}\"", md5::compute(&raw_bytes));
                 let etag_key = ETAG.clone();
@@ -173,7 +173,7 @@ impl TileWriter {
                 WriteError::UnsupportedMediaType(tile.tile_ref.media_type.clone())
             )
         };
-        debug!(context.host.record, "TileWriter::write - finish");
+        debug!(context.host().record, "TileWriter::write - finish");
         return result;
     }
 }
