@@ -11,7 +11,7 @@ use crate::schema::slippy::request::{
 };
 use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::identity::LayerName;
-use crate::interface::context::HostContext;
+use crate::framework::apache2::context::HostContext;
 
 use const_format::concatcp;
 use scan_fmt::scan_fmt;

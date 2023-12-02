@@ -1,6 +1,6 @@
 use crate::schema::communication::error::ResponseWriteError;
 use crate::schema::http::encoding::ContentEncoding;
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 
 use http::header::{ HeaderName, HeaderValue, ToStrError, };
 use mime::Mime;

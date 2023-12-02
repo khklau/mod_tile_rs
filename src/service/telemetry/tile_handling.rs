@@ -8,7 +8,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 use crate::adapter::slippy::interface::WriteResponseObserver;
 use crate::service::telemetry::interface::TileHandlingMetrics;
 

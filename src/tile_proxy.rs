@@ -13,7 +13,7 @@ use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::core::memory::PoolStored;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::io::interface::IOContext;
-use crate::interface::context::{
+use crate::framework::apache2::context::{
     HostContext,
     RequestContext,
 };

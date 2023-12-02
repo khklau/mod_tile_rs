@@ -2,7 +2,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 use crate::io::storage::interface::TileStorage;
 use crate::schema::tile::tile_ref::TileRef;
 use crate::io::storage::meta_tile::MetaTile;

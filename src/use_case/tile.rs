@@ -8,7 +8,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
 use crate::io::interface::IOContext;
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 use crate::service::interface::ServicesContext;
 use crate::use_case::interface::RequestHandler;
 use crate::io::communication::renderd_socket::RenderdSocket;

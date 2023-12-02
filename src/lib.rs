@@ -57,13 +57,11 @@ mod schema {
         pub mod result;
     }
 }
-mod interface {
-    pub mod context;
-}
 mod framework {
     pub mod apache2 {
         pub mod config;
         pub mod connection;
+        pub mod context;
         pub mod memory;
         pub mod record;
         pub mod request;

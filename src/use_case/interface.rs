@@ -1,7 +1,7 @@
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::io::interface::IOContext;
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 use crate::service::interface::ServicesContext;
 
 

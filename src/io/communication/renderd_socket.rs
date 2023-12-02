@@ -1,7 +1,7 @@
 use crate::io::communication::interface::{
     CommunicationError, BidirectionalChannel,
 };
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::config::ModuleConfig;
 

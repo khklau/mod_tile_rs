@@ -7,7 +7,7 @@ use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::identity::LayerName;
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::interface::context::RequestContext;
+use crate::framework::apache2::context::RequestContext;
 use crate::adapter::slippy::interface::WriteResponseObserver;
 use crate::service::telemetry::interface::ResponseMetrics;
 
