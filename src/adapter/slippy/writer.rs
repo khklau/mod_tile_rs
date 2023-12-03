@@ -7,7 +7,7 @@ use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::framework::apache2::context::RequestContext;
 
-use chrono::{ TimeZone, Utc, };
+use chrono::Duration;
 use http::header::{ CACHE_CONTROL, EXPIRES, ETAG, HeaderMap, HeaderValue };
 use http::status::StatusCode;
 use md5;
@@ -59,6 +59,7 @@ impl DescriptionWriter {
             _ => String::from(""),
         };
         let max_age: i64 = 7 * 24 * 60 * 60;
+        let max_age_duration = Duration::seconds(max_age);
 
         let digest = format!("\"{:x}\"", md5::compute(&text));
         let etag_key = ETAG.clone();
@@ -73,9 +74,7 @@ impl DescriptionWriter {
         writer.append_http_header(&cache_key, &cache_value).unwrap();
         http_headers.insert(cache_key, cache_value);
 
-        let request_time_in_epoch_secs = context.request.record.request_time / 1000000;
-        let expiry_in_epoch_secs = max_age + request_time_in_epoch_secs;
-        let expiry_timestamp = Utc.timestamp(expiry_in_epoch_secs, 0);
+        let expiry_timestamp = context.request.received_timestamp + max_age_duration;
         let expiry_string = expiry_timestamp.to_rfc2822();
         let expiry_key = EXPIRES.clone();
         let expiry_value = HeaderValue::from_str(expiry_string.as_str()).unwrap();

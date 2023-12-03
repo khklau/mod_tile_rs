@@ -8,6 +8,7 @@ use crate::core::memory::PoolStored;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve, };
 use crate::framework::apache2::record::RequestRecord;
 
+use chrono::{TimeZone, Utc,};
 use snowflake::SnowflakeIdGenerator;
 
 use std::any::type_name;
@@ -62,6 +63,7 @@ impl<'p> PoolStored<'p> for Apache2Request<'p> {
         let mut generator = SnowflakeIdGenerator::new(1, 1);
         new_request.request_id = generator.real_time_generate();
         new_request.uri = uri;
+        new_request.received_timestamp = Utc.timestamp_millis(request.request_time);
         debug!(server_record, "Apache2Request::new - finish");
         Ok(new_request)
     }
