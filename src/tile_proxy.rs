@@ -18,7 +18,6 @@ use crate::framework::apache2::context::{
     RequestContext,
 };
 use crate::use_case::interface::RequestHandler;
-use crate::use_case::interface::HandlerInventory;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -407,6 +406,7 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::identifier::generate_id;
     use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
@@ -463,12 +463,15 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
-                request.uri = uri.into_raw();
+                request.uri = uri.clone().into_raw();
                 let read_outcome = ReadOutcome::Processed(
                     Ok(
                         request::SlippyRequest {
                             header: request::Header {
                                 layer: LayerName::new(),
+                                request_id: generate_id(),
+                                uri: uri.into_string()?,
+                                received_timestamp: Utc::now(),
                             },
                             body: request::BodyVariant::ReportStatistics,
                         }
@@ -490,10 +493,13 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
-                request.uri = uri.into_raw();
+                request.uri = uri.clone().into_raw();
                 let slippy_request = request::SlippyRequest {
                     header: request::Header {
                         layer: LayerName::from("default"),
+                        request_id: generate_id(),
+                        uri: uri.into_string()?,
+                        received_timestamp: Utc::now(),
                     },
                     body: request::BodyVariant::DescribeLayer,
                 };
@@ -513,10 +519,13 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
-                request.uri = uri.into_raw();
+                request.uri = uri.clone().into_raw();
                 let slippy_request = request::SlippyRequest {
                     header: request::Header {
                         layer: LayerName::from("default"),
+                        request_id: generate_id(),
+                        uri: uri.into_string()?,
+                        received_timestamp: Utc::now(),
                     },
                     body: request::BodyVariant::ReportStatistics,
                 };
@@ -536,13 +545,16 @@ mod tests {
                 let module_config = ModuleConfig::new();
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
-                request.uri = uri.into_raw();
+                request.uri = uri.clone().into_raw();
                 let context = Apache2Request::create_with_tile_config(request)?;
                 let read_outcome = ReadOutcome::Processed(
                     Ok(
                         request::SlippyRequest {
                             header: request::Header {
                                 layer: LayerName::new(),
+                                request_id: generate_id(),
+                                uri: uri.into_string()?,
+                                received_timestamp: Utc::now(),
                             },
                             body: request::BodyVariant::ReportStatistics,
                         }

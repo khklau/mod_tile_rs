@@ -1,4 +1,4 @@
-use chrono::{DateTime, TimeZone, Utc,};
+use chrono::{DateTime, Utc,};
 
 use crate::binding::apache2::request_rec;
 

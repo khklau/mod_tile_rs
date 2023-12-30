@@ -8,6 +8,7 @@ mod binding {
 #[macro_use]
 mod core {
     pub mod debugging;
+    pub mod identifier;
     #[macro_use]
     pub mod logging;
     pub mod memory;

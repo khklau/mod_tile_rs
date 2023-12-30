@@ -294,9 +294,7 @@ impl ResponseMetrics for ResponseAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::apache2::connection::Connection;
-    use crate::schema::apache2::request::Apache2Request;
-    use crate::schema::apache2::virtual_host::VirtualHost;
+    use crate::core::identifier::generate_id;
     use crate::schema::handler::result::HandleRequestResult;
     use crate::schema::http::encoding::ContentEncoding;
     use crate::schema::http::response::HttpResponse;
@@ -305,7 +303,6 @@ mod tests {
     use crate::schema::slippy::result::WriteOutcome;
     use crate::schema::tile::age::TileAge;
     use crate::schema::tile::source::TileSource;
-    use crate::core::memory::PoolStored;
     use crate::schema::tile::tile_ref::TileRef;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::io::communication::http_exchange::test_utils::MockWriter;
@@ -321,7 +318,7 @@ mod tests {
     fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
-            request.uri = uri.into_raw();
+            request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
             let context = RequestContext::new(request, &module_config);
             let layer_name = LayerName::from("default");
@@ -330,6 +327,9 @@ mod tests {
                     request::SlippyRequest {
                         header: request::Header {
                             layer: layer_name.clone(),
+                            request_id: generate_id(),
+                            uri: uri.into_string()?,
+                            received_timestamp: Utc::now(),
                         },
                         body: request::BodyVariant::ServeTileV3(
                             request::ServeTileRequestV3 {

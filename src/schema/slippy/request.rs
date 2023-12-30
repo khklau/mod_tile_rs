@@ -1,5 +1,6 @@
-use crate::binding::apache2::request_rec;
 use crate::schema::tile::identity::LayerName;
+
+use chrono::{DateTime, Utc,};
 
 use std::option::Option;
 use std::string::String;
@@ -18,6 +19,9 @@ pub struct SlippyRequest {
 #[derive(Debug)]
 pub struct Header {
     pub layer: LayerName,
+    pub request_id: i64,
+    pub uri: String,
+    pub received_timestamp: DateTime<Utc>,
 }
 
 #[derive(PartialEq)]

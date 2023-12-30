@@ -8,7 +8,6 @@ use http::status::StatusCode;
 #[cfg(test)]
 use mockall::{automock, mock, predicate::*};
 
-use std::iter::Iterator;
 use std::ops::Range;
 use std::vec::Vec;
 

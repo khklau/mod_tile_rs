@@ -89,16 +89,13 @@ fn describe(config: &ModuleConfig, layer: &LayerName) -> response::Description {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::apache2::config::ModuleConfig;
-    use crate::schema::apache2::connection::Connection;
-    use crate::schema::apache2::request::Apache2Request;
-    use crate::schema::apache2::virtual_host::VirtualHost;
-    use crate::core::memory::PoolStored;
+    use crate::core::identifier::generate_id;
     use crate::io::communication::interface::test_utils::EmptyResultCommunicationInventory;
     use crate::io::storage::interface::test_utils::BlankStorageInventory;
     use crate::service::telemetry::interface::test_utils::NoOpZeroTelemetryInventory;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
+    use chrono::Utc;
     use std::error::Error;
     use std::ffi::CString;
 
@@ -113,7 +110,7 @@ mod tests {
         let mut storage = BlankStorageInventory::new();
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.into_raw();
+            request.uri = uri.clone().into_raw();
             let handle_context = RequestContext::new(
                 request,
                 &module_config,
@@ -128,6 +125,9 @@ mod tests {
             let request = request::SlippyRequest {
                 header: request::Header {
                     layer: layer_name.clone(),
+                    request_id: generate_id(),
+                    uri: uri.into_string()?,
+                    received_timestamp: Utc::now(),
                 },
                 body: request::BodyVariant::ReportStatistics,
             };
@@ -156,7 +156,7 @@ mod tests {
         let mut storage = BlankStorageInventory::new();
         with_request_rec(|request| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.into_raw();
+            request.uri = uri.clone().into_raw();
             let handle_context = RequestContext::new(request, &module_config);
             let mut io_context = IOContext {
                 communication: &mut communication,
@@ -168,6 +168,9 @@ mod tests {
             let request = request::SlippyRequest {
                 header: request::Header {
                     layer: layer_name.clone(),
+                    request_id: generate_id(),
+                    uri: uri.into_string()?,
+                    received_timestamp: Utc::now(),
                 },
                 body: request::BodyVariant::DescribeLayer,
             };
