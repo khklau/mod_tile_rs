@@ -23,6 +23,7 @@ use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::io::communication::state::CommunicationState;
 use crate::use_case::inventory::{HandlerObserverInventory, HandlerState,};
+use crate::adapter::http::reader::read_apache2_request;
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
@@ -193,6 +194,17 @@ impl TileProxy {
         let context = HostContext {
             module_config: &self.config,
             host: VirtualHost::find_or_allocate_new(record).unwrap(),
+        };
+        let request = match read_apache2_request(record) {
+            Ok(request) => request,
+            Err(err) => return (
+                ReadOutcome::Processed(
+                    Err(
+                        ReadError::Utf8(err)
+                    )
+                ),
+                self,
+            )
         };
         let request = Apache2Request::find_or_allocate_new(record).unwrap();
         let read_outcome = read(&context, request);

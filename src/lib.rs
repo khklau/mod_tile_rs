@@ -20,6 +20,7 @@ mod schema {
     }
     pub mod http {
         pub mod encoding;
+        pub mod request;
         pub mod response;
     }
     pub mod tile {
@@ -87,6 +88,9 @@ mod io {
     pub mod interface;
 }
 mod adapter {
+    pub mod http {
+        pub mod reader;
+    }
     pub mod slippy {
         pub mod interface;
         pub mod inventory;
