@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::apache2::request::Apache2Request;
 use crate::schema::handler::result::HandleOutcome;
+use crate::schema::http::request::HttpRequest;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
@@ -27,7 +27,7 @@ impl ReadRequestObserver for ReadCounter {
     fn on_read(
         &mut self,
         _context: &HostContext,
-        _request: &Apache2Request,
+        _request: &HttpRequest,
         _outcome: &ReadOutcome,
         _read_func_name: &'static str,
     ) -> () {

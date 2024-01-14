@@ -1,8 +1,8 @@
 use crate::binding::apache2::get_module_name;
 use crate::core::identifier::generate_id;
 use crate::schema::apache2::config::{ LayerConfig, MAX_ZOOM_SERVER };
-use crate::schema::apache2::request::Apache2Request;
 use crate::schema::core::processed::ProcessOutcome;
+use crate::schema::http::request::HttpRequest;
 use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
@@ -14,7 +14,6 @@ use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::identity::LayerName;
 use crate::framework::apache2::context::HostContext;
 
-use chrono::Utc;
 use const_format::concatcp;
 use scan_fmt::scan_fmt;
 
@@ -25,7 +24,7 @@ pub struct SlippyRequestReader;
 impl SlippyRequestReader {
     pub fn read(
         context: &HostContext,
-        request: &Apache2Request,
+        request: &HttpRequest,
     ) -> ReadOutcome {
         let request_url= request.uri;
         SlippyRequestParser::parse(&context, request, request_url)
@@ -36,7 +35,7 @@ pub struct SlippyRequestParser;
 impl SlippyRequestParser {
     pub fn parse(
         context: &HostContext,
-        request: &Apache2Request,
+        request: &HttpRequest,
         request_url: &str,
     ) -> ReadOutcome {
         debug!(context.host.record, "SlippyRequestParser::parse - start");
@@ -61,8 +60,8 @@ impl SlippyRequestParser {
             );
             if let Some(found) = request_url.find(&config.base_url) {
                 let after_base = found + config.base_url.len();
-                if let Some(layer_url) = request_url.get(after_base..) {
-                    let layer_outcome = parse_layer_request(context, config, request, layer_url);
+                if let Some(layer_trimmed_url) = request_url.get(after_base..) {
+                    let layer_outcome = parse_layer_request(context, config, request, layer_trimmed_url);
                     if layer_outcome.is_processed() {
                         return layer_outcome;
                     }
@@ -80,10 +79,10 @@ impl LayerParserCombinator {
     fn try_else<F, G>(
         func1: F,
         func2: G,
-    ) -> impl Fn(&HostContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome
+    ) -> impl Fn(&HostContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome
     where
-        F: Fn(&HostContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
-        G: Fn(&HostContext, &LayerConfig, &Apache2Request, &str) -> ReadOutcome,
+        F: Fn(&HostContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
+        G: Fn(&HostContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
     {
         move |context, config, request, request_url| {
             let outcome = func1(context, config, request, request_url);
@@ -100,12 +99,12 @@ struct StatisticsRequestParser;
 impl StatisticsRequestParser {
     fn parse(
         context: &HostContext,
-        _request: &Apache2Request,
-        request_url: &str,
+        request: &HttpRequest,
+        _request_url: &str,
     ) -> ReadOutcome {
         let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
-        if request_url.eq(&stats_uri) {
+        if request.uri.eq(&stats_uri) {
             info!(context.host.record, "StatisticsRequestParser::parse - matched ReportStatistics");
             ProcessOutcome::Processed(
                 Ok(
@@ -113,8 +112,8 @@ impl StatisticsRequestParser {
                         header: Header {
                             layer: LayerName::new(),
                             request_id: generate_id(),
-                            uri: request_url.to_string(),
-                            received_timestamp: Utc::now(),
+                            uri: request.uri.to_string(),
+                            received_timestamp: request.received_time.clone(),
                         },
                         body: BodyVariant::ReportStatistics,
                     }
@@ -132,10 +131,10 @@ impl DescribeLayerRequestParser {
     fn parse(
         context: &HostContext,
         layer_config: &LayerConfig,
-        _request: &Apache2Request,
-        request_url: &str,
+        request: &HttpRequest,
+        layer_trimmed_url: &str,
     ) -> ReadOutcome {
-        if request_url.eq_ignore_ascii_case("/tile-layer.json") {
+        if layer_trimmed_url.eq_ignore_ascii_case("/tile-layer.json") {
             info!(context.host.record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
             ProcessOutcome::Processed(
                 Ok(
@@ -143,8 +142,8 @@ impl DescribeLayerRequestParser {
                         header: Header {
                             layer: layer_config.name.clone(),
                             request_id: generate_id(),
-                            uri: request_url.to_string(),
-                            received_timestamp: Utc::now(),
+                            uri: request.uri.to_string(),
+                            received_timestamp: request.received_time.clone(),
                         },
                         body: BodyVariant::DescribeLayer
                     }
@@ -162,12 +161,12 @@ impl ServeTileV3RequestParser {
     fn parse(
         context: &HostContext,
         layer_config: &LayerConfig,
-        _request: &Apache2Request,
-        request_url: &str,
+        request: &HttpRequest,
+        layer_trimmed_url: &str,
     ) -> ReadOutcome {
         // TODO: replace with a more modular parser that better handles with option and no option
         let has_parameter = match scan_fmt!(
-            request_url,
+            layer_trimmed_url,
             "/{40[^0-9/]}/",
             String
         ) {
@@ -182,7 +181,7 @@ impl ServeTileV3RequestParser {
                     ReadError::Param(
                         InvalidParameterError {
                             param: String::from("uri"),
-                            value: request_url.to_string(),
+                            value: request.uri.to_string(),
                             reason: "Request has parameter but parameterize_style not set in config".to_string(),
                         }
                     )
@@ -192,7 +191,7 @@ impl ServeTileV3RequestParser {
 
         // try match with option
         match scan_fmt!(
-            request_url,
+            layer_trimmed_url,
             concatcp!("/{40[^/]}/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}/{10[^/]}"),
             String, i32, i32, i32, String, String
         ) {
@@ -205,8 +204,8 @@ impl ServeTileV3RequestParser {
                                 header: Header {
                                     layer: layer_config.name.clone(),
                                     request_id: generate_id(),
-                                    uri: request_url.to_string(),
-                                    received_timestamp: Utc::now(),
+                                    uri: request.uri.to_string(),
+                                    received_timestamp: request.received_time.clone(),
                                 },
                                 body: BodyVariant::ServeTileV3(
                                     ServeTileRequestV3 {
@@ -227,7 +226,7 @@ impl ServeTileV3RequestParser {
                             ReadError::Param(
                                 InvalidParameterError {
                                     param: String::from("z"),
-                                    value: request_url.to_string(),
+                                    value: request.uri.to_string(),
                                     reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                                 }
                             )
@@ -240,7 +239,7 @@ impl ServeTileV3RequestParser {
 
         // try match no option
         match scan_fmt!(
-            request_url,
+            layer_trimmed_url,
             concatcp!("/{40[^/]}/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}{///?/}"),
             String, i32, i32, i32, String
         ) {
@@ -253,8 +252,8 @@ impl ServeTileV3RequestParser {
                                 header: Header {
                                     layer: layer_config.name.clone(),
                                     request_id: generate_id(),
-                                    uri: request_url.to_string(),
-                                    received_timestamp: Utc::now(),
+                                    uri: request.uri.to_string(),
+                                    received_timestamp: request.received_time.clone(),
                                 },
                                 body: BodyVariant::ServeTileV3(
                                     ServeTileRequestV3 {
@@ -275,7 +274,7 @@ impl ServeTileV3RequestParser {
                             ReadError::Param(
                             InvalidParameterError {
                                 param: String::from("z"),
-                                value: request_url.to_string(),
+                                value: request.uri.to_string(),
                                 reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                             }
                             )
@@ -296,13 +295,13 @@ impl ServeTileV2RequestParser {
     fn parse(
         context: &HostContext,
         layer_config: &LayerConfig,
-        _request: &Apache2Request,
-        request_url: &str,
+        request: &HttpRequest,
+        layer_trimmed_url: &str,
     ) -> ReadOutcome {
     // TODO: replace with a more modular parser that better handles with option and no option
     // try match with option
     match scan_fmt!(
-        request_url,
+        layer_trimmed_url,
         concatcp!("/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}/{10[^/]}"),
         i32, i32, i32, String, String
     ) {
@@ -315,8 +314,8 @@ impl ServeTileV2RequestParser {
                             header: Header {
                                 layer: layer_config.name.clone(),
                                 request_id: generate_id(),
-                                uri: request_url.to_string(),
-                                received_timestamp: Utc::now(),
+                                uri: request.uri.to_string(),
+                                received_timestamp: request.received_time.clone(),
                             },
                             body: BodyVariant::ServeTileV2(
                                 ServeTileRequestV2 {
@@ -336,7 +335,7 @@ impl ServeTileV2RequestParser {
                         ReadError::Param(
                             InvalidParameterError {
                                 param: String::from("z"),
-                                value: request_url.to_string(),
+                                value: request.uri.to_string(),
                                 reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                             }
                         )
@@ -349,7 +348,7 @@ impl ServeTileV2RequestParser {
 
     // try match no option
     match scan_fmt!(
-        request_url,
+        layer_trimmed_url,
         concatcp!("/{d}/{d}/{d}.{", MAX_EXTENSION_LEN, "[a-z]}{///?/}"),
         i32, i32, i32, String
     ) {
@@ -362,8 +361,8 @@ impl ServeTileV2RequestParser {
                             header: Header {
                                 layer: layer_config.name.clone(),
                                 request_id: generate_id(),
-                                uri: request_url.to_string(),
-                                received_timestamp: Utc::now(),
+                                uri: request.uri.to_string(),
+                                received_timestamp: request.received_time.clone(),
                             },
                             body: BodyVariant::ServeTileV2(
                                 ServeTileRequestV2 {
@@ -383,7 +382,7 @@ impl ServeTileV2RequestParser {
                         ReadError::Param(
                             InvalidParameterError {
                                 param: String::from("z"),
-                                value: request_url.to_string(),
+                                value: request.uri.to_string(),
                                 reason: format!("Request parameter z {} exceeds the allowed limit {}", z, MAX_ZOOM_SERVER),
                             }
                         )
@@ -403,10 +402,10 @@ impl ServeTileV2RequestParser {
 mod tests {
     use super::*;
     use crate::schema::apache2::config::ModuleConfig;
-    use crate::schema::apache2::request::Apache2Request;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::core::memory::PoolStored;
     use crate::framework::apache2::record::test_utils::with_request_rec;
+    use chrono::Utc;
     use std::boxed::Box;
     use std::error::Error;
     use std::ffi::CString;
@@ -416,15 +415,18 @@ mod tests {
         with_request_rec(|record| {
             let module_config = ModuleConfig::new();
             let uri = CString::new("/mod_tile_rs")?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             assert_eq!(BodyVariant::ReportStatistics, actual_request.body, "Incorrect parsing");
             Ok(())
         })
@@ -437,15 +439,18 @@ mod tests {
             let mut module_config = ModuleConfig::new();
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             assert_eq!(BodyVariant::DescribeLayer, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -460,15 +465,18 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTileV3(
                 ServeTileRequestV3 {
@@ -493,15 +501,18 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/999.png/bar", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            match SlippyRequestParser::parse(&context, request, request_url).expect_processed().unwrap_err() {
+            match SlippyRequestParser::parse(&context, &request, request_url).expect_processed().unwrap_err() {
                 ReadError::Param(err) => {
                     assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
                 },
@@ -521,15 +532,18 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTileV3(
                 ServeTileRequestV3 {
@@ -554,15 +568,18 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTileV3(
                 ServeTileRequestV3 {
@@ -586,15 +603,18 @@ mod tests {
             let mut module_config = ModuleConfig::new();
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTileV2(
                 ServeTileRequestV2 {
@@ -617,15 +637,18 @@ mod tests {
             let mut module_config = ModuleConfig::new();
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/999.jpg/blah", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            match SlippyRequestParser::parse(&context, request, request_url).expect_processed().unwrap_err() {
+            match SlippyRequestParser::parse(&context, &request, request_url).expect_processed().unwrap_err() {
                 ReadError::Param(err) => {
                     assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
                 },
@@ -644,15 +667,18 @@ mod tests {
             let mut module_config = ModuleConfig::new();
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTileV2(
                 ServeTileRequestV2 {
@@ -675,15 +701,18 @@ mod tests {
             let mut module_config = ModuleConfig::new();
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
-            record.uri = uri.into_raw();
+            record.uri = uri.clone().into_raw();
             let context = HostContext {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = Apache2Request::create_with_tile_config(record)?;
+            let request = HttpRequest {
+                uri: uri.as_c_str().to_str()?,
+                received_time: Utc::now(),
+            };
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTileV2(
                 ServeTileRequestV2 {

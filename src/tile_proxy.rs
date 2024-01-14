@@ -206,11 +206,10 @@ impl TileProxy {
                 self,
             )
         };
-        let request = Apache2Request::find_or_allocate_new(record).unwrap();
-        let read_outcome = read(&context, request);
+        let read_outcome = read(&context, &request);
         for observer_iter in SlippyObserverInventory::read_observers(&mut self.telemetry_state).iter_mut() {
             debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(&context, request, &read_outcome, read_func_name);
+            (*observer_iter).on_read(&context, &request, &read_outcome, read_func_name);
         }
         debug!(record.server, "TileServer::read_request - finish");
         return (read_outcome, self);

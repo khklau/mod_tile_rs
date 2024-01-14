@@ -1,12 +1,12 @@
-use crate::schema::apache2::request::Apache2Request;
 use crate::schema::handler::result::HandleOutcome;
+use crate::schema::http::request::HttpRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::framework::apache2::context::{HostContext, RequestContext,};
 
 
-pub type ReadRequestFunc = fn(&HostContext, &Apache2Request) -> ReadOutcome;
+pub type ReadRequestFunc = fn(&HostContext, &HttpRequest) -> ReadOutcome;
 
 pub type WriteResponseFunc = fn(&RequestContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteOutcome;
 
@@ -14,7 +14,7 @@ pub trait ReadRequestObserver {
     fn on_read(
         &mut self,
         context: &HostContext,
-        request: &Apache2Request,
+        request: &HttpRequest,
         read_outcome: &ReadOutcome,
         read_func_name: &'static str,
     ) -> ();
@@ -50,7 +50,7 @@ pub mod test_utils {
         fn on_read(
             &mut self,
             _context: &HostContext,
-            _request: &Apache2Request,
+            _request: &HttpRequest,
             _read_outcome: &ReadOutcome,
             _read_func_name: &'static str,
         ) -> () {
