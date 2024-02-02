@@ -3,7 +3,6 @@ use crate::binding::apache2::{
     apr_status_t, request_rec, server_rec,
 };
 use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::apache2::request::Apache2Request;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
@@ -557,7 +556,6 @@ mod tests {
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.clone().into_raw();
-                let context = Apache2Request::create_with_tile_config(request)?;
                 let read_outcome = ReadOutcome::Processed(
                     Ok(
                         request::SlippyRequest {
