@@ -420,10 +420,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -444,10 +445,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -470,10 +472,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -506,10 +509,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             match SlippyRequestParser::parse(&context, &request, request_url).expect_processed().unwrap_err() {
@@ -537,10 +541,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -573,10 +578,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -608,10 +614,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -642,10 +649,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             match SlippyRequestParser::parse(&context, &request, request_url).expect_processed().unwrap_err() {
@@ -672,10 +680,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
@@ -706,10 +715,11 @@ mod tests {
                 module_config: &module_config,
                 host: VirtualHost::find_or_allocate_new(record)?,
             };
-            let request = HttpRequest {
-                uri: uri.as_c_str().to_str()?,
-                received_time: Utc::now(),
-            };
+            let request = HttpRequest::new(
+                uri.as_c_str().to_str()?,
+                Utc::now(),
+                record,
+            );
             let request_url= request.uri;
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
