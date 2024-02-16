@@ -22,6 +22,13 @@ impl<R> ProcessOutcome<R> {
         }
     }
 
+    pub fn expect_processed_ref(&self) -> &R {
+        if let ProcessOutcome::Processed(result) = &self {
+            return result;
+        }
+        panic!("Expected processed ProcessOutcome");
+    }
+
     #[cfg(test)]
     pub fn is_ignored(&self) -> bool {
         match self {

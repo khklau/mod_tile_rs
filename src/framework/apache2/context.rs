@@ -10,6 +10,18 @@ pub struct HostContext<'c> {
     pub host: &'c VirtualHost<'c>,
 }
 
+impl<'c> HostContext<'c> {
+    pub fn new(
+        config: &'c ModuleConfig,
+        request: &'c request_rec,
+    ) -> HostContext<'c> {
+        HostContext {
+            module_config: &config,
+            host: VirtualHost::find_or_allocate_new(request).unwrap(),
+        }
+    }
+}
+
 pub struct RequestContext<'c> {
     pub host_context: HostContext<'c>,
     pub request: &'c Apache2Request<'c>,

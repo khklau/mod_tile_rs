@@ -23,6 +23,7 @@ use crate::framework::apache2::record::ServerRecord;
 use crate::io::communication::state::CommunicationState;
 use crate::use_case::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::adapter::http::reader::read_apache2_request;
+use crate::adapter::slippy::interface::WriteContext;
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
@@ -373,7 +374,10 @@ impl TileProxy {
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
         let write_record = record as *mut request_rec;
         let writer: &mut dyn HttpResponseWriter = unsafe { write_record.as_mut().unwrap() };
-        let context = RequestContext::new(record, &self.config);
+        let context = WriteContext {
+            host_context: HostContext::new(&self.config, record),
+            read_outcome,
+        };
         let write_outcome = match handle_outcome {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {

@@ -5,7 +5,7 @@ use crate::schema::slippy::response::{
 };
 use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::framework::apache2::context::RequestContext;
+use crate::adapter::slippy::interface::WriteContext;
 
 use chrono::Duration;
 use http::header::{ CACHE_CONTROL, EXPIRES, ETAG, HeaderMap, HeaderValue };
@@ -16,7 +16,7 @@ use mime;
 pub struct SlippyResponseWriter { }
 impl SlippyResponseWriter {
     pub fn write(
-        context: &RequestContext,
+        context: &WriteContext,
         response: &SlippyResponse,
         writer: &mut dyn HttpResponseWriter,
     ) -> WriteOutcome {
@@ -43,7 +43,7 @@ impl SlippyResponseWriter {
 struct DescriptionWriter { }
 impl DescriptionWriter {
     pub fn write(
-        context: &RequestContext,
+        context: &WriteContext,
         header: &Header,
         description: &Description,
         writer: &mut dyn HttpResponseWriter,
@@ -74,7 +74,10 @@ impl DescriptionWriter {
         writer.append_http_header(&cache_key, &cache_value).unwrap();
         http_headers.insert(cache_key, cache_value);
 
-        let expiry_timestamp = context.request.received_timestamp + max_age_duration;
+        let request = context.read_outcome.expect_processed_ref().as_ref().expect(
+            "Attempting to write response when read request failed"
+        );
+        let expiry_timestamp = request.header.received_timestamp + max_age_duration;
         let expiry_string = expiry_timestamp.to_rfc2822();
         let expiry_key = EXPIRES.clone();
         let expiry_value = HeaderValue::from_str(expiry_string.as_str()).unwrap();
@@ -99,7 +102,7 @@ impl DescriptionWriter {
 struct StatisticsWriter { }
 impl StatisticsWriter {
     pub fn write(
-        context: &RequestContext,
+        context: &WriteContext,
         header: &Header,
         statistics: &Statistics,
         writer: &mut dyn HttpResponseWriter,
@@ -139,7 +142,7 @@ impl StatisticsWriter {
 struct TileWriter {}
 impl TileWriter {
     pub fn write(
-        context: &RequestContext,
+        context: &WriteContext,
         header: &Header,
         tile: &TileResponse,
         writer: &mut dyn HttpResponseWriter,

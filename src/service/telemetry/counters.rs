@@ -6,8 +6,12 @@ use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::framework::apache2::context::{HostContext, RequestContext,};
-use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
+use crate::framework::apache2::context::HostContext;
+use crate::adapter::slippy::interface::{
+    ReadRequestObserver,
+    WriteContext,
+    WriteResponseObserver,
+};
 use crate::use_case::interface::HandleRequestObserver;
 
 
@@ -73,7 +77,7 @@ impl WriteCounter {
 impl WriteResponseObserver for WriteCounter {
     fn on_write(
         &mut self,
-        _context: &RequestContext,
+        _context: &WriteContext,
         _response: &SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,

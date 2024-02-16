@@ -8,8 +8,8 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::framework::apache2::context::RequestContext;
-use crate::adapter::slippy::interface::WriteResponseObserver;
+use crate::framework::apache2::context::HostContext;
+use crate::adapter::slippy::interface::{WriteContext, WriteResponseObserver,};
 use crate::service::telemetry::interface::TileHandlingMetrics;
 
 use chrono::Duration;
@@ -42,7 +42,7 @@ impl TileHandlingAnalysis {
 
     fn on_handled_tile(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         request: &request::SlippyRequest,
         response: &response::TileResponse,
         handle_duration: &Duration,
@@ -53,7 +53,7 @@ impl TileHandlingAnalysis {
 
     fn increase_tile_handle_count(
         &mut self,
-        _context: &RequestContext,
+        _context: &WriteContext,
         request: &request::SlippyRequest,
         response: &response::TileResponse,
     ) -> () {
@@ -66,7 +66,7 @@ impl TileHandlingAnalysis {
 
     fn accrue_tile_handle_duration(
         &mut self,
-        _context: &RequestContext,
+        _context: &WriteContext,
         request: &request::SlippyRequest,
         response: &response::TileResponse,
         handle_duration: &Duration,
@@ -82,7 +82,7 @@ impl TileHandlingAnalysis {
 impl WriteResponseObserver for TileHandlingAnalysis {
     fn on_write(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         _write_outcome: &WriteOutcome,
@@ -237,7 +237,7 @@ pub mod test_utils {
     impl WriteResponseObserver for MockNoOpTileHandlingAnalysis {
         fn on_write(
             &mut self,
-            _context: &RequestContext,
+            _context: &WriteContext,
             _response: &response::SlippyResponse,
             _writer: &dyn HttpResponseWriter,
             _write_outcome: &WriteOutcome,
@@ -277,7 +277,6 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext::new(request, &module_config);
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
@@ -300,6 +299,10 @@ mod tests {
                     }
                 )
             );
+            let context = WriteContext {
+                host_context: HostContext::new(&module_config, request),
+                read_outcome: &read_outcome,
+            };
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
             let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
@@ -361,7 +364,6 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext::new(request, &module_config);
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
@@ -384,6 +386,10 @@ mod tests {
                     }
                 )
             );
+            let context = WriteContext {
+                host_context: HostContext::new(&module_config, request),
+                read_outcome: &read_outcome,
+            };
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
             let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
@@ -445,7 +451,6 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext::new(request, &module_config);
             let read_outcome = ReadOutcome::Processed(
                 Ok(
                     request::SlippyRequest {
@@ -468,6 +473,10 @@ mod tests {
                     }
                 )
             );
+            let context = WriteContext {
+                host_context: HostContext::new(&module_config, request),
+                read_outcome: &read_outcome,
+            };
             let write_outcome = WriteOutcome::Processed(
                 Ok(
                     HttpResponse {

@@ -7,8 +7,10 @@ use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::schema::tile::identity::LayerName;
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::framework::apache2::context::RequestContext;
-use crate::adapter::slippy::interface::WriteResponseObserver;
+use crate::adapter::slippy::interface::{
+    WriteContext,
+    WriteResponseObserver,
+};
 use crate::service::telemetry::interface::ResponseMetrics;
 
 use chrono::Duration;
@@ -47,7 +49,7 @@ impl ResponseAnalysis {
 
     fn on_tile_write(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         request: &request::SlippyRequest,
         response: &response::SlippyResponse,
         response_duration: &Duration,
@@ -58,7 +60,7 @@ impl ResponseAnalysis {
 
     fn accrue_tile_response_duration(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         request: &request::SlippyRequest,
         _response: &response::SlippyResponse,
         response_duration: &Duration,
@@ -84,7 +86,7 @@ impl ResponseAnalysis {
 
     fn increment_tile_response_count(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         request: &request::SlippyRequest,
         _response: &response::SlippyResponse,
     ) -> () {
@@ -108,7 +110,7 @@ impl ResponseAnalysis {
 
     fn on_http_response_write(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         request: &request::SlippyRequest,
         http_response: &HttpResponse,
     ) -> () {
@@ -155,7 +157,7 @@ impl LayerResponseAnalysis {
 impl WriteResponseObserver for ResponseAnalysis {
     fn on_write(
         &mut self,
-        context: &RequestContext,
+        context: &WriteContext,
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
         write_outcome: &WriteOutcome,
@@ -304,6 +306,7 @@ mod tests {
     use crate::schema::tile::age::TileAge;
     use crate::schema::tile::source::TileSource;
     use crate::schema::tile::tile_ref::TileRef;
+    use crate::framework::apache2::context::HostContext;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::io::communication::http_exchange::test_utils::MockWriter;
     use chrono::Utc;
@@ -320,7 +323,6 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let context = RequestContext::new(request, &module_config);
             let layer_name = LayerName::from("default");
             let read_outcome = ReadOutcome::Processed(
                 Ok(
@@ -344,6 +346,10 @@ mod tests {
                     }
                 )
             );
+            let context = WriteContext {
+                host_context: HostContext::new(&module_config, request),
+                read_outcome: &read_outcome,
+            };
             let before_timestamp = Utc::now();
             let response_duration = Duration::seconds(2);
             let after_timestamp = before_timestamp + response_duration;
