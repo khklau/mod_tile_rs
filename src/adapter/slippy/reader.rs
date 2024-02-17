@@ -12,7 +12,7 @@ use crate::schema::slippy::request::{
 };
 use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::identity::LayerName;
-use crate::framework::apache2::context::HostContext;
+use crate::adapter::slippy::interface::ReadContext;
 
 use const_format::concatcp;
 use scan_fmt::scan_fmt;
@@ -23,7 +23,7 @@ use std::string::String;
 pub struct SlippyRequestReader;
 impl SlippyRequestReader {
     pub fn read(
-        context: &HostContext,
+        context: &ReadContext,
         request: &HttpRequest,
     ) -> ReadOutcome {
         let request_url= request.uri;
@@ -34,11 +34,11 @@ impl SlippyRequestReader {
 pub struct SlippyRequestParser;
 impl SlippyRequestParser {
     pub fn parse(
-        context: &HostContext,
+        context: &ReadContext,
         request: &HttpRequest,
         request_url: &str,
     ) -> ReadOutcome {
-        debug!(context.host.record, "SlippyRequestParser::parse - start");
+        debug!(context.host().record, "SlippyRequestParser::parse - start");
         // try match stats request
         let stat_outcome = StatisticsRequestParser::parse(&context, request, request_url);
         if stat_outcome.is_processed() {
@@ -51,9 +51,9 @@ impl SlippyRequestParser {
                 ServeTileV2RequestParser::parse,
             )
         );
-        for (layer, config) in &(context.module_config.layers) {
+        for (layer, config) in &(context.module_config().layers) {
             info!(
-                context.host.record,
+                context.host().record,
                 "SlippyRequestParser::parse - comparing layer {} with base URL {} to uri",
                 layer,
                 request_url
@@ -68,7 +68,7 @@ impl SlippyRequestParser {
                 }
             };
         }
-        info!(context.host.record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
+        info!(context.host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
         return ProcessOutcome::Ignored;
     }
 }
@@ -79,10 +79,10 @@ impl LayerParserCombinator {
     fn try_else<F, G>(
         func1: F,
         func2: G,
-    ) -> impl Fn(&HostContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome
+    ) -> impl Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome
     where
-        F: Fn(&HostContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
-        G: Fn(&HostContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
+        F: Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
+        G: Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
     {
         move |context, config, request, request_url| {
             let outcome = func1(context, config, request, request_url);
@@ -98,14 +98,14 @@ impl LayerParserCombinator {
 struct StatisticsRequestParser;
 impl StatisticsRequestParser {
     fn parse(
-        context: &HostContext,
+        context: &ReadContext,
         request: &HttpRequest,
         _request_url: &str,
     ) -> ReadOutcome {
         let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
         if request.uri.eq(&stats_uri) {
-            info!(context.host.record, "StatisticsRequestParser::parse - matched ReportStatistics");
+            info!(context.host().record, "StatisticsRequestParser::parse - matched ReportStatistics");
             ProcessOutcome::Processed(
                 Ok(
                     SlippyRequest {
@@ -120,7 +120,7 @@ impl StatisticsRequestParser {
                 )
             )
         } else {
-            info!(context.host.record, "StatisticsRequestParser::parse - no match");
+            info!(context.host().record, "StatisticsRequestParser::parse - no match");
             ProcessOutcome::Ignored
         }
     }
@@ -129,13 +129,13 @@ impl StatisticsRequestParser {
 struct DescribeLayerRequestParser;
 impl DescribeLayerRequestParser {
     fn parse(
-        context: &HostContext,
+        context: &ReadContext,
         layer_config: &LayerConfig,
         request: &HttpRequest,
         layer_trimmed_url: &str,
     ) -> ReadOutcome {
         if layer_trimmed_url.eq_ignore_ascii_case("/tile-layer.json") {
-            info!(context.host.record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
+            info!(context.host().record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
             ProcessOutcome::Processed(
                 Ok(
                     SlippyRequest {
@@ -150,7 +150,7 @@ impl DescribeLayerRequestParser {
                 )
             )
         } else {
-            info!(context.host.record, "DescribeLayerRequestParser::parse - no match");
+            info!(context.host().record, "DescribeLayerRequestParser::parse - no match");
             ProcessOutcome::Ignored
         }
     }
@@ -159,7 +159,7 @@ impl DescribeLayerRequestParser {
 struct ServeTileV3RequestParser;
 impl ServeTileV3RequestParser {
     fn parse(
-        context: &HostContext,
+        context: &ReadContext,
         layer_config: &LayerConfig,
         request: &HttpRequest,
         layer_trimmed_url: &str,
@@ -196,7 +196,7 @@ impl ServeTileV3RequestParser {
             String, i32, i32, i32, String, String
         ) {
             Ok((parameter, x, y, z, extension, option)) => {
-                info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
+                info!(context.host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 with option");
                 if z <= MAX_ZOOM_SERVER as i32 {
                     return ProcessOutcome::Processed(
                         Ok(
@@ -244,7 +244,7 @@ impl ServeTileV3RequestParser {
             String, i32, i32, i32, String
         ) {
             Ok((parameter, x, y, z, extension)) => {
-                info!(context.host.record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
+                info!(context.host().record, "ServeTileV3RequestParser::parse - matched ServeTileV3 no option");
                 if z <= MAX_ZOOM_SERVER as i32 {
                     return ProcessOutcome::Processed(
                         Ok(
@@ -285,7 +285,7 @@ impl ServeTileV3RequestParser {
             Err(_) => ()
         }
 
-        info!(context.host.record, "ServeTileV3RequestParser::parse - no match");
+        info!(context.host().record, "ServeTileV3RequestParser::parse - no match");
         return ProcessOutcome::Ignored;
     }
 }
@@ -293,7 +293,7 @@ impl ServeTileV3RequestParser {
 struct ServeTileV2RequestParser;
 impl ServeTileV2RequestParser {
     fn parse(
-        context: &HostContext,
+        context: &ReadContext,
         layer_config: &LayerConfig,
         request: &HttpRequest,
         layer_trimmed_url: &str,
@@ -307,7 +307,7 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension, option)) => {
             if z <= MAX_ZOOM_SERVER as i32 {
-                info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
+                info!(context.host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 with option");
                 return ProcessOutcome::Processed(
                     Ok(
                         SlippyRequest {
@@ -354,7 +354,7 @@ impl ServeTileV2RequestParser {
     ) {
         Ok((x, y, z, extension)) => {
             if z <= MAX_ZOOM_SERVER as i32 {
-                info!(context.host.record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
+                info!(context.host().record, "ServeTileV2RequestParser::parse - matched ServeTileV2 no option");
                 return ProcessOutcome::Processed(
                     Ok(
                         SlippyRequest {
@@ -392,7 +392,7 @@ impl ServeTileV2RequestParser {
         },
         Err(_) => ()
     }
-        info!(context.host.record, "ServeTileV2RequestParser::parse - no match");
+        info!(context.host().record, "ServeTileV2RequestParser::parse - no match");
         return ProcessOutcome::Ignored;
     }
 }
@@ -404,6 +404,7 @@ mod tests {
     use crate::schema::apache2::config::ModuleConfig;
     use crate::schema::apache2::virtual_host::VirtualHost;
     use crate::core::memory::PoolStored;
+    use crate::framework::apache2::context::HostContext;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use chrono::Utc;
     use std::boxed::Box;
@@ -416,9 +417,11 @@ mod tests {
             let module_config = ModuleConfig::new();
             let uri = CString::new("/mod_tile_rs")?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -441,9 +444,11 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -468,9 +473,11 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/bar", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -505,9 +512,11 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/999.png/bar", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -537,9 +546,11 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png/", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -574,9 +585,11 @@ mod tests {
             layer_config.parameters_allowed = true;
             let uri = CString::new(format!("{}/foo/7/8/9.png", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -610,9 +623,11 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/blah", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -645,9 +660,11 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/999.jpg/blah", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -676,9 +693,11 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg/", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,
@@ -711,9 +730,11 @@ mod tests {
             let layer_config = module_config.layers.get_mut(&layer_name).unwrap();
             let uri = CString::new(format!("{}/1/2/3.jpg", layer_config.base_url))?;
             record.uri = uri.clone().into_raw();
-            let context = HostContext {
-                module_config: &module_config,
-                host: VirtualHost::find_or_allocate_new(record)?,
+            let context = ReadContext {
+                host_context: HostContext {
+                    module_config: &module_config,
+                    host: VirtualHost::find_or_allocate_new(record)?,
+                }
             };
             let request = HttpRequest::new(
                 uri.as_c_str().to_str()?,

@@ -16,18 +16,18 @@ use crate::framework::apache2::context::{
     HostContext,
     RequestContext,
 };
-use crate::use_case::interface::RequestHandler;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
 use crate::io::communication::state::CommunicationState;
 use crate::use_case::inventory::{HandlerObserverInventory, HandlerState,};
 use crate::adapter::http::reader::read_apache2_request;
-use crate::adapter::slippy::interface::WriteContext;
+use crate::adapter::slippy::interface::{ReadContext, WriteContext,};
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
 use crate::service::telemetry::inventory::TelemetryState;
+use crate::use_case::interface::RequestHandler;
 
 use chrono::Utc;
 
@@ -191,9 +191,11 @@ impl TileProxy {
     ) -> (ReadOutcome, &mut Self) {
         debug!(record.server, "TileServer::read_request - start");
         let (read, read_func_name) = SlippyInventory::read_request_func();
-        let context = HostContext {
-            module_config: &self.config,
-            host: VirtualHost::find_or_allocate_new(record).unwrap(),
+        let context = ReadContext {
+            host_context: HostContext {
+                module_config: &self.config,
+                host: VirtualHost::find_or_allocate_new(record).unwrap(),
+            }
         };
         let request = match read_apache2_request(record) {
             Ok(request) => request,
@@ -208,7 +210,7 @@ impl TileProxy {
         };
         let read_outcome = read(&context, &request);
         for observer_iter in SlippyObserverInventory::read_observers(&mut self.telemetry_state).iter_mut() {
-            debug!(context.host.record, "TileServer::read_request - calling observer {:p}", *observer_iter);
+            debug!(context.host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
             (*observer_iter).on_read(&context, &request, &read_outcome, read_func_name);
         }
         debug!(record.server, "TileServer::read_request - finish");

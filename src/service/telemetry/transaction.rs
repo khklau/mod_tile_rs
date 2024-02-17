@@ -7,8 +7,8 @@ use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::use_case::interface::HandleRequestObserver;
-use crate::framework::apache2::context::HostContext;
 use crate::adapter::slippy::interface::{
+    ReadContext,
     ReadRequestObserver,
     WriteContext,
     WriteResponseObserver,
@@ -28,7 +28,7 @@ impl TransactionTrace {
 impl ReadRequestObserver for TransactionTrace {
     fn on_read(
         &mut self,
-        _context: &HostContext,
+        _context: &ReadContext,
         _request: &HttpRequest,
         _read_outcome: &ReadOutcome,
         _read_func_name: &'static str,

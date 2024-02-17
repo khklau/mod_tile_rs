@@ -6,8 +6,8 @@ use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::framework::apache2::context::HostContext;
 use crate::adapter::slippy::interface::{
+    ReadContext,
     ReadRequestObserver,
     WriteContext,
     WriteResponseObserver,
@@ -30,7 +30,7 @@ impl ReadCounter {
 impl ReadRequestObserver for ReadCounter {
     fn on_read(
         &mut self,
-        _context: &HostContext,
+        _context: &ReadContext,
         _request: &HttpRequest,
         _outcome: &ReadOutcome,
         _read_func_name: &'static str,
