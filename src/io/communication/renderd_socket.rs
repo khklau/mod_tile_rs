@@ -1,7 +1,7 @@
 use crate::io::communication::interface::{
     CommunicationError, BidirectionalChannel,
 };
-use crate::framework::apache2::context::RequestContext;
+use crate::framework::apache2::context::HostContext;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::config::ModuleConfig;
 
@@ -84,7 +84,7 @@ impl RenderdSocket {
 impl BidirectionalChannel for RenderdSocket {
     fn send_blocking_request(
         &mut self,
-        _context: &RequestContext,
+        _context: &HostContext,
         request: &[u8],
         response_buffer: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, CommunicationError> {

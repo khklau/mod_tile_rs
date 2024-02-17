@@ -66,7 +66,7 @@ impl RequestHandler for TileHandlerState {
             _ => return HandleOutcome::Ignored,
         };
         let primary_store = io.storage.primary_tile_store();
-        let tile_ref = match primary_store.read_tile(context, &tile_id) {
+        let tile_ref = match primary_store.read_tile(&(context.host_context), &tile_id) {
             Ok(tile) => tile,
             Err(err) => {
                 return HandleOutcome::Processed(

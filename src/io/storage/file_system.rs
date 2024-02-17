@@ -2,7 +2,7 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
-use crate::framework::apache2::context::RequestContext;
+use crate::framework::apache2::context::HostContext;
 use crate::io::storage::interface::TileStorage;
 use crate::schema::tile::tile_ref::TileRef;
 use crate::io::storage::meta_tile::MetaTile;
@@ -33,10 +33,10 @@ impl FileSystem {
 impl TileStorage for FileSystem {
     fn read_tile(
         &mut self,
-        context: &RequestContext,
+        context: &HostContext,
         id: &TileIdentity,
     ) -> Result<TileRef, TileReadError> {
-        let path = MetaTile::identity_to_path(context.module_config(), id);
+        let path = MetaTile::identity_to_path(context.module_config, id);
         let meta_tile = MetaTile::read(&path.meta_tile_path)?;
         let cached_tile = match self.cache.entry(path.meta_tile_path.clone()) {
             Entry::Occupied(mut entry) => {
