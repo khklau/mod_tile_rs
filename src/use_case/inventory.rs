@@ -2,7 +2,10 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::service::telemetry::interface::TelemetryInventory;
 use crate::use_case::interface::{
-    HandlerInventory, HandleRequestObserver, RequestHandler
+    DescriptionUseCaseObserver,
+    HandlerInventory,
+    HandleRequestObserver,
+    RequestHandler,
 };
 use crate::use_case::description::DescriptionHandlerState;
 use crate::use_case::statistics::StatisticsHandlerState;
@@ -44,6 +47,13 @@ impl HandlerObserverInventory {
         telemetry: &'i mut dyn TelemetryInventory
     ) -> [&'i mut dyn HandleRequestObserver; 2] {
         let [read_observer_0, read_observer_1] = telemetry.handle_request_observers();
+        return [read_observer_0, read_observer_1];
+    }
+
+    pub fn description_use_case_observers<'i>(
+        telemetry: &'i mut dyn TelemetryInventory
+    ) -> [&'i mut dyn DescriptionUseCaseObserver; 2] {
+        let [read_observer_0, read_observer_1] = telemetry.description_use_case_observers();
         return [read_observer_0, read_observer_1];
     }
 }

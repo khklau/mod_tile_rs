@@ -27,7 +27,7 @@ use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory
 use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
 use crate::service::telemetry::inventory::TelemetryState;
-use crate::use_case::interface::RequestHandler;
+use crate::use_case::interface::{DescriptionContext, RequestHandler};
 
 use chrono::Utc;
 
@@ -263,33 +263,32 @@ impl TileProxy {
         request: &SlippyRequest,
     ) -> HandleOutcome {
         debug!(record.server, "TileServer::call_description_handler - start");
-        let context = RequestContext::new(record, &self.config);
-        let mut io = IOContext {
-            communication: &mut self.comms_state,
-            storage: &mut self.storage_state
-        };
-        let mut services = ServicesContext {
-            telemetry: &self.telemetry_state,
-        };
         let outcome_option = {
-            let handler: &mut dyn RequestHandler = &mut self.handler_state.description;
-            (*handler).handle(
+            let context = DescriptionContext {
+                host: HostContext::new(&self.config, record),
+                io: IOContext {
+                    communication: &mut self.comms_state,
+                    storage: &mut self.storage_state,
+                },
+                services: ServicesContext {
+                    telemetry: &self.telemetry_state,
+                },
+            };
+            self.handler_state.description.describe_layer(
                 &context,
-                &mut io,
-                &mut services,
                 request,
-            ).as_some_when_processed(handler.type_name())
+            ).as_some_when_processed(self.handler_state.description.type_name())
         };
         let outcome = match outcome_option {
             Some((handle_outcome, handler_name)) => {
-                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                    (*observer_iter).on_handle(request, &handle_outcome, handler_name);
+                for observer_iter in HandlerObserverInventory::description_use_case_observers(&mut self.telemetry_state).iter_mut() {
+                    (*observer_iter).on_describe_layer(request, &handle_outcome, handler_name);
                 }
                 handle_outcome
             },
             None => HandleOutcome::Ignored,
         };
-        debug!(context.request.record.server, "TileServer::call_description_handler - finish");
+        debug!(record.server, "TileServer::call_description_handler - finish");
         return outcome;
     }
 

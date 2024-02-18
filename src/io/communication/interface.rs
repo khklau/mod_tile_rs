@@ -101,6 +101,7 @@ pub struct RenderdCommunicationInventory<'i> {
 
 pub trait CommunicationInventory {
     fn primary_renderd_comms(&mut self) -> &mut dyn BidirectionalChannel;
+    // TODO: add a method that returns the concrete type name
 }
 
 #[cfg(test)]

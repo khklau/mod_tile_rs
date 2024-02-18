@@ -1,6 +1,5 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::use_case::interface::HandleRequestObserver;
 use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
 use crate::service::telemetry::interface::{
     ResponseMetrics, TelemetryInventory, TileHandlingMetrics,
@@ -11,6 +10,7 @@ use crate::service::telemetry::counters::{
 use crate::service::telemetry::response::ResponseAnalysis;
 use crate::service::telemetry::tile_handling::TileHandlingAnalysis;
 use crate::service::telemetry::transaction::TransactionTrace;
+use crate::use_case::interface::{DescriptionUseCaseObserver, HandleRequestObserver,};
 
 use std::result::Result;
 
@@ -53,6 +53,10 @@ impl TelemetryInventory for TelemetryState {
     }
 
     fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
+        [&mut self.trans_trace, &mut self.handle_counter]
+    }
+
+    fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {
         [&mut self.trans_trace, &mut self.handle_counter]
     }
 

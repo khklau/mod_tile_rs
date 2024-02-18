@@ -12,7 +12,10 @@ use crate::adapter::slippy::interface::{
     WriteContext,
     WriteResponseObserver,
 };
-use crate::use_case::interface::HandleRequestObserver;
+use crate::use_case::interface::{
+    DescriptionUseCaseObserver,
+    HandleRequestObserver,
+};
 
 
 pub struct ReadCounter {
@@ -53,6 +56,17 @@ impl HandleCounter {
 
 impl HandleRequestObserver for HandleCounter {
     fn on_handle(
+        &mut self,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+    ) -> () {
+        self.count += 1;
+    }
+}
+
+impl DescriptionUseCaseObserver for HandleCounter {
+    fn on_describe_layer(
         &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,

@@ -18,6 +18,7 @@ pub trait TileStorage {
 
 pub trait StorageInventory {
     fn primary_tile_store(&mut self) -> &mut dyn TileStorage;
+    // TODO: add a method that returns the concrete type name
 }
 
 #[cfg(test)]

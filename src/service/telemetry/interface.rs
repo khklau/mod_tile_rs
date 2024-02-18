@@ -1,7 +1,7 @@
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
-use crate::use_case::interface::HandleRequestObserver;
+use crate::use_case::interface::{DescriptionUseCaseObserver, HandleRequestObserver};
 use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
 
 use http::status::StatusCode;
@@ -50,12 +50,16 @@ pub trait TileHandlingMetrics {
 
 pub trait TelemetryInventory {
     fn response_metrics(&self) -> &dyn ResponseMetrics;
+    // TODO: add a method that returns the concrete type name
 
     fn tile_handling_metrics(&self) -> &dyn TileHandlingMetrics;
+    // TODO: add a method that returns the concrete type name
 
     fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2];
 
     fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2];
+
+    fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2];
 
     fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4];
 }
@@ -147,6 +151,8 @@ pub mod test_utils {
         read_observer_1: NoOpReadRequestObserver,
         handle_observer_0: NoOpHandleRequestObserver,
         handle_observer_1: NoOpHandleRequestObserver,
+        description_use_case_observer_0: NoOpHandleRequestObserver,
+        description_use_case_observer_1: NoOpHandleRequestObserver,
         write_observer_0: NoOpWriteResponseObserver,
         write_observer_1: NoOpWriteResponseObserver,
         write_observer_2: NoOpWriteResponseObserver,
@@ -162,6 +168,8 @@ pub mod test_utils {
                 read_observer_1: NoOpReadRequestObserver::new(),
                 handle_observer_0: NoOpHandleRequestObserver::new(),
                 handle_observer_1: NoOpHandleRequestObserver::new(),
+                description_use_case_observer_0: NoOpHandleRequestObserver::new(),
+                description_use_case_observer_1: NoOpHandleRequestObserver::new(),
                 write_observer_0: NoOpWriteResponseObserver::new(),
                 write_observer_1: NoOpWriteResponseObserver::new(),
                 write_observer_2: NoOpWriteResponseObserver::new(),
@@ -185,6 +193,10 @@ pub mod test_utils {
 
         fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
             [&mut self.handle_observer_0, &mut self.handle_observer_1]
+        }
+
+        fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {
+            [&mut self.description_use_case_observer_0, &mut self.description_use_case_observer_1]
         }
 
         fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4] {

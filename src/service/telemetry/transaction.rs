@@ -6,12 +6,15 @@ use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::use_case::interface::HandleRequestObserver;
 use crate::adapter::slippy::interface::{
     ReadContext,
     ReadRequestObserver,
     WriteContext,
     WriteResponseObserver,
+};
+use crate::use_case::interface::{
+    DescriptionUseCaseObserver,
+    HandleRequestObserver,
 };
 
 
@@ -38,6 +41,16 @@ impl ReadRequestObserver for TransactionTrace {
 
 impl HandleRequestObserver for TransactionTrace {
     fn on_handle(
+        &mut self,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+    ) -> () {
+    }
+}
+
+impl DescriptionUseCaseObserver for TransactionTrace {
+    fn on_describe_layer(
         &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,

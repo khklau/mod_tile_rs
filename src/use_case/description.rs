@@ -7,7 +7,7 @@ use crate::schema::tile::identity::LayerName;
 use crate::io::interface::IOContext;
 use crate::framework::apache2::context::RequestContext;
 use crate::service::interface::ServicesContext;
-use crate::use_case::interface::RequestHandler;
+use crate::use_case::interface::{DescriptionContext, RequestHandler,};
 
 use chrono::Utc;
 use mime;
@@ -17,11 +17,45 @@ use std::any::type_name;
 
 pub struct DescriptionHandlerState { }
 
+
 impl DescriptionHandlerState {
     pub fn new(_config: &ModuleConfig) -> Result<DescriptionHandlerState, InvalidConfigError> {
         Ok(
             DescriptionHandlerState {  }
         )
+    }
+
+    pub fn type_name(&self) -> &'static str {
+        type_name::<Self>()
+    }
+
+    pub fn describe_layer(
+        &mut self,
+        context: &DescriptionContext,
+        request: &request::SlippyRequest,
+    ) -> HandleOutcome {
+        let before_timestamp = Utc::now();
+        let layer = match request.body {
+            request::BodyVariant::DescribeLayer => &request.header.layer,
+            _ => {
+                return HandleOutcome::Ignored;
+            },
+        };
+        let description = describe(context.module_config(), layer);
+        let response = response::SlippyResponse {
+            header: response::Header {
+                mime_type: mime::APPLICATION_JSON.clone(),
+            },
+            body: response::BodyVariant::Description(description),
+        };
+        let after_timestamp = Utc::now();
+        return HandleOutcome::Processed(
+            HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response),
+            }
+        );
     }
 }
 
