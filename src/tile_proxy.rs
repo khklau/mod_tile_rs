@@ -27,7 +27,8 @@ use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory
 use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
 use crate::service::telemetry::inventory::TelemetryState;
-use crate::use_case::interface::{DescriptionContext, RequestHandler};
+use crate::use_case::description::DescriptionContext;
+use crate::use_case::interface::RequestHandler;
 
 use chrono::Utc;
 

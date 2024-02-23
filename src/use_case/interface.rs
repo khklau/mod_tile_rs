@@ -1,27 +1,8 @@
-use crate::schema::apache2::config::ModuleConfig;
-use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 use crate::io::interface::IOContext;
-use crate::framework::apache2::context::{HostContext, RequestContext,};
+use crate::framework::apache2::context::RequestContext;
 use crate::service::interface::ServicesContext;
-
-
-pub struct DescriptionContext<'c> {
-    pub host: HostContext<'c>,
-    pub io: IOContext<'c>,
-    pub services: ServicesContext<'c>,
-}
-
-impl<'c> DescriptionContext<'c> {
-    pub fn module_config(&self) -> &'c ModuleConfig {
-        self.host.module_config
-    }
-
-    pub fn host(&self) -> &'c VirtualHost<'c> {
-        self.host.host
-    }
-}
 
 
 pub trait RequestHandler {
