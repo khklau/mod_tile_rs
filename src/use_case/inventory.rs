@@ -6,6 +6,7 @@ use crate::use_case::interface::{
     HandlerInventory,
     HandleRequestObserver,
     RequestHandler,
+    StatisticsUseCaseObserver,
 };
 use crate::use_case::description::DescriptionHandlerState;
 use crate::use_case::statistics::StatisticsHandlerState;
@@ -54,6 +55,13 @@ impl HandlerObserverInventory {
         telemetry: &'i mut dyn TelemetryInventory
     ) -> [&'i mut dyn DescriptionUseCaseObserver; 2] {
         let [read_observer_0, read_observer_1] = telemetry.description_use_case_observers();
+        return [read_observer_0, read_observer_1];
+    }
+
+    pub fn statistics_use_case_observers<'i>(
+        telemetry: &'i mut dyn TelemetryInventory
+    ) -> [&'i mut dyn StatisticsUseCaseObserver; 2] {
+        let [read_observer_0, read_observer_1] = telemetry.statistics_use_case_observers();
         return [read_observer_0, read_observer_1];
     }
 }

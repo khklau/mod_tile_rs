@@ -29,6 +29,7 @@ use crate::service::interface::ServicesContext;
 use crate::service::telemetry::inventory::TelemetryState;
 use crate::use_case::description::DescriptionContext;
 use crate::use_case::interface::RequestHandler;
+use crate::use_case::statistics::StatisticsContext;
 
 use chrono::Utc;
 
@@ -299,33 +300,28 @@ impl TileProxy {
         request: &SlippyRequest,
     ) -> HandleOutcome {
         debug!(record.server, "TileServer::call_statistics_handler - start");
-        let context = RequestContext::new(record, &self.config);
-        let mut io = IOContext {
-            communication: &mut self.comms_state,
-            storage: &mut self.storage_state
-        };
-        let mut services = ServicesContext {
-            telemetry: &self.telemetry_state,
-        };
         let outcome_option = {
-            let handler: &mut dyn RequestHandler = &mut self.handler_state.statistics;
-            (*handler).handle(
+            let context = StatisticsContext {
+                host: HostContext::new(&self.config, record),
+                services: ServicesContext {
+                    telemetry: &self.telemetry_state,
+                },
+            };
+            self.handler_state.statistics.report_statistics(
                 &context,
-                &mut io,
-                &mut services,
-                request,
-            ).as_some_when_processed(handler.type_name())
+                request
+            ).as_some_when_processed(self.handler_state.statistics.type_name())
         };
         let outcome = match outcome_option {
             Some((handle_outcome, handler_name)) => {
-                for observer_iter in HandlerObserverInventory::handle_observers(&mut self.telemetry_state).iter_mut() {
-                    (*observer_iter).on_handle(request, &handle_outcome, handler_name);
+                for observer_iter in HandlerObserverInventory::statistics_use_case_observers(&mut self.telemetry_state).iter_mut() {
+                    (*observer_iter).on_report_statistics(request, &handle_outcome, handler_name);
                 }
                 handle_outcome
             },
             None => HandleOutcome::Ignored,
         };
-        debug!(context.request.record.server, "TileServer::call_statistics_handler - finish");
+        debug!(record.server, "TileServer::call_statistics_handler - finish");
         return outcome;
     }
 

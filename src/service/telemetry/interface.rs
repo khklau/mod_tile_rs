@@ -1,7 +1,7 @@
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
-use crate::use_case::interface::{DescriptionUseCaseObserver, HandleRequestObserver};
+use crate::use_case::interface::{DescriptionUseCaseObserver, HandleRequestObserver, StatisticsUseCaseObserver};
 use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
 
 use http::status::StatusCode;
@@ -61,6 +61,8 @@ pub trait TelemetryInventory {
 
     fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2];
 
+    fn statistics_use_case_observers(&mut self) -> [&mut dyn StatisticsUseCaseObserver; 2];
+
     fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4];
 }
 
@@ -72,8 +74,6 @@ pub mod test_utils {
     use crate::adapter::slippy::interface::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
 
     use enum_iterator::IntoEnumIterator;
-
-    use std::boxed::Box;
 
     pub struct ZeroResponseMetrics {
         pub mock_status_codes: Vec<StatusCode>,
@@ -153,6 +153,8 @@ pub mod test_utils {
         handle_observer_1: NoOpHandleRequestObserver,
         description_use_case_observer_0: NoOpHandleRequestObserver,
         description_use_case_observer_1: NoOpHandleRequestObserver,
+        statistics_use_case_observer_0: NoOpHandleRequestObserver,
+        statistics_use_case_observer_1: NoOpHandleRequestObserver,
         write_observer_0: NoOpWriteResponseObserver,
         write_observer_1: NoOpWriteResponseObserver,
         write_observer_2: NoOpWriteResponseObserver,
@@ -170,6 +172,8 @@ pub mod test_utils {
                 handle_observer_1: NoOpHandleRequestObserver::new(),
                 description_use_case_observer_0: NoOpHandleRequestObserver::new(),
                 description_use_case_observer_1: NoOpHandleRequestObserver::new(),
+                statistics_use_case_observer_0: NoOpHandleRequestObserver::new(),
+                statistics_use_case_observer_1: NoOpHandleRequestObserver::new(),
                 write_observer_0: NoOpWriteResponseObserver::new(),
                 write_observer_1: NoOpWriteResponseObserver::new(),
                 write_observer_2: NoOpWriteResponseObserver::new(),
@@ -197,6 +201,10 @@ pub mod test_utils {
 
         fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {
             [&mut self.description_use_case_observer_0, &mut self.description_use_case_observer_1]
+        }
+
+        fn statistics_use_case_observers(&mut self) -> [&mut dyn StatisticsUseCaseObserver; 2] {
+            [&mut self.statistics_use_case_observer_0, &mut self.statistics_use_case_observer_1]
         }
 
         fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4] {

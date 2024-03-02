@@ -15,6 +15,7 @@ use crate::adapter::slippy::interface::{
 use crate::use_case::interface::{
     DescriptionUseCaseObserver,
     HandleRequestObserver,
+    StatisticsUseCaseObserver,
 };
 
 
@@ -51,6 +52,16 @@ impl HandleRequestObserver for TransactionTrace {
 
 impl DescriptionUseCaseObserver for TransactionTrace {
     fn on_describe_layer(
+        &mut self,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+    ) -> () {
+    }
+}
+
+impl StatisticsUseCaseObserver for TransactionTrace {
+    fn on_report_statistics(
         &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,

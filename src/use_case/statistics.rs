@@ -1,12 +1,13 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
+use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::io::interface::IOContext;
-use crate::framework::apache2::context::RequestContext;
+use crate::framework::apache2::context::{HostContext, RequestContext,};
 use crate::service::interface::ServicesContext;
 use crate::use_case::interface::RequestHandler;
 
@@ -15,6 +16,22 @@ use http::status::StatusCode;
 use mime;
 
 use std::any::type_name;
+
+
+pub struct StatisticsContext<'c> {
+    pub host: HostContext<'c>,
+    pub services: ServicesContext<'c>,
+}
+
+impl<'c> StatisticsContext<'c> {
+    pub fn module_config(&self) -> &'c ModuleConfig {
+        self.host.module_config
+    }
+
+    pub fn host(&self) -> &'c VirtualHost<'c> {
+        self.host.host
+    }
+}
 
 
 pub struct StatisticsHandlerState { }
@@ -26,10 +43,38 @@ impl StatisticsHandlerState {
         )
     }
 
+    pub fn report_statistics(
+        &self,
+        context: &StatisticsContext,
+        request: &request::SlippyRequest,
+    ) -> HandleOutcome {
+        let before_timestamp = Utc::now();
+        match request.body {
+            request::BodyVariant::ReportStatistics => (),
+            _ => {
+                return HandleOutcome::Ignored;
+            },
+        };
+        let statistics = self.report(&context.services);
+        let response = response::SlippyResponse {
+            header: response::Header {
+                mime_type: mime::TEXT_PLAIN.clone(),
+            },
+            body: response::BodyVariant::Statistics(statistics),
+        };
+        let after_timestamp = Utc::now();
+        return HandleOutcome::Processed(
+            HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response),
+            }
+        );
+    }
+
     fn report(
         &self,
-        context: &RequestContext,
-        services: &mut ServicesContext,
+        services: &ServicesContext,
     ) -> response::Statistics {
         let mut result = response::Statistics::new();
         let response_metrics = services.telemetry.response_metrics();
@@ -104,7 +149,7 @@ impl RequestHandler for StatisticsHandlerState {
                 return HandleOutcome::Ignored;
             },
         };
-        let statistics = self.report(context, services);
+        let statistics = self.report(services);
         let response = response::SlippyResponse {
             header: response::Header {
                 mime_type: mime::TEXT_PLAIN.clone(),
@@ -133,7 +178,11 @@ mod tests {
     use crate::core::identifier::generate_id;
     use crate::schema::tile::identity::LayerName;
     use crate::io::communication::interface::test_utils::EmptyResultCommunicationInventory;
-    use crate::use_case::interface::{DescriptionUseCaseObserver, HandleRequestObserver};
+    use crate::use_case::interface::{
+        DescriptionUseCaseObserver,
+        HandleRequestObserver,
+        StatisticsUseCaseObserver,
+    };
     use crate::use_case::interface::test_utils::NoOpHandleRequestObserver;
     use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
     use crate::adapter::slippy::interface::test_utils::{NoOpReadRequestObserver, NoOpWriteResponseObserver,};
@@ -206,6 +255,8 @@ mod tests {
         handle_observer_1: NoOpHandleRequestObserver,
         description_use_case_observer_0: NoOpHandleRequestObserver,
         description_use_case_observer_1: NoOpHandleRequestObserver,
+        statistics_use_case_observer_0: NoOpHandleRequestObserver,
+        statistics_use_case_observer_1: NoOpHandleRequestObserver,
         write_observer_0: NoOpWriteResponseObserver,
         write_observer_1: NoOpWriteResponseObserver,
         write_observer_2: NoOpWriteResponseObserver,
@@ -223,6 +274,8 @@ mod tests {
                 handle_observer_1: NoOpHandleRequestObserver::new(),
                 description_use_case_observer_0: NoOpHandleRequestObserver::new(),
                 description_use_case_observer_1: NoOpHandleRequestObserver::new(),
+                statistics_use_case_observer_0: NoOpHandleRequestObserver::new(),
+                statistics_use_case_observer_1: NoOpHandleRequestObserver::new(),
                 write_observer_0: NoOpWriteResponseObserver::new(),
                 write_observer_1: NoOpWriteResponseObserver::new(),
                 write_observer_2: NoOpWriteResponseObserver::new(),
@@ -246,6 +299,10 @@ mod tests {
 
         fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {
             [&mut self.description_use_case_observer_0, &mut self.description_use_case_observer_1]
+        }
+
+        fn statistics_use_case_observers(&mut self) -> [&mut dyn StatisticsUseCaseObserver; 2] {
+            [&mut self.statistics_use_case_observer_0, &mut self.statistics_use_case_observer_1]
         }
 
         fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4] {

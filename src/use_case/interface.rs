@@ -39,6 +39,15 @@ pub trait DescriptionUseCaseObserver {
     ) -> ();
 }
 
+pub trait StatisticsUseCaseObserver {
+    fn on_report_statistics(
+        &mut self,
+        request: &SlippyRequest,
+        handle_outcome: &HandleOutcome,
+        handler_name: &'static str,
+    ) -> ();
+}
+
 
 #[cfg(test)]
 pub mod test_utils {
@@ -84,6 +93,16 @@ pub mod test_utils {
 
     impl DescriptionUseCaseObserver for NoOpHandleRequestObserver {
         fn on_describe_layer(
+            &mut self,
+            _request: &SlippyRequest,
+            _handle_outcome: &HandleOutcome,
+            _handler_name: &'static str,
+        ) -> () {
+        }
+    }
+
+    impl StatisticsUseCaseObserver for NoOpHandleRequestObserver {
+        fn on_report_statistics(
             &mut self,
             _request: &SlippyRequest,
             _handle_outcome: &HandleOutcome,
