@@ -16,6 +16,7 @@ use crate::use_case::interface::{
     DescriptionUseCaseObserver,
     HandleRequestObserver,
     StatisticsUseCaseObserver,
+    TileUseCaseObserver,
 };
 
 
@@ -79,6 +80,17 @@ impl DescriptionUseCaseObserver for HandleCounter {
 
 impl StatisticsUseCaseObserver for HandleCounter {
     fn on_report_statistics(
+        &mut self,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+    ) -> () {
+        self.count += 1;
+    }
+}
+
+impl TileUseCaseObserver for HandleCounter {
+    fn on_fetch_tile(
         &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,

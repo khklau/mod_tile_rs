@@ -14,6 +14,7 @@ use crate::use_case::interface::{
     DescriptionUseCaseObserver,
     HandleRequestObserver,
     StatisticsUseCaseObserver,
+    TileUseCaseObserver,
 };
 
 use std::result::Result;
@@ -65,6 +66,10 @@ impl TelemetryInventory for TelemetryState {
     }
 
     fn statistics_use_case_observers(&mut self) -> [&mut dyn StatisticsUseCaseObserver; 2] {
+        [&mut self.trans_trace, &mut self.handle_counter]
+    }
+
+    fn tile_use_case_observers(&mut self) -> [&mut dyn TileUseCaseObserver; 2] {
         [&mut self.trans_trace, &mut self.handle_counter]
     }
 

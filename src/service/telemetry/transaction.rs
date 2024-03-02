@@ -16,6 +16,7 @@ use crate::use_case::interface::{
     DescriptionUseCaseObserver,
     HandleRequestObserver,
     StatisticsUseCaseObserver,
+    TileUseCaseObserver,
 };
 
 
@@ -62,6 +63,16 @@ impl DescriptionUseCaseObserver for TransactionTrace {
 
 impl StatisticsUseCaseObserver for TransactionTrace {
     fn on_report_statistics(
+        &mut self,
+        _request: &SlippyRequest,
+        _handle_outcome: &HandleOutcome,
+        _handler_name: &'static str,
+    ) -> () {
+    }
+}
+
+impl TileUseCaseObserver for TransactionTrace {
+    fn on_fetch_tile(
         &mut self,
         _request: &SlippyRequest,
         _handle_outcome: &HandleOutcome,

@@ -48,6 +48,15 @@ pub trait StatisticsUseCaseObserver {
     ) -> ();
 }
 
+pub trait TileUseCaseObserver {
+    fn on_fetch_tile(
+        &mut self,
+        request: &SlippyRequest,
+        handle_outcome: &HandleOutcome,
+        handler_name: &'static str,
+    ) -> ();
+}
+
 
 #[cfg(test)]
 pub mod test_utils {
@@ -103,6 +112,16 @@ pub mod test_utils {
 
     impl StatisticsUseCaseObserver for NoOpHandleRequestObserver {
         fn on_report_statistics(
+            &mut self,
+            _request: &SlippyRequest,
+            _handle_outcome: &HandleOutcome,
+            _handler_name: &'static str,
+        ) -> () {
+        }
+    }
+
+    impl TileUseCaseObserver for NoOpHandleRequestObserver {
+        fn on_fetch_tile(
             &mut self,
             _request: &SlippyRequest,
             _handle_outcome: &HandleOutcome,

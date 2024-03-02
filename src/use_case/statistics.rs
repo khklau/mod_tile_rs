@@ -182,6 +182,7 @@ mod tests {
         DescriptionUseCaseObserver,
         HandleRequestObserver,
         StatisticsUseCaseObserver,
+        TileUseCaseObserver,
     };
     use crate::use_case::interface::test_utils::NoOpHandleRequestObserver;
     use crate::adapter::slippy::interface::{ReadRequestObserver, WriteResponseObserver,};
@@ -257,6 +258,8 @@ mod tests {
         description_use_case_observer_1: NoOpHandleRequestObserver,
         statistics_use_case_observer_0: NoOpHandleRequestObserver,
         statistics_use_case_observer_1: NoOpHandleRequestObserver,
+        tile_use_case_observer_0: NoOpHandleRequestObserver,
+        tile_use_case_observer_1: NoOpHandleRequestObserver,
         write_observer_0: NoOpWriteResponseObserver,
         write_observer_1: NoOpWriteResponseObserver,
         write_observer_2: NoOpWriteResponseObserver,
@@ -276,6 +279,8 @@ mod tests {
                 description_use_case_observer_1: NoOpHandleRequestObserver::new(),
                 statistics_use_case_observer_0: NoOpHandleRequestObserver::new(),
                 statistics_use_case_observer_1: NoOpHandleRequestObserver::new(),
+                tile_use_case_observer_0: NoOpHandleRequestObserver::new(),
+                tile_use_case_observer_1: NoOpHandleRequestObserver::new(),
                 write_observer_0: NoOpWriteResponseObserver::new(),
                 write_observer_1: NoOpWriteResponseObserver::new(),
                 write_observer_2: NoOpWriteResponseObserver::new(),
@@ -303,6 +308,10 @@ mod tests {
 
         fn statistics_use_case_observers(&mut self) -> [&mut dyn StatisticsUseCaseObserver; 2] {
             [&mut self.statistics_use_case_observer_0, &mut self.statistics_use_case_observer_1]
+        }
+
+        fn tile_use_case_observers(&mut self) -> [&mut dyn TileUseCaseObserver; 2] {
+            [&mut self.tile_use_case_observer_0, &mut self.tile_use_case_observer_1]
         }
 
         fn write_response_observers(&mut self) -> [&mut dyn WriteResponseObserver; 4] {
