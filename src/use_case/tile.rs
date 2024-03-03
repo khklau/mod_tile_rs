@@ -58,6 +58,10 @@ impl TileHandlerState {
         return Ok(value);
     }
 
+    pub fn type_name(&self) -> &'static str {
+        type_name::<Self>()
+    }
+
     pub fn fetch_tile(
         &mut self,
         context: &mut TileContext,
@@ -112,69 +116,5 @@ impl TileHandlerState {
                 result: Ok(response),
             }
         );
-    }
-}
-
-impl RequestHandler for TileHandlerState {
-    fn handle(
-        &mut self,
-        context: &RequestContext,
-        io: &mut IOContext,
-        services: &mut ServicesContext,
-        request: &SlippyRequest,
-    ) -> HandleOutcome {
-        let before_timestamp = Utc::now();
-        let tile_id = match &request.body {
-            BodyVariant::ServeTileV2(body) => TileIdentity {
-                x: body.x,
-                y: body.y,
-                z: body.z,
-                layer: request.header.layer.clone(),
-            },
-            BodyVariant::ServeTileV3(body) => TileIdentity {
-                x: body.x,
-                y: body.y,
-                z: body.z,
-                layer: request.header.layer.clone(),
-            },
-            _ => return HandleOutcome::Ignored,
-        };
-        let primary_store = io.storage.primary_tile_store();
-        let tile_ref = match primary_store.read_tile(&(context.host_context), &tile_id) {
-            Ok(tile) => tile,
-            Err(err) => {
-                return HandleOutcome::Processed(
-                    HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp: Utc::now(),
-                        result: Err(HandleError::TileRead(err)),
-                    }
-                )
-            },
-        };
-        let response = response::SlippyResponse {
-            header: response::Header {
-                mime_type: tile_ref.media_type.clone(),
-            },
-            body: response::BodyVariant::Tile(
-                response::TileResponse {
-                    source: TileSource::Cache,
-                    age: TileAge::Fresh,
-                    tile_ref,
-                }
-            ),
-        };
-        let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
-    }
-
-    fn type_name(&self) -> &'static str {
-        type_name::<Self>()
     }
 }

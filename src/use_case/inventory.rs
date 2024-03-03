@@ -3,9 +3,7 @@ use crate::schema::apache2::error::InvalidConfigError;
 use crate::service::telemetry::interface::TelemetryInventory;
 use crate::use_case::interface::{
     DescriptionUseCaseObserver,
-    HandlerInventory,
     HandleRequestObserver,
-    RequestHandler,
     StatisticsUseCaseObserver,
     TileUseCaseObserver,
 };
@@ -29,14 +27,6 @@ impl HandlerState {
                 tile: TileHandlerState::new(config)?,
             }
         )
-    }
-}
-
-impl HandlerInventory for HandlerState {
-    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 1] {
-        [
-            &mut self.tile,
-        ]
     }
 }
 
