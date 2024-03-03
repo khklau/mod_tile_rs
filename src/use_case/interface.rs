@@ -18,7 +18,7 @@ pub trait RequestHandler {
 }
 
 pub trait HandlerInventory {
-    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 3];
+    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 2];
 }
 
 pub trait HandleRequestObserver {

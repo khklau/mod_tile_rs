@@ -77,43 +77,6 @@ impl DescriptionHandlerState {
     }
 }
 
-impl RequestHandler for DescriptionHandlerState {
-    fn handle(
-        &mut self,
-        context: &RequestContext,
-        _io: &mut IOContext,
-        _services: &mut ServicesContext,
-        request: &request::SlippyRequest,
-    ) -> HandleOutcome {
-        let before_timestamp = Utc::now();
-        let layer = match request.body {
-            request::BodyVariant::DescribeLayer => &request.header.layer,
-            _ => {
-                return HandleOutcome::Ignored;
-            },
-        };
-        let description = describe(context.module_config(), layer);
-        let response = response::SlippyResponse {
-            header: response::Header {
-                mime_type: mime::APPLICATION_JSON.clone(),
-            },
-            body: response::BodyVariant::Description(description),
-        };
-        let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
-    }
-
-    fn type_name(&self) -> &'static str {
-        type_name::<Self>()
-    }
-}
-
 fn describe(config: &ModuleConfig, layer: &LayerName) -> response::Description {
     let layer_config = &config.layers[layer];
     let mut value = response::Description {
@@ -160,19 +123,18 @@ mod tests {
         let telemetry = NoOpZeroTelemetryInventory::new();
         let mut communication = EmptyResultCommunicationInventory::new();
         let mut storage = BlankStorageInventory::new();
-        with_request_rec(|request| {
+        with_request_rec(|record| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.clone().into_raw();
-            let handle_context = RequestContext::new(
-                request,
-                &module_config,
-            );
-            let mut io_context = IOContext {
-                communication: &mut communication,
-                storage: &mut storage,
-            };
-            let mut services = ServicesContext {
-                telemetry: &telemetry,
+            record.uri = uri.clone().into_raw();
+            let context = DescriptionContext {
+                host: HostContext::new(&module_config, record),
+                io: IOContext {
+                    communication: &mut communication,
+                    storage: &mut storage,
+                },
+                services: ServicesContext {
+                    telemetry: &telemetry,
+                },
             };
             let request = request::SlippyRequest {
                 header: request::Header {
@@ -183,12 +145,9 @@ mod tests {
                 },
                 body: request::BodyVariant::ReportStatistics,
             };
-
             assert!(
-                description_state.handle(
-                    &handle_context,
-                    &mut io_context,
-                    &mut services,
+                description_state.describe_layer(
+                    &context,
                     &request
                 ).is_ignored(),
                 "Expected to not handle"
@@ -198,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn test_default_config_json() -> Result<(), Box<dyn Error>> {
+    fn test_describe_layer_with_default_config() -> Result<(), Box<dyn Error>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");
@@ -206,16 +165,18 @@ mod tests {
         let telemetry = NoOpZeroTelemetryInventory::new();
         let mut communication = EmptyResultCommunicationInventory::new();
         let mut storage = BlankStorageInventory::new();
-        with_request_rec(|request| {
+        with_request_rec(|record| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.clone().into_raw();
-            let handle_context = RequestContext::new(request, &module_config);
-            let mut io_context = IOContext {
-                communication: &mut communication,
-                storage: &mut storage,
-            };
-            let mut services = ServicesContext {
-                telemetry: &telemetry,
+            record.uri = uri.clone().into_raw();
+            let context = DescriptionContext {
+                host: HostContext::new(&module_config, record),
+                io: IOContext {
+                    communication: &mut communication,
+                    storage: &mut storage,
+                },
+                services: ServicesContext {
+                    telemetry: &telemetry,
+                },
             };
             let request = request::SlippyRequest {
                 header: request::Header {
@@ -226,11 +187,8 @@ mod tests {
                 },
                 body: request::BodyVariant::DescribeLayer,
             };
-
-            let actual_response = description_state.handle(
-                &handle_context,
-                &mut io_context,
-                &mut services,
+            let actual_response = description_state.describe_layer(
+                &context,
                 &request
             ).expect_processed().result?;
             let expected_data = response::Description {
