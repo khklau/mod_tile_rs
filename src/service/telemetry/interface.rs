@@ -3,7 +3,6 @@ use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::use_case::interface::{
     DescriptionUseCaseObserver,
-    HandleRequestObserver,
     StatisticsUseCaseObserver,
     TileUseCaseObserver,
 };
@@ -61,8 +60,6 @@ pub trait TelemetryInventory {
     // TODO: add a method that returns the concrete type name
 
     fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2];
-
-    fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2];
 
     fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2];
 
@@ -204,10 +201,6 @@ pub mod test_utils {
 
         fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2] {
             [&mut self.read_observer_0, &mut self.read_observer_1]
-        }
-
-        fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
-            [&mut self.handle_observer_0, &mut self.handle_observer_1]
         }
 
         fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {

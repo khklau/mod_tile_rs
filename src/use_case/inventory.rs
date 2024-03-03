@@ -3,7 +3,6 @@ use crate::schema::apache2::error::InvalidConfigError;
 use crate::service::telemetry::interface::TelemetryInventory;
 use crate::use_case::interface::{
     DescriptionUseCaseObserver,
-    HandleRequestObserver,
     StatisticsUseCaseObserver,
     TileUseCaseObserver,
 };

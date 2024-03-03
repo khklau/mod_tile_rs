@@ -145,7 +145,6 @@ mod tests {
     use crate::io::communication::interface::test_utils::EmptyResultCommunicationInventory;
     use crate::use_case::interface::{
         DescriptionUseCaseObserver,
-        HandleRequestObserver,
         StatisticsUseCaseObserver,
         TileUseCaseObserver,
     };
@@ -251,10 +250,6 @@ mod tests {
 
         fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2] {
             [&mut self.read_observer_0, &mut self.read_observer_1]
-        }
-
-        fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
-            [&mut self.handle_observer_0, &mut self.handle_observer_1]
         }
 
         fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {

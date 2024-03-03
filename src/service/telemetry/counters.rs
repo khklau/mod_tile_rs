@@ -14,7 +14,6 @@ use crate::adapter::slippy::interface::{
 };
 use crate::use_case::interface::{
     DescriptionUseCaseObserver,
-    HandleRequestObserver,
     StatisticsUseCaseObserver,
     TileUseCaseObserver,
 };
@@ -53,17 +52,6 @@ impl HandleCounter {
         Ok(
             HandleCounter { count: 0 }
         )
-    }
-}
-
-impl HandleRequestObserver for HandleCounter {
-    fn on_handle(
-        &mut self,
-        _request: &SlippyRequest,
-        _handle_outcome: &HandleOutcome,
-        _handler_name: &'static str,
-    ) -> () {
-        self.count += 1;
     }
 }
 

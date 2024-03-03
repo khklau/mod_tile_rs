@@ -12,7 +12,6 @@ use crate::service::telemetry::tile_handling::TileHandlingAnalysis;
 use crate::service::telemetry::transaction::TransactionTrace;
 use crate::use_case::interface::{
     DescriptionUseCaseObserver,
-    HandleRequestObserver,
     StatisticsUseCaseObserver,
     TileUseCaseObserver,
 };
@@ -55,10 +54,6 @@ impl TelemetryInventory for TelemetryState {
 
     fn read_request_observers(&mut self) -> [&mut dyn ReadRequestObserver; 2] {
         [&mut self.trans_trace, &mut self.read_counter]
-    }
-
-    fn handle_request_observers(&mut self) -> [&mut dyn HandleRequestObserver; 2] {
-        [&mut self.trans_trace, &mut self.handle_counter]
     }
 
     fn description_use_case_observers(&mut self) -> [&mut dyn DescriptionUseCaseObserver; 2] {

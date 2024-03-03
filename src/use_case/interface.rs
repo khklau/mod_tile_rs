@@ -2,15 +2,6 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
 
 
-pub trait HandleRequestObserver {
-    fn on_handle(
-        &mut self,
-        request: &SlippyRequest,
-        handle_outcome: &HandleOutcome,
-        handler_name: &'static str,
-    ) -> ();
-}
-
 pub trait DescriptionUseCaseObserver {
     fn on_describe_layer(
         &mut self,
@@ -49,16 +40,6 @@ pub mod test_utils {
     impl NoOpHandleRequestObserver {
         pub fn new() -> NoOpHandleRequestObserver {
             NoOpHandleRequestObserver { }
-        }
-    }
-
-    impl HandleRequestObserver for NoOpHandleRequestObserver {
-        fn on_handle(
-            &mut self,
-            _request: &SlippyRequest,
-            _handle_outcome: &HandleOutcome,
-            _handler_name: &'static str,
-        ) -> () {
         }
     }
 
