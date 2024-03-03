@@ -33,13 +33,6 @@ impl HandlerState {
 pub struct HandlerObserverInventory { }
 
 impl HandlerObserverInventory {
-    pub fn handle_observers<'i>(
-        telemetry: &'i mut dyn TelemetryInventory
-    ) -> [&'i mut dyn HandleRequestObserver; 2] {
-        let [read_observer_0, read_observer_1] = telemetry.handle_request_observers();
-        return [read_observer_0, read_observer_1];
-    }
-
     pub fn description_use_case_observers<'i>(
         telemetry: &'i mut dyn TelemetryInventory
     ) -> [&'i mut dyn DescriptionUseCaseObserver; 2] {

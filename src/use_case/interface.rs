@@ -1,21 +1,6 @@
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request::SlippyRequest;
-use crate::io::interface::IOContext;
-use crate::framework::apache2::context::RequestContext;
-use crate::service::interface::ServicesContext;
 
-
-pub trait RequestHandler {
-    fn handle(
-        &mut self,
-        context: &RequestContext,
-        io: &mut IOContext,
-        services: &mut ServicesContext,
-        request: &SlippyRequest,
-    ) -> HandleOutcome;
-
-    fn type_name(&self) -> &'static str;
-}
 
 pub trait HandleRequestObserver {
     fn on_handle(
@@ -57,26 +42,7 @@ pub trait TileUseCaseObserver {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
-    use crate::schema::slippy::request;
 
-
-    pub struct NoOpRequestHandler { }
-
-    impl RequestHandler for NoOpRequestHandler {
-        fn handle(
-            &mut self,
-            _context: &RequestContext,
-            _io: &mut IOContext,
-            _services: &mut ServicesContext,
-            _request: &request::SlippyRequest,
-        ) -> HandleOutcome {
-            HandleOutcome::Ignored
-        }
-
-        fn type_name(&self) -> &'static str {
-            std::any::type_name::<Self>()
-        }
-    }
 
     pub struct NoOpHandleRequestObserver {}
 

@@ -12,10 +12,7 @@ use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
 use crate::core::memory::PoolStored;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::io::interface::IOContext;
-use crate::framework::apache2::context::{
-    HostContext,
-    RequestContext,
-};
+use crate::framework::apache2::context::HostContext;
 use crate::framework::apache2::config::Loadable;
 use crate::framework::apache2::memory::{ access_pool_object, alloc, retrieve };
 use crate::framework::apache2::record::ServerRecord;
@@ -28,7 +25,6 @@ use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
 use crate::service::telemetry::inventory::TelemetryState;
 use crate::use_case::description::DescriptionContext;
-use crate::use_case::interface::RequestHandler;
 use crate::use_case::statistics::StatisticsContext;
 use crate::use_case::tile::TileContext;
 
