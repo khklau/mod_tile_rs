@@ -33,9 +33,8 @@ impl HandlerState {
 }
 
 impl HandlerInventory for HandlerState {
-    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 2] {
+    fn request_handlers(&mut self) -> [&mut dyn RequestHandler; 1] {
         [
-            &mut self.statistics,
             &mut self.tile,
         ]
     }

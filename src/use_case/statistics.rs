@@ -43,6 +43,10 @@ impl StatisticsHandlerState {
         )
     }
 
+    pub fn type_name(&self) -> &'static str {
+        type_name::<Self>()
+    }
+
     pub fn report_statistics(
         &self,
         context: &StatisticsContext,
@@ -134,43 +138,6 @@ impl StatisticsHandlerState {
     }
 }
 
-impl RequestHandler for StatisticsHandlerState {
-    fn handle(
-        &mut self,
-        context: &RequestContext,
-        _io: &mut IOContext,
-        services: &mut ServicesContext,
-        request: &request::SlippyRequest,
-    ) -> HandleOutcome {
-        let before_timestamp = Utc::now();
-        match request.body {
-            request::BodyVariant::ReportStatistics => (),
-            _ => {
-                return HandleOutcome::Ignored;
-            },
-        };
-        let statistics = self.report(services);
-        let response = response::SlippyResponse {
-            header: response::Header {
-                mime_type: mime::TEXT_PLAIN.clone(),
-            },
-            body: response::BodyVariant::Statistics(statistics),
-        };
-        let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
-    }
-
-    fn type_name(&self) -> &'static str {
-        type_name::<Self>()
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -204,25 +171,18 @@ mod tests {
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
         let telemetry = NoOpZeroTelemetryInventory::new();
-        let mut communication = EmptyResultCommunicationInventory::new();
-        let mut storage = BlankStorageInventory::new();
         let module_config = ModuleConfig::new();
-        let mut stat_state = StatisticsHandlerState::new(&module_config)?;
+        let stat_state = StatisticsHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");
         let layer_config = module_config.layers.get(&layer_name).unwrap();
-        with_request_rec(|request| {
+        with_request_rec(|record| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.clone().into_raw();
-            let handle_context = RequestContext::new(
-                request,
-                &module_config,
-            );
-            let mut io_context = IOContext {
-                communication: &mut communication,
-                storage: &mut storage,
-            };
-            let mut services = ServicesContext {
-                telemetry: &telemetry,
+            record.uri = uri.clone().into_raw();
+            let context = StatisticsContext {
+                host: HostContext::new(&module_config, record),
+                services: ServicesContext {
+                    telemetry: &telemetry,
+                },
             };
             let request = request::SlippyRequest {
                 header: request::Header {
@@ -233,12 +193,9 @@ mod tests {
                 },
                 body: request::BodyVariant::DescribeLayer,
             };
-
             assert!(
-                stat_state.handle(
-                    &handle_context,
-                    &mut io_context,
-                    &mut services,
+                stat_state.report_statistics(
+                    &context,
                     &request
                 ).is_ignored(),
                 "Expected to not handle"
@@ -435,16 +392,14 @@ mod tests {
             .times(1)
             .returning(|_, _| { 1 });
 
-        with_request_rec(|request| {
+        with_request_rec(|record| {
             let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            request.uri = uri.clone().into_raw();
-            let handle_context = RequestContext::new(request, &module_config);
-            let mut io_context = IOContext {
-                communication: &mut communication,
-                storage: &mut storage,
-            };
-            let mut services = ServicesContext {
-                telemetry: &telemetry,
+            record.uri = uri.clone().into_raw();
+            let context = StatisticsContext {
+                host: HostContext::new(&module_config, record),
+                services: ServicesContext {
+                    telemetry: &telemetry,
+                },
             };
             let request = request::SlippyRequest {
                 header: request::Header {
@@ -455,11 +410,8 @@ mod tests {
                 },
                 body: request::BodyVariant::ReportStatistics,
             };
-
-            let actual_response = handler_state.handle(
-                &handle_context,
-                &mut io_context,
-                &mut services,
+            let actual_response = handler_state.report_statistics(
+                &context,
                 &request
             ).expect_processed().result?;
             let mut expected_data = response::Statistics::new();
