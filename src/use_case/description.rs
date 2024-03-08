@@ -5,9 +5,7 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
-use crate::io::interface::IOContext;
 use crate::framework::apache2::context::HostContext;
-use crate::service::interface::ServicesContext;
 
 use chrono::Utc;
 use mime;
@@ -17,8 +15,6 @@ use std::any::type_name;
 
 pub struct DescriptionContext<'c> {
     pub host: HostContext<'c>,
-    pub io: IOContext<'c>,
-    pub services: ServicesContext<'c>,
 }
 
 impl<'c> DescriptionContext<'c> {
@@ -127,13 +123,6 @@ mod tests {
             record.uri = uri.clone().into_raw();
             let context = DescriptionContext {
                 host: HostContext::new(&module_config, record),
-                io: IOContext {
-                    communication: &mut communication,
-                    storage: &mut storage,
-                },
-                services: ServicesContext {
-                    telemetry: &telemetry,
-                },
             };
             let request = request::SlippyRequest {
                 header: request::Header {
@@ -169,13 +158,6 @@ mod tests {
             record.uri = uri.clone().into_raw();
             let context = DescriptionContext {
                 host: HostContext::new(&module_config, record),
-                io: IOContext {
-                    communication: &mut communication,
-                    storage: &mut storage,
-                },
-                services: ServicesContext {
-                    telemetry: &telemetry,
-                },
             };
             let request = request::SlippyRequest {
                 header: request::Header {

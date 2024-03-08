@@ -265,13 +265,6 @@ impl TileProxy {
         let outcome_option = {
             let context = DescriptionContext {
                 host: HostContext::new(&self.config, record),
-                io: IOContext {
-                    communication: &mut self.comms_state,
-                    storage: &mut self.storage_state,
-                },
-                services: ServicesContext {
-                    telemetry: &self.telemetry_state,
-                },
             };
             self.handler_state.description.describe_layer(
                 &context,
