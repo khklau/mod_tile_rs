@@ -36,7 +36,6 @@ mod schema {
         pub mod config;
         pub mod connection;
         pub mod error;
-        pub mod request;
         pub mod virtual_host;
     }
     pub mod communication {
@@ -66,7 +65,6 @@ mod framework {
         pub mod context;
         pub mod memory;
         pub mod record;
-        pub mod request;
         pub mod virtual_host;
     }
 }
