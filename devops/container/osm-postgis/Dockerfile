@@ -9,4 +9,5 @@ RUN apt-get update && \
 # Stay up to date with security updates
 RUN unattended-upgrade
 
-COPY init_osm.sql /docker-entrypoint-initdb.d/
+COPY createdb_osm.sh /docker-entrypoint-createdb.d/20_createdb_osm.sh
+COPY initdb_osm.sql /docker-entrypoint-initdb.d/30_initdb_osm.sql
