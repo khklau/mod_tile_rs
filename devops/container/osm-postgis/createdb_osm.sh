@@ -1,7 +1,6 @@
 #!/bin/sh
 
 echo "Creating user '${POSTGRES_USER}'"
-adduser --system --group ${POSTGRES_USER}
 createuser ${POSTGRES_USER}
 
 echo "Creating database '${POSTGRES_DB}'"
