@@ -16,3 +16,4 @@ RUN adduser --system --group ${POSTGRES_USER}
 
 COPY createdb_osm.sh /docker-entrypoint-initdb.d/20_createdb_osm.sh
 COPY initdb_osm.sql /docker-entrypoint-initdb.d/30_initdb_osm.sql
+COPY postgresql.conf /etc/postgresql/postgresql.conf
