@@ -1,3 +1,4 @@
+use crate::binding::renderd_protocol::{protoCmd, protoCmd_cmdIgnore, protocol};
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::error::HandleError;
@@ -6,14 +7,13 @@ use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
 use crate::schema::slippy::request::{ BodyVariant, SlippyRequest, };
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
+use crate::schema::tile::error::TileReadError;
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::source::TileSource;
 use crate::io::interface::IOContext;
 use crate::framework::apache2::context::HostContext;
 use crate::service::interface::ServicesContext;
-use crate::io::communication::renderd_socket::RenderdSocket;
-use crate::io::storage::file_system::FileSystem;
-use crate::io::storage::variant::StorageVariant;
+use crate::service::rendering::interface::create_request;
 
 use chrono::Utc;
 
@@ -41,18 +41,12 @@ impl<'c> TileContext<'c> {
 
 pub struct TileHandlerState {
     render_requests_by_tile_id: HashMap<TileIdentity, i32>,
-    primary_store: StorageVariant,
-    primary_comms: RenderdSocket,
 }
 
 impl TileHandlerState {
     pub fn new(config: &ModuleConfig) -> Result<TileHandlerState, InvalidConfigError> {
         let value = TileHandlerState {
             render_requests_by_tile_id: HashMap::new(),
-            primary_store: StorageVariant::FileSystem(
-                FileSystem::new(config)?
-            ),
-            primary_comms: RenderdSocket::new(config)?,
         };
         return Ok(value);
     }
@@ -82,18 +76,54 @@ impl TileHandlerState {
             },
             _ => return HandleOutcome::Ignored,
         };
-        let primary_store = context.io.storage.primary_tile_store();
-        let tile_ref = match primary_store.read_tile(&context.host, &tile_id) {
+        // First preference is to fetch the tile from storage if it is available
+        let read_result = {
+            let primary_store = context.io.storage.primary_tile_store();
+            primary_store.read_tile(&context.host, &tile_id)
+        };
+        let tile_ref = match read_result {
             Ok(tile) => tile,
-            Err(err) => {
-                return HandleOutcome::Processed(
-                    HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp: Utc::now(),
-                        result: Err(HandleError::TileRead(err)),
-                    }
-                )
+            Err(TileReadError::NotFound(tile_path)) => {
+                // Second preference is to render the tile
+                // TODO: calculate the rendering priority
+                let request = create_request(
+                    &context.module_config().renderd,
+                    request
+                );
+                let mut response = protocol {
+                    ver: 0 as std::os::raw::c_int,
+                    cmd: protoCmd_cmdIgnore,
+                    x: 0 as std::os::raw::c_int,
+                    y: 0 as std::os::raw::c_int,
+                    z: 0 as std::os::raw::c_int,
+                    xmlname: [0; 41usize],
+                    mimetype: [0; 41usize],
+                    options: [0; 41usize],
+                };
+                match context.services.rendering.tile_renderer().render_tile(
+                    &mut context.io,
+                    tile_id,
+                    &request,
+                    &mut response,
+                    1,  // TODO: calculate the priority
+                ) {
+                    Ok(tile_ref) => tile_ref,
+                    Err(err) =>return HandleOutcome::Processed(
+                        HandleRequestResult {
+                            before_timestamp,
+                            after_timestamp: Utc::now(),
+                            result: Err(HandleError::Render(err)),
+                        }
+                    )
+                }
             },
+            Err(other) => return HandleOutcome::Processed(
+                HandleRequestResult {
+                    before_timestamp,
+                    after_timestamp: Utc::now(),
+                    result: Err(HandleError::TileRead(other)),
+                }
+            )
         };
         let response = response::SlippyResponse {
             header: response::Header {

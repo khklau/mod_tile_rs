@@ -48,7 +48,7 @@ pub mod test_utils {
         ) -> Result<TileRef, TileReadError> {
             Ok(
                 TileRef {
-                    raw_bytes: Rc::downgrade(&self.blank_tile),
+                    raw_bytes: Rc::clone(&self.blank_tile),
                     begin: 0,
                     end: 0,
                     media_type: mime::IMAGE_PNG,

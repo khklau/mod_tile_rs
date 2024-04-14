@@ -156,6 +156,7 @@ mod tests {
         MockResponseMetrics, MockTileHandlingMetrics,
         ResponseMetrics, TileHandlingMetrics, TelemetryInventory
     };
+    use crate::service::rendering::interface::test_utils::NoOpRenderingInventory;
     use crate::service::telemetry::interface::test_utils::NoOpZeroTelemetryInventory;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
@@ -168,6 +169,7 @@ mod tests {
     #[test]
     fn test_not_handled() -> Result<(), Box<dyn Error>> {
         let telemetry = NoOpZeroTelemetryInventory::new();
+        let mut rendering = NoOpRenderingInventory::new();
         let module_config = ModuleConfig::new();
         let stat_state = StatisticsHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");
@@ -179,6 +181,7 @@ mod tests {
                 host: HostContext::new(&module_config, record),
                 services: ServicesContext {
                     telemetry: &telemetry,
+                    rendering: &mut rendering,
                 },
             };
             let request = request::SlippyRequest {
@@ -281,6 +284,7 @@ mod tests {
         let layer_name = LayerName::from("default");
         let layer_config = module_config.layers.get(&layer_name).unwrap();
         let mut telemetry = TelemetryInventoryWithMockedMetrics::new();
+        let mut rendering = NoOpRenderingInventory::new();
         let mut communication = EmptyResultCommunicationInventory::new();
         let mut storage = BlankStorageInventory::new();
 
@@ -392,6 +396,7 @@ mod tests {
                 host: HostContext::new(&module_config, record),
                 services: ServicesContext {
                     telemetry: &telemetry,
+                    rendering: &mut rendering,
                 },
             };
             let request = request::SlippyRequest {

@@ -7,12 +7,12 @@ use serde::ser::SerializeStruct;
 use std::clone::Clone;
 use std::cmp::PartialEq;
 use std::fmt::Debug;
-use std::rc::Weak;
+use std::rc::Rc;
 
 
 #[derive(Clone, Debug)]
 pub struct TileRef {
-    pub raw_bytes: Weak<Vec<u8>>,
+    pub raw_bytes: Rc<Vec<u8>>,
     pub begin: usize,
     pub end: usize,
     pub media_type: Mime,
@@ -26,8 +26,7 @@ impl TileRef {
     ) -> R
     where
         F: FnOnce(&[u8]) -> R {
-        let strong_ref = self.raw_bytes.upgrade().expect("Tile has been dropped");
-        let tile_bytes = &(strong_ref.as_ref()[self.begin..self.end]);
+        let tile_bytes = &self.raw_bytes[self.begin..self.end];
         return func(tile_bytes);
     }
 }
@@ -46,12 +45,9 @@ impl Serialize for TileRef {
     where
         S: Serializer {
             let mut state = serializer.serialize_struct("TileRef", 4)?;
-            if let Some(rc) = self.raw_bytes.upgrade() {
-                state.serialize_field("raw_bytes", rc.as_ref())?;
-            } else {
-                let empty_vec: Vec<u8> = Vec::new();
-                state.serialize_field("raw_bytes", &empty_vec)?;
-            }
+            self.with_tile(|tile_bytes| {
+                state.serialize_field("raw_bytes", tile_bytes)
+            })?;
             state.serialize_field("begin", &self.begin)?;
             state.serialize_field("end", &self.end)?;
             state.serialize_field("media_type", &self.media_type.essence_str())?;

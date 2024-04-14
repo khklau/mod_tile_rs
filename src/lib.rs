@@ -107,8 +107,9 @@ mod service {
     }
     pub mod rendering {
         pub mod interface;
+        pub mod inventory;
+        pub mod mapnik;
         pub mod protocol;
-        pub mod state;
         mod status;
     }
     pub mod interface;

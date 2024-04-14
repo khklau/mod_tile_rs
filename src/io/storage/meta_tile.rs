@@ -84,7 +84,7 @@ impl MetaTile {
         let next_tile_start= (entry.offset + entry.size) as usize;
         return Ok(
             TileRef {
-                raw_bytes: Rc::downgrade(&self.raw_bytes),
+                raw_bytes: Rc::clone(&self.raw_bytes),
                 begin: selected_tile_start,
                 end: next_tile_start,
                 media_type: self.media_type.clone(),

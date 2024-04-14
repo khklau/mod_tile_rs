@@ -355,7 +355,7 @@ mod tests {
             let after_timestamp = before_timestamp + response_duration;
             let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
             let tile_ref = TileRef {
-                raw_bytes: Rc::downgrade(&empty_tile),
+                raw_bytes: Rc::clone(&empty_tile),
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,

@@ -23,6 +23,7 @@ use crate::adapter::slippy::interface::{ReadContext, WriteContext,};
 use crate::adapter::slippy::inventory::{SlippyInventory, SlippyObserverInventory,};
 use crate::io::storage::state::StorageState;
 use crate::service::interface::ServicesContext;
+use crate::service::rendering::inventory::RenderingState;
 use crate::service::telemetry::inventory::TelemetryState;
 use crate::use_case::description::DescriptionContext;
 use crate::use_case::statistics::StatisticsContext;
@@ -79,10 +80,11 @@ impl std::fmt::Display for HandleRequestError {
 pub struct TileProxy {
     config: ModuleConfig,
     config_file_path: Option<PathBuf>,
-    telemetry_state: TelemetryState,
-    handler_state: HandlerState,
     comms_state: CommunicationState,
     storage_state: StorageState,
+    rendering_state: RenderingState,
+    telemetry_state: TelemetryState,
+    handler_state: HandlerState,
 }
 
 impl TileProxy {
@@ -127,10 +129,11 @@ impl TileProxy {
         )?.0;
         new_server.config = module_config;
         new_server.config_file_path = None;
-        new_server.telemetry_state = TelemetryState::new(&new_server.config)?;
-        new_server.handler_state = HandlerState::new(&new_server.config)?;
         new_server.comms_state = CommunicationState::new(&new_server.config)?;
         new_server.storage_state = StorageState::new(&new_server.config)?;
+        new_server.rendering_state = RenderingState::new(&new_server.config)?;
+        new_server.telemetry_state = TelemetryState::new(&new_server.config)?;
+        new_server.handler_state = HandlerState::new(&new_server.config)?;
         info!(record, "TileServer::create - finish");
         return Ok(new_server);
     }
@@ -295,6 +298,7 @@ impl TileProxy {
                 host: HostContext::new(&self.config, record),
                 services: ServicesContext {
                     telemetry: &self.telemetry_state,
+                    rendering: &mut self.rendering_state,
                 },
             };
             self.handler_state.statistics.report_statistics(
@@ -330,6 +334,7 @@ impl TileProxy {
                 },
                 services: ServicesContext {
                     telemetry: &self.telemetry_state,
+                    rendering: &mut self.rendering_state,
                 },
             };
             self.handler_state.tile.fetch_tile(
