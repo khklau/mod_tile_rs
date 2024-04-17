@@ -267,9 +267,9 @@ mod tests {
     use chrono::Utc;
     use http::header::HeaderMap;
     use http::status::StatusCode;
+    use std::cell::RefCell;
     use std::error::Error;
     use std::ffi::CString;
-    use std::rc::Rc;
 
     #[test]
     fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
@@ -305,9 +305,9 @@ mod tests {
             };
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
-            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let empty_tile: RefCell<Vec<u8>> = RefCell::new(Vec::new());
             let tile_ref = TileRef {
-                raw_bytes: Rc::clone(&empty_tile),
+                raw_bytes: empty_tile.clone(),
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,
@@ -392,9 +392,9 @@ mod tests {
             };
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
-            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let empty_tile: RefCell<Vec<u8>> = RefCell::new(Vec::new());
             let tile_ref = TileRef {
-                raw_bytes: Rc::clone(&empty_tile),
+                raw_bytes: empty_tile.clone(),
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,
@@ -489,13 +489,13 @@ mod tests {
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let all_sources = [TileSource::Render, TileSource::Cache];
             let all_ages = [TileAge::Fresh, TileAge::Old, TileAge::VeryOld];
-            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let empty_tile: RefCell<Vec<u8>> = RefCell::new(Vec::new());
             for source in &all_sources {
                 for age in &all_ages {
                     let before_timestamp = Utc::now();
                     let after_timestamp = before_timestamp + Duration::seconds(2);
                     let tile_ref = TileRef {
-                        raw_bytes: Rc::clone(&empty_tile),
+                        raw_bytes: empty_tile.clone(),
                         begin: 0,
                         end: 1,
                         media_type: mime::IMAGE_PNG,

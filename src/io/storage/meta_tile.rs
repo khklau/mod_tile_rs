@@ -11,11 +11,11 @@ use crate::schema::tile::tile_ref::TileRef;
 
 use mime::Mime;
 
+use std::cell::{RefCell, Ref,};
 use std::cmp::min;
 use std::ffi::CStr;
 use std::fs;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::result::Result;
 
 
@@ -28,7 +28,7 @@ pub struct TilePath {
 }
 
 pub struct MetaTile {
-    raw_bytes: Rc<Vec<u8>>,
+    raw_bytes: RefCell<Vec<u8>>,
     tile_count: u32,
     media_type: Mime,
     encoding: ContentEncoding,
@@ -38,8 +38,8 @@ impl MetaTile {
     pub fn read(
         path: &PathBuf
     ) -> Result<MetaTile, InvalidMetaTileError> {
-        let raw_bytes = Rc::new(fs::read(path)?);
-        let layout = MetaTile::get_layout(&raw_bytes);
+        let raw_bytes = RefCell::new(fs::read(path)?);
+        let layout = MetaTile::get_layout(raw_bytes.borrow());
         let encoding = MetaTile::detect_compression(layout)?;
         let tile_count = MetaTile::detect_tile_count(layout)?;
         // TODO - verify tile media type
@@ -84,7 +84,7 @@ impl MetaTile {
         let next_tile_start= (entry.offset + entry.size) as usize;
         return Ok(
             TileRef {
-                raw_bytes: Rc::clone(&self.raw_bytes),
+                raw_bytes: self.raw_bytes.clone(),
                 begin: selected_tile_start,
                 end: next_tile_start,
                 media_type: self.media_type.clone(),
@@ -117,7 +117,7 @@ impl MetaTile {
     }
 
     fn get_layout(
-        raw_bytes: &Vec<u8>
+        raw_bytes: Ref<Vec<u8>>,
     ) -> &meta_layout {
         unsafe {
             (raw_bytes.as_ptr() as *const meta_layout).as_ref().unwrap()
@@ -170,7 +170,7 @@ impl MetaTile {
                 }
             );
         }
-        let layout = MetaTile::get_layout(&self.raw_bytes);
+        let layout = MetaTile::get_layout(self.raw_bytes.borrow());
         let tile_index = unsafe {
             layout.index.as_slice(self.tile_count as usize)
         };
@@ -183,7 +183,7 @@ impl MetaTile {
         for tile_offset in 0..self.tile_count {
             let entry = self.get_entry(tile_offset).unwrap();
             let end_of_tile_position= (entry.offset + entry.size - 1) as usize;
-            let file_size = self.raw_bytes.len();
+            let file_size = self.raw_bytes.borrow().len();
             if end_of_tile_position > file_size {
                 return Err(
                     InvalidMetaTileError::InvalidTileLength(tile_offset)

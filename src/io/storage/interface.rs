@@ -25,17 +25,17 @@ pub trait StorageInventory {
 pub mod test_utils {
     use super::*;
     use crate::schema::http::encoding::ContentEncoding;
-    use std::rc::Rc;
+    use std::cell::RefCell;
     use std::vec::Vec;
 
     pub struct BlankTileStorage {
-        blank_tile: Rc<Vec<u8>>,
+        blank_tile: RefCell<Vec<u8>>,
     }
 
     impl BlankTileStorage {
         pub fn new() -> BlankTileStorage {
             BlankTileStorage {
-                blank_tile: Rc::new(Vec::new())
+                blank_tile: RefCell::new(Vec::new())
             }
         }
     }
@@ -48,7 +48,7 @@ pub mod test_utils {
         ) -> Result<TileRef, TileReadError> {
             Ok(
                 TileRef {
-                    raw_bytes: Rc::clone(&self.blank_tile),
+                    raw_bytes: self.blank_tile.clone(),
                     begin: 0,
                     end: 0,
                     media_type: mime::IMAGE_PNG,

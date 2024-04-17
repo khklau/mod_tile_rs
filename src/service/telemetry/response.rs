@@ -313,9 +313,9 @@ mod tests {
     use http::header::HeaderMap;
     use http::status::StatusCode;
     use std::boxed::Box;
+    use std::cell::RefCell;
     use std::error::Error;
     use std::ffi::CString;
-    use std::rc::Rc;
 
     #[test]
     fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
@@ -353,9 +353,9 @@ mod tests {
             let before_timestamp = Utc::now();
             let response_duration = Duration::seconds(2);
             let after_timestamp = before_timestamp + response_duration;
-            let empty_tile: Rc<Vec<u8>> = Rc::new(Vec::new());
+            let empty_tile: RefCell<Vec<u8>> = RefCell::new(Vec::new());
             let tile_ref = TileRef {
-                raw_bytes: Rc::clone(&empty_tile),
+                raw_bytes: empty_tile.clone(),
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,

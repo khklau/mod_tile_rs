@@ -45,17 +45,17 @@ pub trait RenderingInventory {
 pub mod test_utils {
     use super::*;
     use crate::schema::http::encoding::ContentEncoding;
-    use std::rc::Rc;
+    use std::cell::RefCell;
     use std::vec::Vec;
 
     pub struct MockTileRenderer {
-        buffer: Rc<Vec<u8>>,
+        buffer: RefCell<Vec<u8>>,
     }
 
     impl MockTileRenderer {
         pub fn new() -> MockTileRenderer {
             MockTileRenderer {
-                buffer: Rc::new(Vec::new()),
+                buffer: RefCell::new(Vec::new()),
             }
         }
     }
@@ -71,7 +71,7 @@ pub mod test_utils {
         ) -> Result<TileRef, crate::schema::renderd::error::RenderError> {
             Ok(
                 TileRef {
-                    raw_bytes: Rc::clone(&self.buffer),
+                    raw_bytes: self.buffer.clone(),
                     begin: 0,
                     end: 1,
                     media_type: mime::IMAGE_PNG,

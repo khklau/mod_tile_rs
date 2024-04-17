@@ -23,3 +23,19 @@ impl RenderingInventory for RenderingState {
         &mut self.mapnik
     }
 }
+
+
+mod tests {
+
+    use super::*;
+    use std::boxed::Box;
+    use std::error::Error;
+
+    #[test]
+    fn test_new() -> Result<(), Box<dyn Error>> {
+        let module_config = ModuleConfig::new();
+        let _value = RenderingState::new(&module_config)?;
+        return Ok(())
+    }
+}
+

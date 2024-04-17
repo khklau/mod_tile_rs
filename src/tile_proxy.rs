@@ -424,6 +424,15 @@ mod tests {
     use std::string::String;
 
     #[test]
+    fn test_new() -> Result<(), Box<dyn Error>> {
+        with_server_rec(|record| {
+            let module_config = ModuleConfig::new();
+            let proxy = TileProxy::new(record, module_config)?;
+            Ok(())
+        })
+    }
+
+    #[test]
     fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
         with_server_rec(|record| {
             let module_config = ModuleConfig::new();

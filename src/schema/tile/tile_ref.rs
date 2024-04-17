@@ -7,12 +7,12 @@ use serde::ser::SerializeStruct;
 use std::clone::Clone;
 use std::cmp::PartialEq;
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::cell::RefCell;
 
 
 #[derive(Clone, Debug)]
 pub struct TileRef {
-    pub raw_bytes: Rc<Vec<u8>>,
+    pub raw_bytes: RefCell<Vec<u8>>,
     pub begin: usize,
     pub end: usize,
     pub media_type: Mime,
@@ -26,7 +26,7 @@ impl TileRef {
     ) -> R
     where
         F: FnOnce(&[u8]) -> R {
-        let tile_bytes = &self.raw_bytes[self.begin..self.end];
+        let tile_bytes = &self.raw_bytes.borrow()[self.begin..self.end];
         return func(tile_bytes);
     }
 }

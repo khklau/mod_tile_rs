@@ -11,20 +11,20 @@ use crate::service::rendering::interface::TileRenderer;
 use chrono::{DateTime, Duration, Utc};
 
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::cell::RefCell;
 
 
 pub struct Mapnik {
-    request_expiry_by_tile_id: HashMap<TileIdentity, DateTime<Utc>>,
-    render_timeout: Duration,
-    //response_buffer: Rc<Vec<u8>>,  // TODO: use a buffer pool
+    _request_expiry_by_tile_id: HashMap<TileIdentity, DateTime<Utc>>,
+    _render_timeout: Duration,
+    response_buffer: RefCell<Vec<u8>>,  // TODO: use a buffer pool
 }
 
 impl Mapnik {
     pub fn new(config: &ModuleConfig) -> Result<Mapnik, InvalidConfigError> {
         let value = Mapnik {
-            request_expiry_by_tile_id: HashMap::new(),
-            render_timeout: Duration::from_std(
+            _request_expiry_by_tile_id: HashMap::new(),
+            _render_timeout: Duration::from_std(
                 config.renderd.render_timeout.clone()
             ).or_else(|_| {
                 Err(
@@ -34,7 +34,7 @@ impl Mapnik {
                     }
                 )
             })?,
-            //response_buffer: Rc::new(Vec::new()),
+            response_buffer: RefCell::new(Vec::new()),
         };
         return Ok(value);
     }
@@ -51,13 +51,27 @@ impl TileRenderer for Mapnik {
     ) -> Result<TileRef, RenderError> {
         Ok(
             TileRef {
-                //raw_bytes: Rc::clone(&self.response_buffer),
-                raw_bytes: Rc::new(Vec::new()),
+                raw_bytes: self.response_buffer.clone(),
                 begin: 0,
                 end: 1,
                 media_type: mime::IMAGE_PNG,
                 encoding: ContentEncoding::NotCompressed,
             }
         )
+    }
+}
+
+
+mod tests {
+
+    use super::*;
+    use std::boxed::Box;
+    use std::error::Error;
+
+    #[test]
+    fn test_new() -> Result<(), Box<dyn Error>> {
+        let module_config = ModuleConfig::new();
+        let _value = Mapnik::new(&module_config)?;
+        return Ok(())
     }
 }
