@@ -200,13 +200,13 @@ mod tests {
     use super::*;
     use crate::schema::tile::identity::LayerName;
     use std::boxed::Box;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::env;
     use std::result::Result;
     use std::string::String;
 
     #[test]
-    fn test_calc_offset_x_positive_y_positive_small() -> Result<(), Box<dyn Error>> {
+    fn test_calc_offset_x_positive_y_positive_small() -> Result<(), Box<dyn StdError>> {
         let id1 = TileIdentity {
             x: 0 + 0 + 1,
             y: 4 + 2 + 1,
@@ -237,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calc_offset_x_positive_y_positive_large() -> Result<(), Box<dyn Error>> {
+    fn test_calc_offset_x_positive_y_positive_large() -> Result<(), Box<dyn StdError>> {
         let id1 = TileIdentity {
             x: 32 + 0 + 0 + 4 + 0 + 1,
             y: 0 + 16 + 0 + 0 + 2 + 1,
@@ -268,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calc_dir_hash_x_positive_y_positive() -> Result<(), Box<dyn Error>> {
+    fn test_calc_dir_hash_x_positive_y_positive() -> Result<(), Box<dyn StdError>> {
         let id1 = TileIdentity {
             x: 000000 + 000000 + 000000 + 65536 + 00000 + 00000 + 0000 + 4096 + 0000 + 0000 + 000 + 256 + 000 + 00 + 00 + 16 + 0 + 4 + 2 + 1,
             y: 000000 + 000000 + 000000 + 00000 + 00000 + 00000 + 0000 + 0000 + 0000 + 0000 + 000 + 000 + 000 + 00 + 00 + 00 + 0 + 4 + 2 + 1,

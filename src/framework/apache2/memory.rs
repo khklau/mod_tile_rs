@@ -4,8 +4,9 @@ use crate::binding::apache2::{
     apr_pool_t, apr_size_t, apr_status_t, memset,
 };
 
+use thiserror::Error;
+
 use std::alloc::Layout;
-use std::error::Error;
 use std::ffi::{CString, c_void,};
 use std::fmt;
 use std::option::Option;
@@ -14,12 +15,10 @@ use std::ptr;
 use std::result::Result;
 
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub struct AllocError {
     layout: Layout,
 }
-
-impl Error for AllocError {}
 
 impl fmt::Display for AllocError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -90,12 +89,12 @@ pub mod test_utils {
         APR_SUCCESS, apr_pool_create_ex, apr_pool_t, apr_pool_destroy,
     };
     use std::boxed::Box;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ops::FnOnce;
     use std::ptr;
 
-    pub fn with_pool<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&mut apr_pool_t) -> Result<(), Box<dyn Error>> {
+    pub fn with_pool<F>(func: F) -> Result<(), Box<dyn StdError>>
+    where F: FnOnce(&mut apr_pool_t) -> Result<(), Box<dyn StdError>> {
         let mut pool_ptr: *mut apr_pool_t = ptr::null_mut();
         unsafe {
             let create_result = apr_pool_create_ex(
@@ -115,9 +114,10 @@ pub mod test_utils {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use super::test_utils::with_pool;
     use crate::binding::apache2::APR_BADARG;
-    use super::*;
+    use std::error::Error as StdError;
 
     struct Counter {
         count: u32,
@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn test_retrieve_when_never_allocated() -> Result<(), Box<dyn Error>> {
+    fn test_retrieve_when_never_allocated() -> Result<(), Box<dyn StdError>> {
         with_pool(|pool| {
             assert!(retrieve::<Counter>(pool, &CString::new("foo").unwrap()).is_none(), "Find succeeded on empty pool");
             Ok(())
@@ -155,7 +155,7 @@ mod tests {
     }
 
     #[test]
-    fn test_retrieve_when_already_allocated() -> Result<(), Box<dyn Error>> {
+    fn test_retrieve_when_already_allocated() -> Result<(), Box<dyn StdError>> {
         let mut counter1 = Counter::new();
         let id1 = CString::new("id1")?;
         with_pool(|pool| {
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cleanup_called() -> Result<(), Box<dyn Error>> {
+    fn test_cleanup_called() -> Result<(), Box<dyn StdError>> {
         let mut counter1 = Counter::new();
         let mut counter2 = Counter::new();
         let id1 = CString::new("id1")?;
@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_allocations() -> Result<(), Box<dyn Error>> {
+    fn test_multiple_allocations() -> Result<(), Box<dyn StdError>> {
         let mut counter1 = Counter::new();
         let mut counter2 = Counter::new();
         let id1 = CString::new("id1")?;

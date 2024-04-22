@@ -408,11 +408,11 @@ mod tests {
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use chrono::Utc;
     use std::boxed::Box;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ffi::CString;
 
     #[test]
-    fn test_parse_report_mod_stats() -> Result<(), Box<dyn Error>> {
+    fn test_parse_report_mod_stats() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
             let module_config = ModuleConfig::new();
             let uri = CString::new("/mod_tile_rs")?;
@@ -437,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_describe_layer() -> Result<(), Box<dyn Error>> {
+    fn test_parse_describe_layer() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
             let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -465,7 +465,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v3_with_option() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
             let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -504,7 +504,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v3_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v3_with_invalid_zoom_param() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -538,7 +538,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v3_no_option_with_ending_forward_slash() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -577,7 +577,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v3_no_option_no_ending_forward_slash() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -616,7 +616,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v2_with_option() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -653,7 +653,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v2_with_invalid_zoom_param() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v2_with_invalid_zoom_param() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -686,7 +686,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v2_no_option_with_ending_forward_slash() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();
@@ -723,7 +723,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn Error>> {
+    fn test_parse_serve_tile_v2_no_option_no_ending_forward_slash() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|record| {
            let layer_name = LayerName::from("default");
             let mut module_config = ModuleConfig::new();

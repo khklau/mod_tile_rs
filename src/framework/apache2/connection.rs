@@ -9,7 +9,7 @@ use crate::framework::apache2::record::{ ConnectionRecord, RequestRecord, };
 
 use std::any::type_name;
 use std::boxed::Box;
-use std::error::Error;
+use std::error::Error as StdError;
 use std::ffi::CString;
 use std::os::raw::c_void;
 
@@ -28,7 +28,7 @@ impl<'p> PoolStored<'p> for Connection<'p> {
     fn find(
         request: &'p request_rec,
         pool_key: &CString,
-    ) -> Result<Option<&'p mut Connection<'p>>, Box<dyn Error>> {
+    ) -> Result<Option<&'p mut Connection<'p>>, Box<dyn StdError>> {
         let server_record = request.get_server_record()?;
         debug!(server_record, "Connection::find - start");
         let connection_record = request.get_connection_record().unwrap();
@@ -38,7 +38,7 @@ impl<'p> PoolStored<'p> for Connection<'p> {
         Ok(existing_connection)
     }
 
-    fn new(request: &'p request_rec) -> Result<&'p mut Connection<'p>, Box<dyn Error>> {
+    fn new(request: &'p request_rec) -> Result<&'p mut Connection<'p>, Box<dyn StdError>> {
         let server_record = request.get_server_record()?;
         debug!(server_record, "Connection::new - start");
         let connection_record = request.get_connection_record().unwrap();

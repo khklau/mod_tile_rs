@@ -9,7 +9,7 @@ use crate::framework::apache2::record::{ RequestRecord, ServerRecord, };
 
 use std::any::type_name;
 use std::boxed::Box;
-use std::error::Error;
+use std::error::Error as StdError;
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::option::Option;
@@ -29,7 +29,7 @@ impl<'p> PoolStored<'p> for VirtualHost<'p> {
     fn find(
         request: &'p request_rec,
         pool_key: &CString,
-    ) -> Result<Option<&'p mut VirtualHost<'p>>, Box<dyn Error>> {
+    ) -> Result<Option<&'p mut VirtualHost<'p>>, Box<dyn StdError>> {
         let server_record = request.get_server_record()?;
         debug!(server_record, "VirtualHost::find - start");
         let pool = server_record.get_pool()?;
@@ -38,7 +38,7 @@ impl<'p> PoolStored<'p> for VirtualHost<'p> {
         Ok(existing_host)
     }
 
-    fn new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn Error>> {
+    fn new(request: &'p request_rec) -> Result<&'p mut VirtualHost<'p>, Box<dyn StdError>> {
         let server_record = request.get_server_record()?;
         debug!(server_record, "VirtualHost::new - start");
         let pool = server_record.get_pool()?;

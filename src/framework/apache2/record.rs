@@ -155,7 +155,7 @@ pub mod test_utils {
     };
     use crate::framework::apache2::memory::test_utils::with_pool;
     use std::boxed::Box;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ops::FnOnce;
     use std::os::raw::{ c_char, c_int, c_long, c_uint, };
     use std::ptr;
@@ -206,8 +206,8 @@ pub mod test_utils {
         }
     }
 
-    pub fn with_server_rec<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&mut server_rec) -> Result<(), Box<dyn Error>> {
+    pub fn with_server_rec<F>(func: F) -> Result<(), Box<dyn StdError>>
+    where F: FnOnce(&mut server_rec) -> Result<(), Box<dyn StdError>> {
         let mut process: process_rec = process_rec {
             pool: ptr::null_mut(),
             pconf: ptr::null_mut(),
@@ -263,8 +263,8 @@ pub mod test_utils {
         }
     }
 
-    pub fn with_conn_rec<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&mut conn_rec) -> Result<(), Box<dyn Error>> {
+    pub fn with_conn_rec<F>(func: F) -> Result<(), Box<dyn StdError>>
+    where F: FnOnce(&mut conn_rec) -> Result<(), Box<dyn StdError>> {
         let mut record: conn_rec = conn_rec::new();
         with_pool(|pool| {
             record.pool = pool as *mut apr_pool_t;
@@ -320,8 +320,8 @@ pub mod test_utils {
         }
     }
 
-    pub fn with_request_rec<F>(func: F) -> Result<(), Box<dyn Error>>
-    where F: FnOnce(&mut request_rec) -> Result<(), Box<dyn Error>> {
+    pub fn with_request_rec<F>(func: F) -> Result<(), Box<dyn StdError>>
+    where F: FnOnce(&mut request_rec) -> Result<(), Box<dyn StdError>> {
         let mut record: request_rec = request_rec {
             pool: ptr::null_mut(),
             connection: ptr::null_mut(),

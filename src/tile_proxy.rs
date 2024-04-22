@@ -29,12 +29,12 @@ use crate::use_case::description::DescriptionContext;
 use crate::use_case::statistics::StatisticsContext;
 use crate::use_case::tile::TileContext;
 
+use thiserror::Error;
 use chrono::Utc;
 
 use std::any::type_name;
 use std::boxed::Box;
-use std::convert::From;
-use std::error::Error;
+use std::error::Error as StdError;
 use std::ffi::CString;
 use std::option::Option;
 use std::os::raw::{ c_int, c_void, };
@@ -43,38 +43,14 @@ use std::result::Result;
 use std::time::Duration;
 
 
+#[derive(Error, Debug)]
 pub enum HandleRequestError {
-    Read(ReadError),
-    Handle(HandleError),
-    Write(WriteError),
-}
-
-impl From<ReadError> for HandleRequestError {
-    fn from(error: ReadError) -> Self {
-        HandleRequestError::Read(error)
-    }
-}
-
-impl From<HandleError> for HandleRequestError {
-    fn from(error: HandleError) -> Self {
-        HandleRequestError::Handle(error)
-    }
-}
-
-impl From<WriteError> for HandleRequestError {
-    fn from(error: WriteError) -> Self {
-        HandleRequestError::Write(error)
-    }
-}
-
-impl std::fmt::Display for HandleRequestError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HandleRequestError::Read(err) => return write!(f, "{}", err),
-            HandleRequestError::Handle(err) => return write!(f, "{}", err),
-            HandleRequestError::Write(err) => return write!(f, "{}", err),
-        }
-    }
+    #[error("Error while reading the request")]
+    Read(#[from] ReadError),
+    #[error("Error while handling the request")]
+    Handle(#[from] HandleError),
+    #[error("Error while writing the response")]
+    Write(#[from] WriteError),
 }
 
 pub struct TileProxy {
@@ -88,7 +64,7 @@ pub struct TileProxy {
 }
 
 impl TileProxy {
-    pub fn find_or_allocate_new(record: &mut server_rec) -> Result<&mut Self, Box<dyn Error>> {
+    pub fn find_or_allocate_new(record: &mut server_rec) -> Result<&mut Self, Box<dyn StdError>> {
         info!(record, "TileServer::find_or_create - start");
         let proxy = match retrieve(
             record.get_pool()?,
@@ -120,7 +96,7 @@ impl TileProxy {
     pub fn new(
         record: &server_rec,
         module_config: ModuleConfig,
-    ) -> Result<&mut Self, Box<dyn Error>> {
+    ) -> Result<&mut Self, Box<dyn StdError>> {
         info!(record, "TileServer::create - start");
         let new_server = alloc::<TileProxy>(
             record.get_pool()?,
@@ -142,7 +118,7 @@ impl TileProxy {
         &mut self,
         file_path: PathBuf,
         server_name: Option<&str>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), Box<dyn StdError>> {
         let original_request_timeout = self.config.renderd.render_timeout.clone();
         let module_config = ModuleConfig::load(file_path.as_path(), server_name)?;
         self.config = module_config;
@@ -161,7 +137,7 @@ impl TileProxy {
     pub fn initialise(
         &mut self,
         record: &mut server_rec,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), Box<dyn StdError>> {
         if let Some(original_path) = &self.config_file_path {
             let copied_path = original_path.clone();
             self.load_config(copied_path, record.get_host_name())?;
@@ -420,11 +396,10 @@ mod tests {
     use crate::framework::apache2::record::test_utils::{ with_request_rec, with_server_rec };
     use chrono::Utc;
     use std::boxed::Box;
-    use std::error::Error;
     use std::string::String;
 
     #[test]
-    fn test_new() -> Result<(), Box<dyn Error>> {
+    fn test_new() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|record| {
             let module_config = ModuleConfig::new();
             let proxy = TileProxy::new(record, module_config)?;
@@ -433,7 +408,7 @@ mod tests {
     }
 
     #[test]
-    fn test_proxy_reload() -> Result<(), Box<dyn Error>> {
+    fn test_proxy_reload() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|record| {
             let module_config = ModuleConfig::new();
             let proxy = TileProxy::new(record, module_config)?;
@@ -455,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_request_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+    fn test_read_request_calls_mock_observer() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|server| {
             with_request_rec(|request| {
                 let module_config = ModuleConfig::new();
@@ -472,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn test_call_handlers_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+    fn test_call_handlers_calls_mock_observer() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|server| {
             with_request_rec(|request| {
                 let module_config = ModuleConfig::new();
@@ -502,7 +477,7 @@ mod tests {
     }
 
     #[test]
-    fn test_call_description_handler_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+    fn test_call_description_handler_calls_mock_observer() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|server| {
             with_request_rec(|request| {
                 let module_config = ModuleConfig::new();
@@ -528,7 +503,7 @@ mod tests {
     }
 
     #[test]
-    fn test_call_statistics_handler_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+    fn test_call_statistics_handler_calls_mock_observer() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|server| {
             with_request_rec(|request| {
                 let module_config = ModuleConfig::new();
@@ -554,7 +529,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_response_calls_mock_observer() -> Result<(), Box<dyn Error>> {
+    fn test_write_response_calls_mock_observer() -> Result<(), Box<dyn StdError>> {
         with_server_rec(|server| {
             with_request_rec(|request| {
                 let module_config = ModuleConfig::new();

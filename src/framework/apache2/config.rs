@@ -2,8 +2,8 @@ use crate::schema::apache2::config::{ ModuleConfig, RenderdConfig, LayerConfig }
 use crate::schema::tile::identity::{ LayerName, max_layer_name_char_len };
 
 use configparser::ini::Ini;
+use thiserror::Error;
 
-use std::error::Error;
 use std::fmt;
 use std::option::Option;
 use std::path::Path;
@@ -109,7 +109,7 @@ fn parse_layer(
     return Ok(config);
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub struct ParseError {
     reason: String,
 }
@@ -119,8 +119,6 @@ impl From<String> for ParseError {
         return ParseError { reason };
     }
 }
-
-impl Error for ParseError {}
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -133,7 +131,7 @@ impl fmt::Display for ParseError {
 mod tests {
     use super::*;
     use std::boxed::Box;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::path::PathBuf;
 
     #[test]
@@ -176,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_basic_invalid_file() -> Result<(), Box<dyn Error>> {
+    fn test_load_basic_invalid_file() -> Result<(), Box<dyn StdError>> {
         let mut file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         file_path.push("resources/test/tile/basic_invalid.conf");
         assert!(ModuleConfig::load(file_path.as_path(), None).is_ok(), "Invalid file was parsed");
@@ -184,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_config_name() -> Result<(), Box<dyn Error>> {
+    fn test_parse_config_name() -> Result<(), Box<dyn StdError>> {
         let layer = LayerName::from("foobar");
         let mut ini = Ini::new();
         ini.set("renderd", "socketname", Some(String::from("/var/run/renderd/renderd.sock")));
@@ -200,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_renderd_config() -> Result<(), Box<dyn Error>> {
+    fn test_parse_renderd_config() -> Result<(), Box<dyn StdError>> {
         let mut ini = Ini::new();
         ini.set("renderd", "socketname", Some(String::from("/var/run/renderd/renderd.sock")));
         ini.set("RENDERD", "TILE_DIR", Some(String::from("/var/cache/renderd/")));
@@ -211,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_uri_with_trailing_slash() -> Result<(), Box<dyn Error>> {
+    fn test_parse_uri_with_trailing_slash() -> Result<(), Box<dyn StdError>> {
         let mut ini = Ini::new();
         let layer = LayerName::from("basic");
         ini.set(layer.as_str(), "uri", Some(String::from("/foo/")));
@@ -224,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_parameterize_style_as_bool() -> Result<(), Box<dyn Error>> {
+    fn test_parse_parameterize_style_as_bool() -> Result<(), Box<dyn StdError>> {
         let layer1 = LayerName::from("basic");
         let mut ini1 = Ini::new();
         ini1.set(layer1.as_str(), "parameterize_style", Some(String::from("TRUE")));
@@ -244,7 +242,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_server_alias() -> Result<(), Box<dyn Error>> {
+    fn test_parse_server_alias() -> Result<(), Box<dyn StdError>> {
         let layer1 = LayerName::from("basic");
         let mut ini1 = Ini::new();
         ini1.set(layer1.as_str(), "server_alias", Some(String::from("webserver")));
@@ -275,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_invalid_parameterize_style() -> Result<(), Box<dyn Error>> {
+    fn test_parse_invalid_parameterize_style() -> Result<(), Box<dyn StdError>> {
         let mut ini = Ini::new();
         ini.set("basic", "parameterize_style", Some(String::from("yes")));
         assert!(parse(&ini, None).is_err(), "Invalid parameterize_size value was not rejected");
@@ -283,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_uppercase_section_and_key() -> Result<(), Box<dyn Error>> {
+    fn test_parse_uppercase_section_and_key() -> Result<(), Box<dyn StdError>> {
         let mut ini = Ini::new();
         ini.set("RENDERD", "TILE_DIR", Some(String::from("/var/cache/renderd/")));
         let actual_config = parse(&ini, None)?;

@@ -29,10 +29,10 @@ mod tests {
 
     use super::*;
     use std::boxed::Box;
-    use std::error::Error;
+    use std::error::Error as StdError;
 
     #[test]
-    fn test_new() -> Result<(), Box<dyn Error>> {
+    fn test_new() -> Result<(), Box<dyn StdError>> {
         let module_config = ModuleConfig::new();
         let _value = RenderingState::new(&module_config)?;
         return Ok(())

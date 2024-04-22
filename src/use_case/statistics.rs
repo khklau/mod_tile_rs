@@ -163,11 +163,11 @@ mod tests {
     use chrono::Utc;
     use mockall::predicate::eq;
 
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ffi::CString;
 
     #[test]
-    fn test_not_handled() -> Result<(), Box<dyn Error>> {
+    fn test_not_handled() -> Result<(), Box<dyn StdError>> {
         let telemetry = NoOpZeroTelemetryInventory::new();
         let mut rendering = NoOpRenderingInventory::new();
         let module_config = ModuleConfig::new();
@@ -278,7 +278,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_after_tile_render() -> Result<(), Box<dyn Error>> {
+    fn test_handle_after_tile_render() -> Result<(), Box<dyn StdError>> {
         let module_config = ModuleConfig::new();
         let mut handler_state = StatisticsHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");

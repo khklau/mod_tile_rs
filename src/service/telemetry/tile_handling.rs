@@ -268,11 +268,11 @@ mod tests {
     use http::header::HeaderMap;
     use http::status::StatusCode;
     use std::cell::RefCell;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ffi::CString;
 
     #[test]
-    fn test_count_increment_on_tile_render() -> Result<(), Box<dyn Error>> {
+    fn test_count_increment_on_tile_render() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
@@ -359,7 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn test_count_increment_on_tile_cache() -> Result<(), Box<dyn Error>> {
+    fn test_count_increment_on_tile_cache() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
@@ -446,7 +446,7 @@ mod tests {
     }
 
     #[test]
-    fn test_count_increment_on_tile_response_combinations() -> Result<(), Box<dyn Error>> {
+    fn test_count_increment_on_tile_response_combinations() -> Result<(), Box<dyn StdError>> {
         with_request_rec(|request| {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();

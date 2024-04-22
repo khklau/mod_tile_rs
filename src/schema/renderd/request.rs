@@ -110,11 +110,11 @@ impl Constructable for protocol {
 mod tests {
     use super::*;
     use std::ffi::CStr;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::os::raw::c_char;
 
     #[test]
-    fn test_new_basic_protocol() -> Result<(), Box<dyn Error>> {
+    fn test_new_basic_protocol() -> Result<(), Box<dyn StdError>> {
         let version = RenderRequestVersion::Three;
         let command = RenderRequestCommand::RenderLow;
         let layer = LayerName::make("1234567890123456");
@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new_protocol_with_invalid_extension() -> Result<(), Box<dyn Error>> {
+    fn test_new_protocol_with_invalid_extension() -> Result<(), Box<dyn StdError>> {
         let version = RenderRequestVersion::Three;
         let command = RenderRequestCommand::RenderLow;
         let layer = LayerName::make("1234567890123456");

@@ -10,7 +10,7 @@ use std::str::Utf8Error;
 
 #[derive(Error, Debug, Clone)]
 pub enum ReadError {
-    #[error("Invalid rarameter read: {0:?}")]
+    #[error("Invalid parameter: {0:?}")]
     Param(#[from] InvalidParameterError),
     #[error("An IO error while reading")]
     Io(#[from] Rc<std::io::Error>),

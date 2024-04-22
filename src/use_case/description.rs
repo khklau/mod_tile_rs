@@ -106,11 +106,11 @@ mod tests {
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
     use chrono::Utc;
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ffi::CString;
 
     #[test]
-    fn test_not_handled() -> Result<(), Box<dyn Error>> {
+    fn test_not_handled() -> Result<(), Box<dyn StdError>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_describe_layer_with_default_config() -> Result<(), Box<dyn Error>> {
+    fn test_describe_layer_with_default_config() -> Result<(), Box<dyn StdError>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
         let layer_name = LayerName::from("default");

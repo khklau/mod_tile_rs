@@ -291,12 +291,12 @@ mod tests {
     use super::test_utils::MockWriter;
     use crate::framework::apache2::record::test_utils::with_request_rec;
 
-    use std::error::Error;
+    use std::error::Error as StdError;
     use std::ffi::CString;
 
 
     #[test]
-    fn test_write_content_small_lengths() -> Result<(), Box<dyn Error>> {
+    fn test_write_content_small_lengths() -> Result<(), Box<dyn StdError>> {
         let mut writer = MockWriter {
             default_length: 1,
             allowed_lengths: vec![2, 2, 2, 2].into_iter().collect(),
@@ -315,7 +315,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_content_large_lengths() -> Result<(), Box<dyn Error>> {
+    fn test_write_content_large_lengths() -> Result<(), Box<dyn StdError>> {
         let mut writer = MockWriter {
             default_length: 1,
             allowed_lengths: vec![128].into_iter().collect(),
@@ -334,7 +334,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_content_paused_writes() -> Result<(), Box<dyn Error>> {
+    fn test_write_content_paused_writes() -> Result<(), Box<dyn StdError>> {
         let mut writer = MockWriter {
             default_length: 1,
             allowed_lengths: vec![2, 0, 4, 0, 2].into_iter().collect(),
@@ -353,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_content_delayed_writes() -> Result<(), Box<dyn Error>> {
+    fn test_write_content_delayed_writes() -> Result<(), Box<dyn StdError>> {
         let mut writer = MockWriter {
             default_length: 1,
             allowed_lengths: vec![0, 0, 4, 4].into_iter().collect(),
