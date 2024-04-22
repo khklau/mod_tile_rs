@@ -1,154 +1,48 @@
-use std::convert::From;
-use std::error::Error;
-use std::option::Option;
+use thiserror::Error;
+
 use std::path::PathBuf;
 use std::str::Utf8Error;
 
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TileReadError {
-    Io(std::io::Error),
-    InvalidTile(InvalidMetaTileError),
+    #[error("An IO error while reading a tile")]
+    Io(#[from] std::io::Error),
+    #[error("Invalid meta tile")]
+    InvalidTile(#[from] InvalidMetaTileError),
+    #[error("Meta tile not found at path: {0:?}")]
     NotFound(PathBuf),
-    OffsetOutOfBounds(TileOffsetOutOfBoundsError),
+    #[error("Meta tile contains offset that is out of bounds: {0:?}")]
+    OffsetOutOfBounds(#[from] TileOffsetOutOfBoundsError),
 }
 
-impl Error for TileReadError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            TileReadError::Io(err) => return Some(err),
-            TileReadError::InvalidTile(err) => return Some(err),
-            TileReadError::NotFound(_) => return None,
-            TileReadError::OffsetOutOfBounds(err) => return Some(err),
-        }
-    }
-}
-
-impl std::fmt::Display for TileReadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TileReadError::Io(err) => return write!(f, "{}", err),
-            TileReadError::InvalidTile(err) => return write!(f, "{}", err),
-            TileReadError::NotFound(path) => return write!(f, "{}", path.to_str().unwrap()),
-            TileReadError::OffsetOutOfBounds(err) => return write!(f, "{}", err),
-        }
-    }
-}
-
-impl From<std::io::Error> for TileReadError {
-    fn from(error: std::io::Error) -> Self {
-        return TileReadError::Io(error);
-    }
-}
-
-impl From<InvalidMetaTileError> for TileReadError {
-    fn from(error: InvalidMetaTileError) -> Self {
-        return TileReadError::InvalidTile(error);
-    }
-}
-
-impl From<TileOffsetOutOfBoundsError> for TileReadError {
-    fn from(error: TileOffsetOutOfBoundsError) -> Self {
-        return TileReadError::OffsetOutOfBounds(error);
-    }
-}
-
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum InvalidMetaTileError {
-    Io(std::io::Error),
-    InvalidCompression(InvalidCompressionError),
+    #[error("An IO error while reading a meta tile")]
+    Io(#[from] std::io::Error),
+    #[error("Meta tile is using an unsupported compression algorithm")]
+    InvalidCompression(#[from] InvalidCompressionError),
+    #[error("Invalid tile count found in meta tile: {0}")]
     InvalidTileCount(i32),
+    #[error("Invalid tile length found in meta tile: {0}")]
     InvalidTileLength(u32),
 }
 
-impl Error for InvalidMetaTileError {}
-
-impl From<std::io::Error> for InvalidMetaTileError {
-    fn from(error: std::io::Error) -> Self {
-        InvalidMetaTileError::Io(error)
-    }
-}
-
-impl From<InvalidCompressionError> for InvalidMetaTileError {
-    fn from(error: InvalidCompressionError) -> Self {
-        InvalidMetaTileError::InvalidCompression(error)
-    }
-}
-
-impl std::fmt::Display for InvalidMetaTileError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            InvalidMetaTileError::Io(err) => return write!(f, "{}", err),
-            InvalidMetaTileError::InvalidCompression(err) => return write!(f, "{}", err),
-            InvalidMetaTileError::InvalidTileCount(err) => return write!(f, "{}", err),
-            InvalidMetaTileError::InvalidTileLength(err) => return write!(f, "{}", err),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Error, Debug, Clone)]
 pub enum InvalidCompressionError {
-    TagIsNotUtf8(Utf8Error),
+    #[error("Tag in meta tile is not Utf8")]
+    TagIsNotUtf8(#[from] Utf8Error),
+    #[error("Invalid tag in meta tile: {0}")]
     InvalidTag(String),
 }
 
-impl Error for InvalidCompressionError {}
-
-impl From<Utf8Error> for InvalidCompressionError {
-    fn from(error: Utf8Error) -> Self {
-        InvalidCompressionError::TagIsNotUtf8(error)
-    }
-}
-
-impl std::fmt::Display for InvalidCompressionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            InvalidCompressionError::TagIsNotUtf8(err) => return write!(f, "{}", err),
-            InvalidCompressionError::InvalidTag(err) => return write!(f, "{}", err),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Error, Debug, Clone)]
 pub struct TileOffsetOutOfBoundsError {
     pub tile_offset: u32,
 }
 
-impl Error for TileOffsetOutOfBoundsError {}
-
 impl std::fmt::Display for TileOffsetOutOfBoundsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Invalid tile offset {}", self.tile_offset)
-    }
-}
-
-
-#[derive(Debug)]
-pub enum TileGetStatusError {
-    Io(std::io::Error),
-    NotFound(PathBuf),
-}
-
-impl Error for TileGetStatusError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            TileGetStatusError::Io(err) => return Some(err),
-            TileGetStatusError::NotFound(_) => return None,
-        }
-    }
-}
-
-impl std::fmt::Display for TileGetStatusError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TileGetStatusError::Io(err) => return write!(f, "{}", err),
-            TileGetStatusError::NotFound(path) => return write!(f, "{}", path.to_str().unwrap()),
-        }
-    }
-}
-
-impl From<std::io::Error> for TileGetStatusError {
-    fn from(error: std::io::Error) -> Self {
-        return TileGetStatusError::Io(error);
     }
 }

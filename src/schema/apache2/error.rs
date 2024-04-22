@@ -1,8 +1,9 @@
+use thiserror::Error;
+
 use std::any::type_name;
-use std::error::Error;
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Error, Debug, Clone)]
 pub struct InvalidRecordError {
     pub record: String,
     pub address: usize,
@@ -22,21 +23,17 @@ impl InvalidRecordError {
     }
 }
 
-impl Error for InvalidRecordError {}
-
 impl fmt::Display for InvalidRecordError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Record {} @{} is invalid: {}", self.record, self.address, self.reason)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Error, Debug, Clone)]
 pub struct InvalidConfigError {
     pub entry: String,
     pub reason: String,
 }
-
-impl Error for InvalidConfigError {}
 
 impl fmt::Display for InvalidConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
