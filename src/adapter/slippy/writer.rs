@@ -3,7 +3,7 @@ use crate::schema::slippy::error::WriteError;
 use crate::schema::slippy::response::{
     BodyVariant, Header, Description, SlippyResponse, Statistics, TileResponse,
 };
-use crate::schema::slippy::result::{ WriteOutcome, WriteResponseResult, };
+use crate::schema::slippy::result::WriteResponseResult;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::adapter::slippy::interface::WriteContext;
 
@@ -19,22 +19,16 @@ impl SlippyResponseWriter {
         context: &WriteContext,
         response: &SlippyResponse,
         writer: &mut dyn HttpResponseWriter,
-    ) -> WriteOutcome {
+    ) -> WriteResponseResult {
         match &response.body {
             BodyVariant::Description(description) => {
-                WriteOutcome::Processed(
-                    DescriptionWriter::write(context, &response.header, description, writer)
-                )
+                DescriptionWriter::write(context, &response.header, description, writer)
             },
             BodyVariant::Statistics(statistics) => {
-                WriteOutcome::Processed(
-                    StatisticsWriter::write(context, &response.header, statistics, writer)
-                )
+                StatisticsWriter::write(context, &response.header, statistics, writer)
             },
             BodyVariant::Tile(tile) => {
-                WriteOutcome::Processed(
-                    TileWriter::write(context, &response.header, tile, writer)
-                )
+                TileWriter::write(context, &response.header, tile, writer)
             },
         }
     }

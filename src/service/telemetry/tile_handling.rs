@@ -3,12 +3,12 @@ use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
+use crate::schema::slippy::result::WriteResponseResult;
+use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
 use crate::io::communication::interface::HttpResponseWriter;
-use crate::framework::apache2::context::HostContext;
 use crate::adapter::slippy::interface::{WriteContext, WriteResponseObserver,};
 use crate::service::telemetry::interface::TileHandlingMetrics;
 
@@ -85,7 +85,7 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         context: &WriteContext,
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
-        _write_outcome: &WriteOutcome,
+        _write_result: &WriteResponseResult,
         _write_func_name: &'static str,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
@@ -240,7 +240,7 @@ pub mod test_utils {
             _context: &WriteContext,
             _response: &response::SlippyResponse,
             _writer: &dyn HttpResponseWriter,
-            _write_outcome: &WriteOutcome,
+            _write_result: &WriteResponseResult,
             _write_func_name: &'static str,
             _read_outcome: &ReadOutcome,
             _handle_outcome: &HandleOutcome,
@@ -260,8 +260,8 @@ mod tests {
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
-    use crate::schema::slippy::result::WriteOutcome;
     use crate::schema::tile::tile_ref::TileRef;
+    use crate::framework::apache2::context::HostContext;
     use crate::framework::apache2::record::test_utils::with_request_rec;
     use crate::io::communication::http_exchange::test_utils::MockWriter;
     use chrono::Utc;
@@ -332,18 +332,16 @@ mod tests {
                     result: Ok(response.clone()),
                 }
             );
-            let write_outcome = WriteOutcome::Processed(
-                Ok(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 508,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
+            let write_result = Ok(
+                HttpResponse {
+                    status_code: StatusCode::OK,
+                    bytes_written: 508,
+                    http_headers: HeaderMap::new(),
+                }
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -419,18 +417,16 @@ mod tests {
                     result: Ok(response.clone()),
                 }
             );
-            let write_outcome = WriteOutcome::Processed(
-                Ok(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 508,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
+            let write_result = Ok(
+                HttpResponse {
+                    status_code: StatusCode::OK,
+                    bytes_written: 508,
+                    http_headers: HeaderMap::new(),
+                }
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -477,14 +473,12 @@ mod tests {
                 host_context: HostContext::new(&module_config, request),
                 read_outcome: &read_outcome,
             };
-            let write_outcome = WriteOutcome::Processed(
-                Ok(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 508,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
+            let write_result = Ok(
+                HttpResponse {
+                    status_code: StatusCode::OK,
+                    bytes_written: 508,
+                    http_headers: HeaderMap::new(),
+                }
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let all_sources = [TileSource::Render, TileSource::Cache];
@@ -521,8 +515,8 @@ mod tests {
                         }
                     );
                     let writer = MockWriter::new();
-                    analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
-                    analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
+                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
                 }
             }
             for age in &all_ages {

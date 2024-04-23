@@ -4,7 +4,7 @@ use crate::schema::handler::result::HandleOutcome;
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
+use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
 use crate::schema::tile::identity::LayerName;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::adapter::slippy::interface::{
@@ -160,7 +160,7 @@ impl WriteResponseObserver for ResponseAnalysis {
         context: &WriteContext,
         _response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
-        write_outcome: &WriteOutcome,
+        write_result: &WriteResponseResult,
         _write_func_name: &'static str,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
@@ -178,8 +178,8 @@ impl WriteResponseObserver for ResponseAnalysis {
             },
             _ => ()
         }
-        match (read_outcome, write_outcome) {
-            (ReadOutcome::Processed(read_result), WriteOutcome::Processed(write_outcome)) => match (read_result, write_outcome) {
+        match read_outcome {
+            ReadOutcome::Processed(read_result) => match (read_result, write_result) {
                 (Ok(request), Ok(http_response)) => self.on_http_response_write(context, request, http_response),
                 _ => (),
             },
@@ -302,7 +302,6 @@ mod tests {
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
-    use crate::schema::slippy::result::WriteOutcome;
     use crate::schema::tile::age::TileAge;
     use crate::schema::tile::source::TileSource;
     use crate::schema::tile::tile_ref::TileRef;
@@ -380,18 +379,16 @@ mod tests {
                     result: Ok(response.clone()),
                 }
             );
-            let write_outcome = WriteOutcome::Processed(
-                Ok(
-                    HttpResponse {
-                        status_code: StatusCode::OK,
-                        bytes_written: 508,
-                        http_headers: HeaderMap::new(),
-                    }
-                )
+            let write_result = Ok(
+                HttpResponse {
+                    status_code: StatusCode::OK,
+                    bytes_written: 508,
+                    http_headers: HeaderMap::new(),
+                }
             );
             let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_outcome, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 5),

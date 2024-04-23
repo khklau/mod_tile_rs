@@ -8,7 +8,7 @@ use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::{HandleOutcome, HandleRequestResult,};
 use crate::schema::slippy::request::{BodyVariant, SlippyRequest};
 use crate::schema::slippy::error::{ReadError, WriteError,};
-use crate::schema::slippy::result::{ReadOutcome, WriteOutcome,};
+use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
 use crate::core::memory::PoolStored;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::io::interface::IOContext;
@@ -152,12 +152,12 @@ impl TileProxy {
         debug!(record.server, "TileServer::handle_request - start");
         let (read_outcome, self2) = self.read_request(record);
         let (handle_outcome, self3) = self2.call_handlers(record, &read_outcome);
-        let (write_outcome, _) = self3.write_response(record, &read_outcome, &handle_outcome);
-        let result: Result<c_int, HandleRequestError> = match write_outcome {
-            WriteOutcome::Processed(write_result) => {
-                Ok(write_result?.status_code.as_u16() as c_int)
-            },
-            WriteOutcome::Ignored => Ok(DECLINED as c_int)
+        let (write_result, _) = self3.write_response(record, &read_outcome, &handle_outcome);
+        let result: Result<c_int, HandleRequestError> = match write_result {
+            Ok(response) => Ok(response.status_code.as_u16() as c_int),
+            Err(write_err) => Err(
+                HandleRequestError::Write(write_err)
+            ),
         };
         debug!(record.server, "TileServer::handle_request - finish");
         return result;
@@ -336,7 +336,7 @@ impl TileProxy {
         record: &mut request_rec,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
-    ) -> (WriteOutcome, &mut Self) {
+    ) -> (WriteResponseResult, &mut Self) {
         debug!(record.server, "TileServer::write_response - start");
         let (write, write_func_name) = SlippyInventory::write_response_func();
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
@@ -349,23 +349,23 @@ impl TileProxy {
         let write_outcome = match handle_outcome {
             HandleOutcome::Processed(result) => match &result.result {
                 Ok(response) => {
-                    let outcome = write(&context, &response, writer);
+                    let write_result = write(&context, &response, writer);
                     for observer_iter in SlippyObserverInventory::write_observers(&mut self.telemetry_state).iter_mut() {
                         debug!(
                             context.host().record,
                             "TileServer::write_response - calling observer {:p}", *observer_iter
                         );
-                        (*observer_iter).on_write(&context, response, writer, &outcome, write_func_name, &read_outcome, &handle_outcome);
+                        (*observer_iter).on_write(&context, response, writer, &write_result, write_func_name, &read_outcome, &handle_outcome);
                     }
-                    outcome
+                    write_result
                 }
-                Err(_) => WriteOutcome::Processed(
-                    Err(
-                        WriteError::RequestNotHandled
-                    ) // FIXME: propagate the HandleError properly
-                )
+                Err(_) => Err(
+                    WriteError::RequestNotHandled
+                ) // FIXME: propagate the HandleError properly
             },
-            HandleOutcome::Ignored => WriteOutcome::Ignored,
+            HandleOutcome::Ignored => Err(
+                WriteError::RequestNotHandled
+            ),
         };
         debug!(record.server, "TileServer::write_response - finish");
         return (write_outcome, self);
@@ -575,7 +575,7 @@ mod tests {
                     }
                 );
                 let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
-                result.expect_processed().unwrap();
+                result.expect("Unexpected error");
                 let actual_count = proxy.telemetry_state.write_counter().count;
                 assert_eq!(1, actual_count, "Write observer not called");
                 Ok(())

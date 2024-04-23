@@ -126,6 +126,7 @@ mod tile_proxy;
 
 use crate::binding::apache2::{
     HTTP_INTERNAL_SERVER_ERROR,
+    OK, DECLINED,
     MODULE_MAGIC_COOKIE, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR,
     apr_pool_t, cmd_parms, module, request_rec, server_rec,
 };
@@ -133,7 +134,8 @@ use crate::binding::apache2::{
 use crate::binding::apache2::{ APR_HOOK_MIDDLE, ap_hook_child_init, ap_hook_handler, };
 
 use crate::framework::apache2::record::ServerRecord;
-use crate::tile_proxy::TileProxy;
+use crate::schema::slippy::error::WriteError;
+use crate::tile_proxy::{HandleRequestError, TileProxy,};
 
 use scan_fmt::scan_fmt;
 
@@ -289,9 +291,18 @@ pub extern "C" fn handle_request(
             debug!(record.server, "tile_server::handle_request - request handled");
             return result;
         },
-        Err(why) => {
-            error!(record.server, "tile_server::handle_request - failed: {}", why);
-            return HTTP_INTERNAL_SERVER_ERROR as c_int;
+        Err(why) => match why {
+            HandleRequestError::Write(write_err) => match write_err {
+                WriteError::RequestNotHandled => return DECLINED as c_int,
+                _ => {
+                    error!(record.server, "tile_server::handle_request - write failed: {}", write_err);
+                    return HTTP_INTERNAL_SERVER_ERROR as c_int;
+                }
+            },
+            _ => {
+                error!(record.server, "tile_server::handle_request - failed: {}", why);
+                return HTTP_INTERNAL_SERVER_ERROR as c_int;
+            }
         },
     };
 }

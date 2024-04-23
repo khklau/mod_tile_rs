@@ -3,7 +3,7 @@ use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::result::HandleOutcome;
 use crate::schema::http::request::HttpRequest;
 use crate::schema::slippy::response::SlippyResponse;
-use crate::schema::slippy::result::{ ReadOutcome, WriteOutcome, };
+use crate::schema::slippy::result::{ ReadOutcome, WriteResponseResult, };
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::framework::apache2::context::HostContext;
 
@@ -39,7 +39,7 @@ impl<'c> WriteContext<'c> {
     }
 }
 
-pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteOutcome;
+pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteResponseResult;
 
 pub trait ReadRequestObserver {
     fn on_read(
@@ -57,7 +57,7 @@ pub trait WriteResponseObserver {
         context: &WriteContext,
         response: &SlippyResponse,
         writer: &dyn HttpResponseWriter,
-        write_outcome: &WriteOutcome,
+        write_result: &WriteResponseResult,
         write_func_name: &'static str,
         read_outcome: &ReadOutcome,
         handle_outcome: &HandleOutcome,
@@ -102,7 +102,7 @@ pub mod test_utils {
             _context: &WriteContext,
             _response: &SlippyResponse,
             _writer: &dyn HttpResponseWriter,
-            _write_outcome: &WriteOutcome,
+            _write_result: &WriteResponseResult,
             _write_func_name: &'static str,
             _read_outcome: &ReadOutcome,
             _handle_outcome: &HandleOutcome,

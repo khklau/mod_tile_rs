@@ -12,5 +12,3 @@ pub type ReadOutcome = ProcessOutcome<ReadRequestResult>;
 
 
 pub type WriteResponseResult = Result<HttpResponse, WriteError>;
-
-pub type WriteOutcome = ProcessOutcome<WriteResponseResult>;
