@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
@@ -45,15 +45,10 @@ impl DescriptionHandlerState {
     pub fn describe_layer(
         &mut self,
         context: &DescriptionContext,
-        request: &request::SlippyRequest,
-    ) -> HandleOutcome {
+        header: &request::Header,
+    ) -> HandleRequestResult {
         let before_timestamp = Utc::now();
-        let layer = match request.body {
-            request::BodyVariant::DescribeLayer => &request.header.layer,
-            _ => {
-                return HandleOutcome::Ignored;
-            },
-        };
+        let layer = &header.layer;
         let description = describe(context.module_config(), layer);
         let response = response::SlippyResponse {
             header: response::Header {
@@ -62,13 +57,11 @@ impl DescriptionHandlerState {
             body: response::BodyVariant::Description(description),
         };
         let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
+        return HandleRequestResult {
+            before_timestamp,
+            after_timestamp,
+            result: Ok(response),
+        };
     }
 }
 
@@ -110,41 +103,6 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn test_not_handled() -> Result<(), Box<dyn StdError>> {
-        let module_config = ModuleConfig::new();
-        let mut description_state = DescriptionHandlerState::new(&module_config)?;
-        let layer_name = LayerName::from("default");
-        let layer_config = module_config.layers.get(&layer_name).unwrap();
-        let telemetry = NoOpZeroTelemetryInventory::new();
-        let mut communication = EmptyResultCommunicationInventory::new();
-        let mut storage = BlankStorageInventory::new();
-        with_request_rec(|record| {
-            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            record.uri = uri.clone().into_raw();
-            let context = DescriptionContext {
-                host: HostContext::new(&module_config, record),
-            };
-            let request = request::SlippyRequest {
-                header: request::Header {
-                    layer: layer_name.clone(),
-                    request_id: generate_id(),
-                    uri: uri.into_string()?,
-                    received_timestamp: Utc::now(),
-                },
-                body: request::BodyVariant::ReportStatistics,
-            };
-            assert!(
-                description_state.describe_layer(
-                    &context,
-                    &request
-                ).is_ignored(),
-                "Expected to not handle"
-            );
-            Ok(())
-        })
-    }
-
-    #[test]
     fn test_describe_layer_with_default_config() -> Result<(), Box<dyn StdError>> {
         let module_config = ModuleConfig::new();
         let mut description_state = DescriptionHandlerState::new(&module_config)?;
@@ -159,19 +117,16 @@ mod tests {
             let context = DescriptionContext {
                 host: HostContext::new(&module_config, record),
             };
-            let request = request::SlippyRequest {
-                header: request::Header {
-                    layer: layer_name.clone(),
-                    request_id: generate_id(),
-                    uri: uri.into_string()?,
-                    received_timestamp: Utc::now(),
-                },
-                body: request::BodyVariant::DescribeLayer,
+            let header = request::Header {
+                layer: layer_name.clone(),
+                request_id: generate_id(),
+                uri: uri.into_string()?,
+                received_timestamp: Utc::now(),
             };
             let actual_response = description_state.describe_layer(
                 &context,
-                &request
-            ).expect_processed().result?;
+                &header
+            ).result?;
             let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",

@@ -1,8 +1,8 @@
 use crate::schema::apache2::config::{MAX_ZOOM_SERVER, ModuleConfig,};
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleOutcome;
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::response::HttpResponse;
-use crate::schema::slippy::request;
+use crate::schema::slippy::request::{self, ServeTileRequest};
 use crate::schema::slippy::response;
 use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
 use crate::schema::tile::identity::LayerName;
@@ -66,8 +66,10 @@ impl ResponseAnalysis {
         response_duration: &Duration,
     ) -> () {
         let zoom_level = match &request.body {
-            request::BodyVariant::ServeTileV2(v2_request) => v2_request.z as usize,
-            request::BodyVariant::ServeTileV3(v3_request) => v3_request.z as usize,
+            request::BodyVariant::ServeTile(tile_request) => match tile_request {
+                request::ServeTileRequest::V2(v2_request) => v2_request.z as usize,
+                request::ServeTileRequest::V3(v3_request) => v3_request.z as usize,
+            }
             _ => { return; },
         };
         let zoom_limit = self.mut_layer(request).tile_response_count_by_zoom.len();
@@ -91,8 +93,10 @@ impl ResponseAnalysis {
         _response: &response::SlippyResponse,
     ) -> () {
         let zoom_level = match &request.body {
-            request::BodyVariant::ServeTileV2(v2_request) => v2_request.z as usize,
-            request::BodyVariant::ServeTileV3(v3_request) => v3_request.z as usize,
+            request::BodyVariant::ServeTile(tile_request) => match tile_request {
+                request::ServeTileRequest::V2(v2_request) => v2_request.z as usize,
+                request::ServeTileRequest::V3(v3_request) => v3_request.z as usize,
+            }
             _ => {
                 return;
             },
@@ -122,8 +126,10 @@ impl ResponseAnalysis {
             &http_response.status_code
         ).unwrap();
         let zoom_level = match &request.body {
-            request::BodyVariant::ServeTileV2(v2_request) => v2_request.z as usize,
-            request::BodyVariant::ServeTileV3(v3_request) => v3_request.z as usize,
+            request::BodyVariant::ServeTile(tile_request) => match tile_request {
+                request::ServeTileRequest::V2(v2_request) => v2_request.z as usize,
+                request::ServeTileRequest::V3(v3_request) => v3_request.z as usize,
+            }
             _ => { return; },
         };
         let zoom_limit = count_by_zoom.len();
@@ -163,10 +169,10 @@ impl WriteResponseObserver for ResponseAnalysis {
         write_result: &WriteResponseResult,
         _write_func_name: &'static str,
         read_outcome: &ReadOutcome,
-        handle_outcome: &HandleOutcome,
+        handle_result: &HandleRequestResult,
     ) -> () {
-        match (&read_outcome, &handle_outcome) {
-            (ReadOutcome::Processed(read_result), HandleOutcome::Processed(handle_result)) => {
+        match &read_outcome {
+            ReadOutcome::Processed(read_result) => {
                 let response_duration = handle_result.after_timestamp - handle_result.before_timestamp; // FIXME does not include read duration
                 match (read_result, &handle_result.result) {
                     (Ok(request), Ok(response)) => match response.body {
@@ -332,15 +338,17 @@ mod tests {
                             uri: uri.into_string()?,
                             received_timestamp: Utc::now(),
                         },
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
+                        body: request::BodyVariant::ServeTile(
+                            request::ServeTileRequest::V3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
+                                }
+                            )
                         ),
                     }
                 )
@@ -372,13 +380,11 @@ mod tests {
                     }
                 ),
             };
-            let handle_outcome = HandleOutcome::Processed(
-                HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp,
-                    result: Ok(response.clone()),
-                }
-            );
+            let handle_result = HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response.clone()),
+            };
             let write_result = Ok(
                 HttpResponse {
                     status_code: StatusCode::OK,
@@ -388,7 +394,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 5),

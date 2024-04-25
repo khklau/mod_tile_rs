@@ -2,7 +2,7 @@ use crate::binding::renderd_protocol::{protocol, protoCmd};
 use crate::schema::apache2::config::RenderdConfig;
 use crate::schema::renderd::error::RenderError;
 use crate::schema::renderd::request::{RenderRequestCommand, RenderRequestVersion};
-use crate::schema::slippy::request::SlippyRequest;
+use crate::schema::slippy::request::{Header, ServeTileRequest,};
 use crate::schema::tile::identity::TileIdentity;
 use crate::schema::tile::tile_ref::TileRef;
 use crate::io::interface::IOContext;
@@ -10,7 +10,8 @@ use crate::io::interface::IOContext;
 
 pub fn create_request(
     _config: &RenderdConfig,
-    _slippy: &SlippyRequest,
+    _header: &Header,
+    _body: &ServeTileRequest,
 ) -> protocol {
     let result = protocol {
         ver: RenderRequestVersion::Three as std::os::raw::c_int,

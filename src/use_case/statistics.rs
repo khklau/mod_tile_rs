@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult, };
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
@@ -48,15 +48,9 @@ impl StatisticsHandlerState {
     pub fn report_statistics(
         &self,
         context: &StatisticsContext,
-        request: &request::SlippyRequest,
-    ) -> HandleOutcome {
+        _header: &request::Header,
+    ) -> HandleRequestResult {
         let before_timestamp = Utc::now();
-        match request.body {
-            request::BodyVariant::ReportStatistics => (),
-            _ => {
-                return HandleOutcome::Ignored;
-            },
-        };
         let statistics = self.report(&context.services);
         let response = response::SlippyResponse {
             header: response::Header {
@@ -65,13 +59,11 @@ impl StatisticsHandlerState {
             body: response::BodyVariant::Statistics(statistics),
         };
         let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
+        return HandleRequestResult {
+            before_timestamp,
+            after_timestamp,
+            result: Ok(response),
+        };
     }
 
     fn report(
@@ -165,44 +157,6 @@ mod tests {
 
     use std::error::Error as StdError;
     use std::ffi::CString;
-
-    #[test]
-    fn test_not_handled() -> Result<(), Box<dyn StdError>> {
-        let telemetry = NoOpZeroTelemetryInventory::new();
-        let mut rendering = NoOpRenderingInventory::new();
-        let module_config = ModuleConfig::new();
-        let stat_state = StatisticsHandlerState::new(&module_config)?;
-        let layer_name = LayerName::from("default");
-        let layer_config = module_config.layers.get(&layer_name).unwrap();
-        with_request_rec(|record| {
-            let uri = CString::new(format!("{}/tile-layer.json", layer_config.base_url))?;
-            record.uri = uri.clone().into_raw();
-            let context = StatisticsContext {
-                host: HostContext::new(&module_config, record),
-                services: ServicesContext {
-                    telemetry: &telemetry,
-                    rendering: &mut rendering,
-                },
-            };
-            let request = request::SlippyRequest {
-                header: request::Header {
-                    layer: layer_name.clone(),
-                    request_id: generate_id(),
-                    uri: uri.into_string()?,
-                    received_timestamp: Utc::now(),
-                },
-                body: request::BodyVariant::DescribeLayer,
-            };
-            assert!(
-                stat_state.report_statistics(
-                    &context,
-                    &request
-                ).is_ignored(),
-                "Expected to not handle"
-            );
-            Ok(())
-        })
-    }
 
     pub struct TelemetryInventoryWithMockedMetrics {
         response_metrics: MockResponseMetrics,
@@ -399,19 +353,16 @@ mod tests {
                     rendering: &mut rendering,
                 },
             };
-            let request = request::SlippyRequest {
-                header: request::Header {
-                    layer: layer_name.clone(),
-                    request_id: generate_id(),
-                    uri: uri.into_string()?,
-                    received_timestamp: Utc::now(),
-                },
-                body: request::BodyVariant::ReportStatistics,
+            let header = request::Header {
+                layer: layer_name.clone(),
+                request_id: generate_id(),
+                uri: uri.into_string()?,
+                received_timestamp: Utc::now(),
             };
             let actual_response = handler_state.report_statistics(
                 &context,
-                &request
-            ).expect_processed().result?;
+                &header
+            ).result?;
             let mut expected_data = response::Statistics::new();
             expected_data.number_response_200 = 5;
             expected_data.number_fresh_cache = 2;

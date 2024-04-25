@@ -10,6 +10,8 @@ use std::fmt;
 
 #[derive(Error, Debug)]
 pub enum HandleError {
+    #[error("TODO: remove after ReadOutcome is removed")]
+    Placeholder,
     #[error("Nothing to handle when the request was not read")]
     RequestNotRead(#[from] ReadError),
     #[error("{0:?}")]

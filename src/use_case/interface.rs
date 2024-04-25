@@ -1,12 +1,12 @@
-use crate::schema::handler::result::HandleOutcome;
-use crate::schema::slippy::request::SlippyRequest;
+use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::slippy::request::{Header, ServeTileRequest,};
 
 
 pub trait DescriptionUseCaseObserver {
     fn on_describe_layer(
         &mut self,
-        request: &SlippyRequest,
-        handle_outcome: &HandleOutcome,
+        request: &Header,
+        handle_result: &HandleRequestResult,
         handler_name: &'static str,
     ) -> ();
 }
@@ -14,8 +14,8 @@ pub trait DescriptionUseCaseObserver {
 pub trait StatisticsUseCaseObserver {
     fn on_report_statistics(
         &mut self,
-        request: &SlippyRequest,
-        handle_outcome: &HandleOutcome,
+        header: &Header,
+        handle_result: &HandleRequestResult,
         handler_name: &'static str,
     ) -> ();
 }
@@ -23,8 +23,9 @@ pub trait StatisticsUseCaseObserver {
 pub trait TileUseCaseObserver {
     fn on_fetch_tile(
         &mut self,
-        request: &SlippyRequest,
-        handle_outcome: &HandleOutcome,
+        header: &Header,
+        body: &ServeTileRequest,
+        handle_result: &HandleRequestResult,
         handler_name: &'static str,
     ) -> ();
 }
@@ -46,8 +47,8 @@ pub mod test_utils {
     impl DescriptionUseCaseObserver for NoOpHandleRequestObserver {
         fn on_describe_layer(
             &mut self,
-            _request: &SlippyRequest,
-            _handle_outcome: &HandleOutcome,
+            _header: &Header,
+            _handle_result: &HandleRequestResult,
             _handler_name: &'static str,
         ) -> () {
         }
@@ -56,8 +57,8 @@ pub mod test_utils {
     impl StatisticsUseCaseObserver for NoOpHandleRequestObserver {
         fn on_report_statistics(
             &mut self,
-            _request: &SlippyRequest,
-            _handle_outcome: &HandleOutcome,
+            _header: &Header,
+            _handle_result: &HandleRequestResult,
             _handler_name: &'static str,
         ) -> () {
         }
@@ -66,8 +67,9 @@ pub mod test_utils {
     impl TileUseCaseObserver for NoOpHandleRequestObserver {
         fn on_fetch_tile(
             &mut self,
-            _request: &SlippyRequest,
-            _handle_outcome: &HandleOutcome,
+            _header: &Header,
+            _body: &ServeTileRequest,
+            _handle_outcome: &HandleRequestResult,
             _handler_name: &'static str,
         ) -> () {
         }

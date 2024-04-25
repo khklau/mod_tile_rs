@@ -1,8 +1,8 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleOutcome;
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::request::HttpRequest;
-use crate::schema::slippy::request::SlippyRequest;
+use crate::schema::slippy::request::{Header, ServeTileRequest};
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
 use crate::io::communication::interface::HttpResponseWriter;
@@ -43,8 +43,8 @@ impl ReadRequestObserver for TransactionTrace {
 impl DescriptionUseCaseObserver for TransactionTrace {
     fn on_describe_layer(
         &mut self,
-        _request: &SlippyRequest,
-        _handle_outcome: &HandleOutcome,
+        _header: &Header,
+        _handle_result: &HandleRequestResult,
         _handler_name: &'static str,
     ) -> () {
     }
@@ -53,8 +53,8 @@ impl DescriptionUseCaseObserver for TransactionTrace {
 impl StatisticsUseCaseObserver for TransactionTrace {
     fn on_report_statistics(
         &mut self,
-        _request: &SlippyRequest,
-        _handle_outcome: &HandleOutcome,
+        _header: &Header,
+        _handle_result: &HandleRequestResult,
         _handler_name: &'static str,
     ) -> () {
     }
@@ -63,8 +63,9 @@ impl StatisticsUseCaseObserver for TransactionTrace {
 impl TileUseCaseObserver for TransactionTrace {
     fn on_fetch_tile(
         &mut self,
-        _request: &SlippyRequest,
-        _handle_outcome: &HandleOutcome,
+        _header: &Header,
+        _body: &ServeTileRequest,
+        _handle_result: &HandleRequestResult,
         _handler_name: &'static str,
     ) -> () {
     }
@@ -79,7 +80,7 @@ impl WriteResponseObserver for TransactionTrace {
         _write_result: &WriteResponseResult,
         _write_func_name: &'static str,
         _read_outcome: &ReadOutcome,
-        _handle_outcome: &HandleOutcome,
+        _handle_result: &HandleRequestResult,
     ) -> () {
     }
 }

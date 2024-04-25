@@ -3,8 +3,8 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::error::HandleError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::{ HandleOutcome, HandleRequestResult };
-use crate::schema::slippy::request::{ BodyVariant, SlippyRequest, };
+use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::slippy::request::{BodyVariant, Header, ServeTileRequest, SlippyRequest,};
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::error::TileReadError;
@@ -58,23 +58,23 @@ impl TileHandlerState {
     pub fn fetch_tile(
         &mut self,
         context: &mut TileContext,
-        request: &SlippyRequest,
-    ) -> HandleOutcome {
+        header: &Header,
+        body: &ServeTileRequest,
+    ) -> HandleRequestResult {
         let before_timestamp = Utc::now();
-        let tile_id = match &request.body {
-            BodyVariant::ServeTileV2(body) => TileIdentity {
+        let tile_id = match body {
+            ServeTileRequest::V2(body) => TileIdentity {
                 x: body.x,
                 y: body.y,
                 z: body.z,
-                layer: request.header.layer.clone(),
+                layer: header.layer.clone(),
             },
-            BodyVariant::ServeTileV3(body) => TileIdentity {
+            ServeTileRequest::V3(body) => TileIdentity {
                 x: body.x,
                 y: body.y,
                 z: body.z,
-                layer: request.header.layer.clone(),
+                layer: header.layer.clone(),
             },
-            _ => return HandleOutcome::Ignored,
         };
         // First preference is to fetch the tile from storage if it is available
         let read_result = {
@@ -88,7 +88,8 @@ impl TileHandlerState {
                 // TODO: calculate the rendering priority
                 let request = create_request(
                     &context.module_config().renderd,
-                    request
+                    header,
+                    body,
                 );
                 let mut response = protocol {
                     ver: 0 as std::os::raw::c_int,
@@ -108,22 +109,18 @@ impl TileHandlerState {
                     1,  // TODO: calculate the priority
                 ) {
                     Ok(tile_ref) => tile_ref,
-                    Err(err) =>return HandleOutcome::Processed(
-                        HandleRequestResult {
-                            before_timestamp,
-                            after_timestamp: Utc::now(),
-                            result: Err(HandleError::Render(err)),
-                        }
-                    )
+                    Err(err) => return HandleRequestResult {
+                        before_timestamp,
+                        after_timestamp: Utc::now(),
+                        result: Err(HandleError::Render(err)),
+                    },
                 }
             },
-            Err(other) => return HandleOutcome::Processed(
-                HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp: Utc::now(),
-                    result: Err(HandleError::TileRead(other)),
-                }
-            )
+            Err(other) => return HandleRequestResult {
+                before_timestamp,
+                after_timestamp: Utc::now(),
+                result: Err(HandleError::TileRead(other)),
+            },
         };
         let response = response::SlippyResponse {
             header: response::Header {
@@ -138,12 +135,10 @@ impl TileHandlerState {
             ),
         };
         let after_timestamp = Utc::now();
-        return HandleOutcome::Processed(
-            HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response),
-            }
-        );
+        return HandleRequestResult {
+            before_timestamp,
+            after_timestamp,
+            result: Ok(response),
+        };
     }
 }

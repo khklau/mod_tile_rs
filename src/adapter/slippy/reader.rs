@@ -7,8 +7,8 @@ use crate::schema::slippy::error::{
     InvalidParameterError, ReadError
 };
 use crate::schema::slippy::request::{
-    BodyVariant, Header, MAX_EXTENSION_LEN,
-    SlippyRequest, ServeTileRequestV2, ServeTileRequestV3
+    BodyVariant, Header, ServeTileRequest, ServeTileRequestV2,
+    ServeTileRequestV3, SlippyRequest, MAX_EXTENSION_LEN,
 };
 use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::identity::LayerName;
@@ -207,15 +207,17 @@ impl ServeTileV3RequestParser {
                                     uri: request.uri.to_string(),
                                     received_timestamp: request.received_time.clone(),
                                 },
-                                body: BodyVariant::ServeTileV3(
-                                    ServeTileRequestV3 {
-                                        parameter,
-                                        x,
-                                        y,
-                                        z,
-                                        extension,
-                                        option: Some(option)
-                                    }
+                                body: BodyVariant::ServeTile(
+                                    ServeTileRequest::V3(
+                                        ServeTileRequestV3 {
+                                            parameter,
+                                            x,
+                                            y,
+                                            z,
+                                            extension,
+                                            option: Some(option)
+                                        }
+                                    )
                                 ),
                             }
                         )
@@ -255,15 +257,17 @@ impl ServeTileV3RequestParser {
                                     uri: request.uri.to_string(),
                                     received_timestamp: request.received_time.clone(),
                                 },
-                                body: BodyVariant::ServeTileV3(
-                                    ServeTileRequestV3 {
-                                        parameter,
-                                        x,
-                                        y,
-                                        z,
-                                        extension,
-                                        option: None,
-                                    }
+                                body: BodyVariant::ServeTile(
+                                    ServeTileRequest::V3(
+                                        ServeTileRequestV3 {
+                                            parameter,
+                                            x,
+                                            y,
+                                            z,
+                                            extension,
+                                            option: None,
+                                        }
+                                    )
                                 ),
                             }
                         )
@@ -317,14 +321,16 @@ impl ServeTileV2RequestParser {
                                 uri: request.uri.to_string(),
                                 received_timestamp: request.received_time.clone(),
                             },
-                            body: BodyVariant::ServeTileV2(
-                                ServeTileRequestV2 {
-                                    x,
-                                    y,
-                                    z,
-                                    extension,
-                                    option: Some(option),
-                                }
+                            body: BodyVariant::ServeTile(
+                                ServeTileRequest::V2(
+                                    ServeTileRequestV2 {
+                                        x,
+                                        y,
+                                        z,
+                                        extension,
+                                        option: Some(option),
+                                    }
+                                )
                             ),
                         }
                     )
@@ -364,14 +370,16 @@ impl ServeTileV2RequestParser {
                                 uri: request.uri.to_string(),
                                 received_timestamp: request.received_time.clone(),
                             },
-                            body: BodyVariant::ServeTileV2(
-                                ServeTileRequestV2 {
-                                    x,
-                                    y,
-                                    z,
-                                    extension,
-                                    option: None,
-                                }
+                            body: BodyVariant::ServeTile(
+                                ServeTileRequest::V2(
+                                    ServeTileRequestV2 {
+                                        x,
+                                        y,
+                                        z,
+                                        extension,
+                                        option: None,
+                                    }
+                                )
                             )
                         }
                     )
@@ -488,15 +496,17 @@ mod tests {
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
-            let expected_body = BodyVariant::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter: String::from("foo"),
-                    x: 7,
-                    y: 8,
-                    z: 9,
-                    extension: String::from("png"),
-                    option: Some(String::from("bar")),
-                }
+            let expected_body = BodyVariant::ServeTile(
+                ServeTileRequest::V3(
+                    ServeTileRequestV3 {
+                        parameter: String::from("foo"),
+                        x: 7,
+                        y: 8,
+                        z: 9,
+                        extension: String::from("png"),
+                        option: Some(String::from("bar")),
+                    }
+                )
             );
             assert_eq!(expected_body, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -561,15 +571,17 @@ mod tests {
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
-            let expected_body = BodyVariant::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter: String::from("foo"),
-                    x: 7,
-                    y: 8,
-                    z: 9,
-                    extension: String::from("png"),
-                    option: None,
-                }
+            let expected_body = BodyVariant::ServeTile(
+                ServeTileRequest::V3(
+                    ServeTileRequestV3 {
+                        parameter: String::from("foo"),
+                        x: 7,
+                        y: 8,
+                        z: 9,
+                        extension: String::from("png"),
+                        option: None,
+                    }
+                )
             );
             assert_eq!(expected_body, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -600,15 +612,17 @@ mod tests {
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
-            let expected_body = BodyVariant::ServeTileV3(
-                ServeTileRequestV3 {
-                    parameter: String::from("foo"),
-                    x: 7,
-                    y: 8,
-                    z: 9,
-                    extension: String::from("png"),
-                    option: None,
-                }
+            let expected_body = BodyVariant::ServeTile(
+                ServeTileRequest::V3(
+                    ServeTileRequestV3 {
+                        parameter: String::from("foo"),
+                        x: 7,
+                        y: 8,
+                        z: 9,
+                        extension: String::from("png"),
+                        option: None,
+                    }
+                )
             );
             assert_eq!(expected_body, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -638,14 +652,16 @@ mod tests {
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
-            let expected_body = BodyVariant::ServeTileV2(
-                ServeTileRequestV2 {
-                    x: 1,
-                    y: 2,
-                    z: 3,
-                    extension: String::from("jpg"),
-                    option: Some(String::from("blah")),
-                }
+            let expected_body = BodyVariant::ServeTile(
+                ServeTileRequest::V2(
+                    ServeTileRequestV2 {
+                        x: 1,
+                        y: 2,
+                        z: 3,
+                        extension: String::from("jpg"),
+                        option: Some(String::from("blah")),
+                    }
+                )
             );
             assert_eq!(expected_body, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -708,14 +724,16 @@ mod tests {
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
-            let expected_body = BodyVariant::ServeTileV2(
-                ServeTileRequestV2 {
-                    x: 1,
-                    y: 2,
-                    z: 3,
-                    extension: String::from("jpg"),
-                    option: None,
-                }
+            let expected_body = BodyVariant::ServeTile(
+                ServeTileRequest::V2(
+                    ServeTileRequestV2 {
+                        x: 1,
+                        y: 2,
+                        z: 3,
+                        extension: String::from("jpg"),
+                        option: None,
+                    }
+                )
             );
             assert_eq!(expected_body, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -745,14 +763,16 @@ mod tests {
 
             let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
             let expected_layer = layer_name.clone();
-            let expected_body = BodyVariant::ServeTileV2(
-                ServeTileRequestV2 {
-                    x: 1,
-                    y: 2,
-                    z: 3,
-                    extension: String::from("jpg"),
-                    option: None,
-                }
+            let expected_body = BodyVariant::ServeTile(
+                ServeTileRequest::V2(
+                    ServeTileRequestV2 {
+                        x: 1,
+                        y: 2,
+                        z: 3,
+                        extension: String::from("jpg"),
+                        option: None,
+                    }
+                )
             );
             assert_eq!(expected_body, actual_request.body, "Incorrect parsing");
             Ok(())

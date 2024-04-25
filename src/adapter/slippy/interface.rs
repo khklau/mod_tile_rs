@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::HandleOutcome;
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::request::HttpRequest;
 use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::result::{ ReadOutcome, WriteResponseResult, };
@@ -60,7 +60,7 @@ pub trait WriteResponseObserver {
         write_result: &WriteResponseResult,
         write_func_name: &'static str,
         read_outcome: &ReadOutcome,
-        handle_outcome: &HandleOutcome,
+        handle_result: &HandleRequestResult,
     ) -> ();
 }
 
@@ -105,7 +105,7 @@ pub mod test_utils {
             _write_result: &WriteResponseResult,
             _write_func_name: &'static str,
             _read_outcome: &ReadOutcome,
-            _handle_outcome: &HandleOutcome,
+            _handle_result: &HandleRequestResult,
         ) -> () {
         }
     }

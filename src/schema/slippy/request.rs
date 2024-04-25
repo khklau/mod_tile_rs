@@ -29,8 +29,14 @@ pub struct Header {
 pub enum BodyVariant {
     ReportStatistics,
     DescribeLayer,
-    ServeTileV3(ServeTileRequestV3),
-    ServeTileV2(ServeTileRequestV2),
+    ServeTile(ServeTileRequest),
+}
+
+#[derive(PartialEq)]
+#[derive(Debug)]
+pub enum ServeTileRequest {
+    V2(ServeTileRequestV2),
+    V3(ServeTileRequestV3),
 }
 
 #[derive(PartialEq)]

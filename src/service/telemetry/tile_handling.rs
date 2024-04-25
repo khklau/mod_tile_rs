@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleOutcome;
+use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::slippy::result::WriteResponseResult;
@@ -88,10 +88,10 @@ impl WriteResponseObserver for TileHandlingAnalysis {
         _write_result: &WriteResponseResult,
         _write_func_name: &'static str,
         read_outcome: &ReadOutcome,
-        handle_outcome: &HandleOutcome,
+        handle_result: &HandleRequestResult,
     ) -> () {
-        match (&read_outcome, &handle_outcome) {
-            (ReadOutcome::Processed(read_result), HandleOutcome::Processed(handle_result)) => {
+        match &read_outcome {
+            ReadOutcome::Processed(read_result) => {
                 let handle_duration = handle_result.after_timestamp - handle_result.before_timestamp;
                 match (read_result, &handle_result.result) {
                     (Ok(request), Ok(response)) => match &response.body {
@@ -243,7 +243,7 @@ pub mod test_utils {
             _write_result: &WriteResponseResult,
             _write_func_name: &'static str,
             _read_outcome: &ReadOutcome,
-            _handle_outcome: &HandleOutcome,
+            _handle_result: &HandleRequestResult,
         ) -> () {
         }
     }
@@ -286,15 +286,17 @@ mod tests {
                             uri: uri.into_string()?,
                             received_timestamp: Utc::now(),
                         },
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
+                        body: request::BodyVariant::ServeTile(
+                            request::ServeTileRequest::V3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
+                                }
+                            )
                         ),
                     }
                 )
@@ -325,13 +327,11 @@ mod tests {
                     }
                 ),
             };
-            let handle_outcome = HandleOutcome::Processed(
-                HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp,
-                    result: Ok(response.clone()),
-                }
-            );
+            let handle_result = HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response.clone()),
+            };
             let write_result = Ok(
                 HttpResponse {
                     status_code: StatusCode::OK,
@@ -341,7 +341,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -371,15 +371,17 @@ mod tests {
                             uri: uri.into_string()?,
                             received_timestamp: Utc::now(),
                         },
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
+                        body: request::BodyVariant::ServeTile(
+                            request::ServeTileRequest::V3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
+                                }
+                            )
                         ),
                     }
                 )
@@ -410,13 +412,11 @@ mod tests {
                     }
                 ),
             };
-            let handle_outcome = HandleOutcome::Processed(
-                HandleRequestResult {
-                    before_timestamp,
-                    after_timestamp,
-                    result: Ok(response.clone()),
-                }
-            );
+            let handle_result = HandleRequestResult {
+                before_timestamp,
+                after_timestamp,
+                result: Ok(response.clone()),
+            };
             let write_result = Ok(
                 HttpResponse {
                     status_code: StatusCode::OK,
@@ -426,7 +426,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -456,15 +456,17 @@ mod tests {
                             uri: uri.into_string()?,
                             received_timestamp: Utc::now(),
                         },
-                        body: request::BodyVariant::ServeTileV3(
-                            request::ServeTileRequestV3 {
-                                parameter: String::from("foo"),
-                                x: 1,
-                                y: 2,
-                                z: 3,
-                                extension: String::from("jpg"),
-                                option: None,
-                            }
+                        body: request::BodyVariant::ServeTile(
+                            request::ServeTileRequest::V3(
+                                request::ServeTileRequestV3 {
+                                    parameter: String::from("foo"),
+                                    x: 1,
+                                    y: 2,
+                                    z: 3,
+                                    extension: String::from("jpg"),
+                                    option: None,
+                                }
+                            )
                         ),
                     }
                 )
@@ -507,16 +509,14 @@ mod tests {
                             }
                         ),
                     };
-                    let handle_outcome = HandleOutcome::Processed(
-                        HandleRequestResult {
-                            before_timestamp,
-                            after_timestamp,
-                            result: Ok(response.clone()),
-                        }
-                    );
+                    let handle_result = HandleRequestResult {
+                        before_timestamp,
+                        after_timestamp,
+                        result: Ok(response.clone()),
+                    };
                     let writer = MockWriter::new();
-                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
-                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_outcome);
+                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
+                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
                 }
             }
             for age in &all_ages {
