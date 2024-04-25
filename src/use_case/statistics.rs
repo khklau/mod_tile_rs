@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::handler::error::HandleError;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
@@ -49,7 +49,7 @@ impl StatisticsHandlerState {
         &self,
         context: &StatisticsContext,
         _header: &request::Header,
-    ) -> HandleRequestResult {
+    ) -> Result<response::SlippyResponse, HandleError> {
         let before_timestamp = Utc::now();
         let statistics = self.report(&context.services);
         let after_timestamp = Utc::now();
@@ -61,11 +61,7 @@ impl StatisticsHandlerState {
             },
             body: response::BodyVariant::Statistics(statistics),
         };
-        return HandleRequestResult {
-            before_timestamp,
-            after_timestamp,
-            result: Ok(response),
-        };
+        return Ok(response);
     }
 
     fn report(
@@ -364,7 +360,7 @@ mod tests {
             let actual_response = handler_state.report_statistics(
                 &context,
                 &header
-            ).result?;
+            )?;
             let mut expected_data = response::Statistics::new();
             expected_data.number_response_200 = 5;
             expected_data.number_fresh_cache = 2;

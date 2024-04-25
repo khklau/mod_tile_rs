@@ -1,4 +1,5 @@
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::handler::error::HandleError;
+use crate::schema::slippy::response::SlippyResponse;
 use crate::schema::slippy::request::{Header, ServeTileRequest,};
 
 
@@ -6,7 +7,7 @@ pub trait DescriptionUseCaseObserver {
     fn on_describe_layer(
         &mut self,
         request: &Header,
-        handle_result: &HandleRequestResult,
+        handle_result: &Result<SlippyResponse, HandleError>,
         handler_name: &'static str,
     ) -> ();
 }
@@ -15,7 +16,7 @@ pub trait StatisticsUseCaseObserver {
     fn on_report_statistics(
         &mut self,
         header: &Header,
-        handle_result: &HandleRequestResult,
+        handle_result: &Result<SlippyResponse, HandleError>,
         handler_name: &'static str,
     ) -> ();
 }
@@ -25,7 +26,7 @@ pub trait TileUseCaseObserver {
         &mut self,
         header: &Header,
         body: &ServeTileRequest,
-        handle_result: &HandleRequestResult,
+        handle_result: &Result<SlippyResponse, HandleError>,
         handler_name: &'static str,
     ) -> ();
 }
@@ -48,7 +49,7 @@ pub mod test_utils {
         fn on_describe_layer(
             &mut self,
             _header: &Header,
-            _handle_result: &HandleRequestResult,
+            _handle_result: &Result<SlippyResponse, HandleError>,
             _handler_name: &'static str,
         ) -> () {
         }
@@ -58,7 +59,7 @@ pub mod test_utils {
         fn on_report_statistics(
             &mut self,
             _header: &Header,
-            _handle_result: &HandleRequestResult,
+            _handle_result: &Result<SlippyResponse, HandleError>,
             _handler_name: &'static str,
         ) -> () {
         }
@@ -69,7 +70,7 @@ pub mod test_utils {
             &mut self,
             _header: &Header,
             _body: &ServeTileRequest,
-            _handle_outcome: &HandleRequestResult,
+            _handle_outcome: &Result<SlippyResponse, HandleError>,
             _handler_name: &'static str,
         ) -> () {
         }

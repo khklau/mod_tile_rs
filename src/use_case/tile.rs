@@ -3,7 +3,6 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::error::HandleError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::slippy::request::{BodyVariant, Header, ServeTileRequest, SlippyRequest,};
 use crate::schema::slippy::response;
 use crate::schema::tile::age::TileAge;
@@ -60,7 +59,7 @@ impl TileHandlerState {
         context: &mut TileContext,
         header: &Header,
         body: &ServeTileRequest,
-    ) -> HandleRequestResult {
+    ) -> Result<response::SlippyResponse, HandleError> {
         let before_timestamp = Utc::now();
         let tile_id = match body {
             ServeTileRequest::V2(body) => TileIdentity {
@@ -109,18 +108,10 @@ impl TileHandlerState {
                     1,  // TODO: calculate the priority
                 ) {
                     Ok(tile_ref) => tile_ref,
-                    Err(err) => return HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp: Utc::now(),
-                        result: Err(HandleError::Render(err)),
-                    },
+                    Err(err) => return Err(HandleError::Render(err)),
                 }
             },
-            Err(other) => return HandleRequestResult {
-                before_timestamp,
-                after_timestamp: Utc::now(),
-                result: Err(HandleError::TileRead(other)),
-            },
+            Err(other) => return Err(HandleError::TileRead(other)),
         };
         let after_timestamp = Utc::now();
         let response = response::SlippyResponse {
@@ -137,10 +128,6 @@ impl TileHandlerState {
                 }
             ),
         };
-        return HandleRequestResult {
-            before_timestamp,
-            after_timestamp,
-            result: Ok(response),
-        };
+        return Ok(response);
     }
 }

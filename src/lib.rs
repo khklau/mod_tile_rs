@@ -54,7 +54,6 @@ mod schema {
     }
     pub mod handler {
         pub mod error;
-        pub mod result;
     }
 }
 mod framework {

@@ -1,11 +1,10 @@
 use crate::binding::apache2::{
-    APR_BADARG, APR_SUCCESS, DECLINED,
+    APR_BADARG, APR_SUCCESS,
     apr_status_t, request_rec, server_rec,
 };
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::error::HandleError;
-use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::request::{
     BodyVariant, Header,
@@ -208,14 +207,14 @@ impl TileProxy {
             }
         };
         debug!(record.server, "TileServer::call_handlers - finish");
-        return handle_result.result;
+        return handle_result;
     }
 
     fn call_description_handler(
         &mut self,
         record: &mut request_rec,
         header: &Header,
-    ) -> HandleRequestResult {
+    ) -> Result<SlippyResponse, HandleError> {
         debug!(record.server, "TileServer::call_description_handler - start");
         let handle_result = {
             let context = DescriptionContext {
@@ -238,7 +237,7 @@ impl TileProxy {
         &mut self,
         record: &mut request_rec,
         header: &Header,
-    ) -> HandleRequestResult {
+    ) -> Result<SlippyResponse, HandleError> {
         debug!(record.server, "TileServer::call_statistics_handler - start");
         let handle_result = {
             let context = StatisticsContext {
@@ -266,7 +265,7 @@ impl TileProxy {
         record: &mut request_rec,
         header: &Header,
         body: &ServeTileRequest,
-    ) -> HandleRequestResult {
+    ) -> Result<SlippyResponse, HandleError> {
         debug!(record.server, "TileServer::call_tile_handler - start");
         let handle_result = {
             let mut context = TileContext {
@@ -435,7 +434,7 @@ mod tests {
                     received_timestamp: Utc::now(),
                 };
                 let handle_outcome = proxy.call_description_handler(request, &header);
-                handle_outcome.result?;
+                handle_outcome?;
                 let actual_count = proxy.telemetry_state.handle_counter().count;
                 assert_eq!(1, actual_count, "Handle observer not called");
                 Ok(())
@@ -458,7 +457,7 @@ mod tests {
                     received_timestamp: Utc::now(),
                 };
                 let handle_outcome = proxy.call_statistics_handler(request, &header);
-                handle_outcome.result?;
+                handle_outcome?;
                 let actual_count = proxy.telemetry_state.handle_counter().count;
                 assert_eq!(1, actual_count, "Handle observer not called");
                 Ok(())

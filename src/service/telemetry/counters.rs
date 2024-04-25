@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::handler::error::HandleError;
 use crate::schema::http::request::HttpRequest;
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::error::{ReadError, WriteError,};
@@ -60,7 +60,7 @@ impl DescriptionUseCaseObserver for HandleCounter {
     fn on_describe_layer(
         &mut self,
         _header: &Header,
-        _handle_result: &HandleRequestResult,
+        _handle_result: &Result<SlippyResponse, HandleError>,
         _handler_name: &'static str,
     ) -> () {
         self.count += 1;
@@ -71,7 +71,7 @@ impl StatisticsUseCaseObserver for HandleCounter {
     fn on_report_statistics(
         &mut self,
         _header: &Header,
-        _handle_result: &HandleRequestResult,
+        _handle_result: &Result<SlippyResponse, HandleError>,
         _handler_name: &'static str,
     ) -> () {
         self.count += 1;
@@ -83,7 +83,7 @@ impl TileUseCaseObserver for HandleCounter {
         &mut self,
         _header: &Header,
         _body: &ServeTileRequest,
-        _handle_result: &HandleRequestResult,
+        _handle_result: &Result<SlippyResponse, HandleError>,
         _handler_name: &'static str,
     ) -> () {
         self.count += 1;

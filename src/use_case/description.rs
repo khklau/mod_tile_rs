@@ -1,7 +1,7 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::handler::error::HandleError;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
 use crate::schema::tile::identity::LayerName;
@@ -46,7 +46,7 @@ impl DescriptionHandlerState {
         &mut self,
         context: &DescriptionContext,
         header: &request::Header,
-    ) -> HandleRequestResult {
+    ) -> Result<response::SlippyResponse, HandleError> {
         let before_timestamp = Utc::now();
         let layer = &header.layer;
         let description = describe(context.module_config(), layer);
@@ -59,11 +59,7 @@ impl DescriptionHandlerState {
             },
             body: response::BodyVariant::Description(description),
         };
-        return HandleRequestResult {
-            before_timestamp,
-            after_timestamp,
-            result: Ok(response),
-        };
+        return Ok(response);
     }
 }
 
@@ -128,7 +124,7 @@ mod tests {
             let actual_response = description_state.describe_layer(
                 &context,
                 &header
-            ).result?;
+            )?;
             let expected_data = response::Description {
                 tilejson: "2.0.0",
                 schema: "xyz",

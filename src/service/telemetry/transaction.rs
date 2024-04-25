@@ -1,6 +1,6 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::handler::error::HandleError;
 use crate::schema::http::request::HttpRequest;
 use crate::schema::http::response::HttpResponse;
 use crate::schema::slippy::error::{ReadError, WriteError,};
@@ -45,7 +45,7 @@ impl DescriptionUseCaseObserver for TransactionTrace {
     fn on_describe_layer(
         &mut self,
         _header: &Header,
-        _handle_result: &HandleRequestResult,
+        _handle_result: &Result<SlippyResponse, HandleError>,
         _handler_name: &'static str,
     ) -> () {
     }
@@ -55,7 +55,7 @@ impl StatisticsUseCaseObserver for TransactionTrace {
     fn on_report_statistics(
         &mut self,
         _header: &Header,
-        _handle_result: &HandleRequestResult,
+        _handle_result: &Result<SlippyResponse, HandleError>,
         _handler_name: &'static str,
     ) -> () {
     }
@@ -66,7 +66,7 @@ impl TileUseCaseObserver for TransactionTrace {
         &mut self,
         _header: &Header,
         _body: &ServeTileRequest,
-        _handle_result: &HandleRequestResult,
+        _handle_result: &Result<SlippyResponse, HandleError>,
         _handler_name: &'static str,
     ) -> () {
     }

@@ -289,7 +289,6 @@ impl ResponseMetrics for ResponseAnalysis {
 mod tests {
     use super::*;
     use crate::core::identifier::generate_id;
-    use crate::schema::handler::result::HandleRequestResult;
     use crate::schema::http::encoding::ContentEncoding;
     use crate::schema::http::response::HttpResponse;
     use crate::schema::slippy::request;
@@ -363,11 +362,6 @@ mod tests {
                         tile_ref,
                     }
                 ),
-            };
-            let handle_result = HandleRequestResult {
-                before_timestamp,
-                after_timestamp,
-                result: Ok(response.clone()),
             };
             let write_result = Ok(
                 HttpResponse {
