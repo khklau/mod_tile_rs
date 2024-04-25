@@ -47,7 +47,7 @@ pub trait ReadRequestObserver {
         &mut self,
         context: &ReadContext,
         request: &HttpRequest,
-        read_outcome: &Result<SlippyRequest, ReadError>,
+        read_result: &Result<SlippyRequest, ReadError>,
         read_func_name: &'static str,
     ) -> ();
 }
@@ -82,7 +82,7 @@ pub mod test_utils {
             &mut self,
             _context: &ReadContext,
             _request: &HttpRequest,
-            _read_outcome: &Result<SlippyRequest, ReadError>,
+            _read_result: &Result<SlippyRequest, ReadError>,
             _read_func_name: &'static str,
         ) -> () {
         }

@@ -70,7 +70,7 @@ pub mod test_utils {
             &mut self,
             _header: &Header,
             _body: &ServeTileRequest,
-            _handle_outcome: &Result<SlippyResponse, HandleError>,
+            _handle_result: &Result<SlippyResponse, HandleError>,
             _handler_name: &'static str,
         ) -> () {
         }

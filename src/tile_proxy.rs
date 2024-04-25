@@ -433,8 +433,7 @@ mod tests {
                     uri: uri.into_string()?,
                     received_timestamp: Utc::now(),
                 };
-                let handle_outcome = proxy.call_description_handler(request, &header);
-                handle_outcome?;
+                proxy.call_description_handler(request, &header)?;
                 let actual_count = proxy.telemetry_state.handle_counter().count;
                 assert_eq!(1, actual_count, "Handle observer not called");
                 Ok(())
@@ -456,8 +455,7 @@ mod tests {
                     uri: uri.into_string()?,
                     received_timestamp: Utc::now(),
                 };
-                let handle_outcome = proxy.call_statistics_handler(request, &header);
-                handle_outcome?;
+                proxy.call_statistics_handler(request, &header)?;
                 let actual_count = proxy.telemetry_state.handle_counter().count;
                 assert_eq!(1, actual_count, "Handle observer not called");
                 Ok(())
