@@ -1,10 +1,9 @@
 use crate::schema::apache2::config::{MAX_ZOOM_SERVER, ModuleConfig,};
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::response::HttpResponse;
-use crate::schema::slippy::request::{self, ServeTileRequest};
+use crate::schema::slippy::error::WriteError;
+use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
 use crate::schema::tile::identity::LayerName;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::adapter::slippy::interface::{
@@ -164,32 +163,19 @@ impl WriteResponseObserver for ResponseAnalysis {
     fn on_write(
         &mut self,
         context: &WriteContext,
-        _response: &response::SlippyResponse,
+        response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
-        write_result: &WriteResponseResult,
+        write_result: &Result<HttpResponse, WriteError>,
         _write_func_name: &'static str,
-        read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        request: &request::SlippyRequest,
     ) -> () {
-        match &read_outcome {
-            ReadOutcome::Processed(read_result) => {
-                let response_duration = handle_result.after_timestamp - handle_result.before_timestamp; // FIXME does not include read duration
-                match (read_result, &handle_result.result) {
-                    (Ok(request), Ok(response)) => match response.body {
-                        response::BodyVariant::Tile(_) => self.on_tile_write(context, request, response, &response_duration),
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            },
-            _ => ()
+        let response_duration = response.header.after_timestamp - response.header.before_timestamp; // FIXME does not include read duration
+        match response.body {
+            response::BodyVariant::Tile(_) => self.on_tile_write(context, request, response, &response_duration),
+            _ => (),
         }
-        match read_outcome {
-            ReadOutcome::Processed(read_result) => match (read_result, write_result) {
-                (Ok(request), Ok(http_response)) => self.on_http_response_write(context, request, http_response),
-                _ => (),
-            },
-            _ => ()
+        if let Ok(http_response) = write_result {
+            self.on_http_response_write(context, request, http_response);
         };
     }
 }
@@ -329,33 +315,29 @@ mod tests {
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
             let layer_name = LayerName::from("default");
-            let read_outcome = ReadOutcome::Processed(
-                Ok(
-                    request::SlippyRequest {
-                        header: request::Header {
-                            layer: layer_name.clone(),
-                            request_id: generate_id(),
-                            uri: uri.into_string()?,
-                            received_timestamp: Utc::now(),
-                        },
-                        body: request::BodyVariant::ServeTile(
-                            request::ServeTileRequest::V3(
-                                request::ServeTileRequestV3 {
-                                    parameter: String::from("foo"),
-                                    x: 1,
-                                    y: 2,
-                                    z: 3,
-                                    extension: String::from("jpg"),
-                                    option: None,
-                                }
-                            )
-                        ),
-                    }
-                )
-            );
+            let slippy_request = request::SlippyRequest {
+                header: request::Header {
+                    layer: layer_name.clone(),
+                    request_id: generate_id(),
+                    uri: uri.into_string()?,
+                    received_timestamp: Utc::now(),
+                },
+                body: request::BodyVariant::ServeTile(
+                    request::ServeTileRequest::V3(
+                        request::ServeTileRequestV3 {
+                            parameter: String::from("foo"),
+                            x: 1,
+                            y: 2,
+                            z: 3,
+                            extension: String::from("jpg"),
+                            option: None,
+                        }
+                    )
+                ),
+            };
             let context = WriteContext {
                 host_context: HostContext::new(&module_config, request),
-                read_outcome: &read_outcome,
+                request: &slippy_request,
             };
             let before_timestamp = Utc::now();
             let response_duration = Duration::seconds(2);
@@ -371,6 +353,8 @@ mod tests {
             let response = response::SlippyResponse {
                 header: response::Header {
                     mime_type: mime::APPLICATION_JSON.clone(),
+                    before_timestamp,
+                    after_timestamp,
                 },
                 body: response::BodyVariant::Tile(
                     response::TileResponse {
@@ -394,7 +378,7 @@ mod tests {
             );
             let mut analysis = ResponseAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &slippy_request);
             assert_eq!(
                 0,
                 analysis.count_response_by_status_code_and_zoom_level(&StatusCode::OK, 5),

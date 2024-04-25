@@ -10,7 +10,6 @@ use crate::schema::slippy::request::{
     BodyVariant, Header, ServeTileRequest, ServeTileRequestV2,
     ServeTileRequestV3, SlippyRequest, MAX_EXTENSION_LEN,
 };
-use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::identity::LayerName;
 use crate::adapter::slippy::interface::ReadContext;
 
@@ -25,11 +24,13 @@ impl SlippyRequestReader {
     pub fn read(
         context: &ReadContext,
         request: &HttpRequest,
-    ) -> ReadOutcome {
+    ) -> Result<SlippyRequest, ReadError> {
         let request_url= request.uri;
         SlippyRequestParser::parse(&context, request, request_url)
     }
 }
+
+type ParseOutcome = ProcessOutcome<Result<SlippyRequest, ReadError>>;
 
 pub struct SlippyRequestParser;
 impl SlippyRequestParser {
@@ -37,12 +38,12 @@ impl SlippyRequestParser {
         context: &ReadContext,
         request: &HttpRequest,
         request_url: &str,
-    ) -> ReadOutcome {
+    ) -> Result<SlippyRequest, ReadError> {
         debug!(context.host().record, "SlippyRequestParser::parse - start");
         // try match stats request
         let stat_outcome = StatisticsRequestParser::parse(&context, request, request_url);
-        if stat_outcome.is_processed() {
-            return stat_outcome;
+        if let ProcessOutcome::Processed(stat_result) = stat_outcome {
+            return stat_result;
         }
         let parse_layer_request = LayerParserCombinator::try_else(
             DescribeLayerRequestParser::parse,
@@ -62,14 +63,22 @@ impl SlippyRequestParser {
                 let after_base = found + config.base_url.len();
                 if let Some(layer_trimmed_url) = request_url.get(after_base..) {
                     let layer_outcome = parse_layer_request(context, config, request, layer_trimmed_url);
-                    if layer_outcome.is_processed() {
-                        return layer_outcome;
+                    if let ProcessOutcome::Processed(result) = layer_outcome {
+                        return result;
                     }
                 }
             };
         }
         info!(context.host().record, "SlippyRequestParser::parse - URL {} does not match any known request types", request_url);
-        return ProcessOutcome::Ignored;
+        return Err(
+            ReadError::Param(
+                InvalidParameterError {
+                    param: String::from("uri"),
+                    value: request.uri.to_string(),
+                    reason: "URI is not a valid Slippy request".to_string(),
+                }
+            )
+        );
     }
 }
 
@@ -79,10 +88,10 @@ impl LayerParserCombinator {
     fn try_else<F, G>(
         func1: F,
         func2: G,
-    ) -> impl Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome
+    ) -> impl Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ParseOutcome
     where
-        F: Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
-        G: Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ReadOutcome,
+        F: Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ParseOutcome,
+        G: Fn(&ReadContext, &LayerConfig, &HttpRequest, &str) -> ParseOutcome,
     {
         move |context, config, request, request_url| {
             let outcome = func1(context, config, request, request_url);
@@ -101,7 +110,7 @@ impl StatisticsRequestParser {
         context: &ReadContext,
         request: &HttpRequest,
         _request_url: &str,
-    ) -> ReadOutcome {
+    ) -> ParseOutcome {
         let module_name = get_module_name();
         let stats_uri = format!("/{}", module_name);
         if request.uri.eq(&stats_uri) {
@@ -133,7 +142,7 @@ impl DescribeLayerRequestParser {
         layer_config: &LayerConfig,
         request: &HttpRequest,
         layer_trimmed_url: &str,
-    ) -> ReadOutcome {
+    ) -> ParseOutcome {
         if layer_trimmed_url.eq_ignore_ascii_case("/tile-layer.json") {
             info!(context.host().record, "DescribeLayerRequestParser::parse - matched DescribeLayer");
             ProcessOutcome::Processed(
@@ -163,7 +172,7 @@ impl ServeTileV3RequestParser {
         layer_config: &LayerConfig,
         request: &HttpRequest,
         layer_trimmed_url: &str,
-    ) -> ReadOutcome {
+    ) -> ParseOutcome {
         // TODO: replace with a more modular parser that better handles with option and no option
         let has_parameter = match scan_fmt!(
             layer_trimmed_url,
@@ -301,7 +310,7 @@ impl ServeTileV2RequestParser {
         layer_config: &LayerConfig,
         request: &HttpRequest,
         layer_trimmed_url: &str,
-    ) -> ReadOutcome {
+    ) -> ParseOutcome {
     // TODO: replace with a more modular parser that better handles with option and no option
     // try match with option
     match scan_fmt!(
@@ -438,7 +447,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             assert_eq!(BodyVariant::ReportStatistics, actual_request.body, "Incorrect parsing");
             Ok(())
         })
@@ -465,7 +474,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             assert_eq!(BodyVariant::DescribeLayer, actual_request.body, "Incorrect parsing");
             Ok(())
@@ -494,7 +503,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTile(
                 ServeTileRequest::V3(
@@ -535,12 +544,14 @@ mod tests {
             );
             let request_url= request.uri;
 
-            match SlippyRequestParser::parse(&context, &request, request_url).expect_processed().unwrap_err() {
-                ReadError::Param(err) => {
-                    assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
-                },
-                _ => {
-                    panic!("Expected InvalidParameterError in result");
+            if let Err(err) = SlippyRequestParser::parse(&context, &request, request_url) {
+                match err {
+                    ReadError::Param(err) => {
+                        assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
+                    },
+                    _ => {
+                        panic!("Expected InvalidParameterError in result");
+                    }
                 }
             }
             Ok(())
@@ -569,7 +580,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTile(
                 ServeTileRequest::V3(
@@ -610,7 +621,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTile(
                 ServeTileRequest::V3(
@@ -650,7 +661,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTile(
                 ServeTileRequest::V2(
@@ -689,12 +700,14 @@ mod tests {
             );
             let request_url= request.uri;
 
-            match SlippyRequestParser::parse(&context, &request, request_url).expect_processed().unwrap_err() {
-                ReadError::Param(err) => {
-                    assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
-                },
-                _ => {
-                    panic!("Expected InvalidParameterError in result");
+            if let Err(err) = SlippyRequestParser::parse(&context, &request, request_url) {
+                match err {
+                    ReadError::Param(err) => {
+                        assert_eq!("z", err.param, "Did not identify zoom as the invalid parameter");
+                    },
+                    _ => {
+                        panic!("Expected InvalidParameterError in result");
+                    }
                 }
             }
             Ok(())
@@ -722,7 +735,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTile(
                 ServeTileRequest::V2(
@@ -761,7 +774,7 @@ mod tests {
             );
             let request_url= request.uri;
 
-            let actual_request = SlippyRequestParser::parse(&context, &request, request_url).expect_processed()?;
+            let actual_request = SlippyRequestParser::parse(&context, &request, request_url)?;
             let expected_layer = layer_name.clone();
             let expected_body = BodyVariant::ServeTile(
                 ServeTileRequest::V2(

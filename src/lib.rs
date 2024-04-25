@@ -43,7 +43,6 @@ mod schema {
     }
     pub mod slippy {
         pub mod error;
-        pub mod result;
         pub mod request;
         pub mod response;
     }

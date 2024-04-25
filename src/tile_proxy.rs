@@ -6,9 +6,13 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::virtual_host::VirtualHost;
 use crate::schema::handler::error::HandleError;
 use crate::schema::handler::result::HandleRequestResult;
-use crate::schema::slippy::request::{BodyVariant, Header, ServeTileRequest, SlippyRequest,};
+use crate::schema::http::response::HttpResponse;
+use crate::schema::slippy::request::{
+    BodyVariant, Header,
+    ServeTileRequest, SlippyRequest,
+};
 use crate::schema::slippy::error::{ReadError, WriteError,};
-use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
+use crate::schema::slippy::response::SlippyResponse;
 use crate::core::memory::PoolStored;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::io::interface::IOContext;
@@ -150,9 +154,9 @@ impl TileProxy {
         record: &mut request_rec,
     ) -> Result<c_int, HandleRequestError> {
         debug!(record.server, "TileServer::handle_request - start");
-        let (read_outcome, self2) = self.read_request(record);
-        let (handle_outcome, self3) = self2.call_handlers(record, &read_outcome);
-        let (write_result, _) = self3.write_response(record, &read_outcome, &handle_outcome);
+        let request = self.read_request(record)?;
+        let response = self.call_handlers(record, &request)?;
+        let write_result = self.write_response(record, &request, &response);
         let result: Result<c_int, HandleRequestError> = match write_result {
             Ok(response) => Ok(response.status_code.as_u16() as c_int),
             Err(write_err) => Err(
@@ -166,7 +170,7 @@ impl TileProxy {
     fn read_request(
         &mut self,
         record: &mut request_rec,
-    ) -> (ReadOutcome, &mut Self) {
+    ) -> Result<SlippyRequest, ReadError> {
         debug!(record.server, "TileServer::read_request - start");
         let (read, read_func_name) = SlippyInventory::read_request_func();
         let context = ReadContext {
@@ -175,66 +179,36 @@ impl TileProxy {
                 host: VirtualHost::find_or_allocate_new(record).unwrap(),
             }
         };
-        let request = match read_apache2_request(record) {
-            Ok(request) => request,
-            Err(err) => return (
-                ReadOutcome::Processed(
-                    Err(
-                        ReadError::Utf8(err)
-                    )
-                ),
-                self,
-            )
-        };
-        let read_outcome = read(&context, &request);
+        let request = read_apache2_request(record)?;
+        let read_result = read(&context, &request);
         for observer_iter in SlippyObserverInventory::read_observers(&mut self.telemetry_state).iter_mut() {
             debug!(context.host().record, "TileServer::read_request - calling observer {:p}", *observer_iter);
-            (*observer_iter).on_read(&context, &request, &read_outcome, read_func_name);
+            (*observer_iter).on_read(&context, &request, &read_result, read_func_name);
         }
         debug!(record.server, "TileServer::read_request - finish");
-        return (read_outcome, self);
+        return read_result;
     }
 
     fn call_handlers(
         &mut self,
         record: &mut request_rec,
-        read_outcome: &ReadOutcome,
-    ) -> (HandleRequestResult, &mut Self) {
+        request: &SlippyRequest,
+    ) -> Result<SlippyResponse, HandleError> {
         debug!(record.server, "TileServer::call_handlers - start");
         let before_timestamp = Utc::now();
-        let result = match read_outcome {
-            ReadOutcome::Ignored => HandleRequestResult {
-                before_timestamp,
-                after_timestamp: Utc::now(),
-                result: Err(HandleError::Placeholder),
+        let handle_result = match &(request.body) {
+            BodyVariant::DescribeLayer => {
+                self.call_description_handler(record, &request.header)
             },
-            ReadOutcome::Processed(result) => match result {
-                Ok(request) => {
-                    match &(request.body) {
-                        BodyVariant::DescribeLayer => {
-                            self.call_description_handler(record, &request.header)
-                        },
-                        BodyVariant::ReportStatistics => {
-                            self.call_statistics_handler(record, &request.header)
-                        },
-                        BodyVariant::ServeTile(body) => {
-                            self.call_tile_handler(record, &request.header, body)
-                        }
-                    }
-                },
-                Err(err) => {
-                    HandleRequestResult {
-                        before_timestamp,
-                        after_timestamp: Utc::now(),
-                        result: Err(
-                            HandleError::RequestNotRead((*err).clone())
-                        ),
-                    }
-                },
+            BodyVariant::ReportStatistics => {
+                self.call_statistics_handler(record, &request.header)
+            },
+            BodyVariant::ServeTile(body) => {
+                self.call_tile_handler(record, &request.header, body)
             }
         };
         debug!(record.server, "TileServer::call_handlers - finish");
-        return (result, self);
+        return handle_result.result;
     }
 
     fn call_description_handler(
@@ -323,9 +297,9 @@ impl TileProxy {
     fn write_response(
         &mut self,
         record: &mut request_rec,
-        read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
-    ) -> (WriteResponseResult, &mut Self) {
+        request: &SlippyRequest,
+        response: &SlippyResponse,
+    ) -> Result<HttpResponse, WriteError> {
         debug!(record.server, "TileServer::write_response - start");
         let (write, write_func_name) = SlippyInventory::write_response_func();
         // Work around the borrow checker below, but its necessary since request_rec from a foreign C framework
@@ -333,26 +307,18 @@ impl TileProxy {
         let writer: &mut dyn HttpResponseWriter = unsafe { write_record.as_mut().unwrap() };
         let context = WriteContext {
             host_context: HostContext::new(&self.config, record),
-            read_outcome,
+            request,
         };
-        let write_outcome = match &handle_result.result {
-            Ok(response) => {
-                let write_result = write(&context, &response, writer);
-                for observer_iter in SlippyObserverInventory::write_observers(&mut self.telemetry_state).iter_mut() {
-                    debug!(
-                        context.host().record,
-                        "TileServer::write_response - calling observer {:p}", *observer_iter
-                    );
-                    (*observer_iter).on_write(&context, response, writer, &write_result, write_func_name, &read_outcome, &handle_result);
-                }
-                write_result
-            }
-            Err(_) => Err(
-                WriteError::RequestNotHandled
-            ) // FIXME: propagate the HandleError properly
-        };
+        let write_result = write(&context, &response, writer);
+        for observer_iter in SlippyObserverInventory::write_observers(&mut self.telemetry_state).iter_mut() {
+            debug!(
+                context.host().record,
+                "TileServer::write_response - calling observer {:p}", *observer_iter
+            );
+            (*observer_iter).on_write(&context, response, writer, &write_result, write_func_name, request);
+        }
         debug!(record.server, "TileServer::write_response - finish");
-        return (write_outcome, self);
+        return write_result;
     }
 }
 
@@ -373,7 +339,6 @@ extern "C" fn drop_tile_server(server_void: *mut c_void) -> apr_status_t {
 mod tests {
     use super::*;
     use crate::core::identifier::generate_id;
-    use crate::schema::slippy::result::ReadOutcome;
     use crate::schema::slippy::request;
     use crate::schema::slippy::response;
     use crate::schema::tile::identity::LayerName;
@@ -421,8 +386,8 @@ mod tests {
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.into_raw();
-                let (outcome, _) = proxy.read_request(request);
-                outcome.expect_processed().unwrap();
+                let result = proxy.read_request(request);
+                result.expect("Unexpected request read error");
                 let actual_count = proxy.telemetry_state.read_counter().count;
                 assert_eq!(1, actual_count, "Read observer not called");
                 Ok(())
@@ -438,21 +403,16 @@ mod tests {
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.clone().into_raw();
-                let read_outcome = ReadOutcome::Processed(
-                    Ok(
-                        request::SlippyRequest {
-                            header: request::Header {
-                                layer: LayerName::new(),
-                                request_id: generate_id(),
-                                uri: uri.into_string()?,
-                                received_timestamp: Utc::now(),
-                            },
-                            body: request::BodyVariant::ReportStatistics,
-                        }
-                    )
-                );
-                let (handle_result, _) = proxy.call_handlers(request, &read_outcome);
-                handle_result.result?;
+                let slippy_request = request::SlippyRequest {
+                    header: request::Header {
+                        layer: LayerName::new(),
+                        request_id: generate_id(),
+                        uri: uri.into_string()?,
+                        received_timestamp: Utc::now(),
+                    },
+                    body: request::BodyVariant::ReportStatistics,
+                };
+                proxy.call_handlers(request, &slippy_request)?;
                 let actual_count = proxy.telemetry_state.handle_counter().count;
                 assert_eq!(1, actual_count, "Handle observer not called");
                 Ok(())
@@ -514,44 +474,35 @@ mod tests {
                 let proxy = TileProxy::new(server, module_config)?;
                 let uri = CString::new("/mod_tile_rs")?;
                 request.uri = uri.clone().into_raw();
-                let read_outcome = ReadOutcome::Processed(
-                    Ok(
-                        request::SlippyRequest {
-                            header: request::Header {
-                                layer: LayerName::new(),
-                                request_id: generate_id(),
-                                uri: uri.into_string()?,
-                                received_timestamp: Utc::now(),
-                            },
-                            body: request::BodyVariant::ReportStatistics,
-                        }
-                    )
-                );
-                let handle_result = HandleRequestResult {
-                    before_timestamp: Utc::now(),
-                    after_timestamp: Utc::now(),
-                    result: Ok(
-                        response::SlippyResponse {
-                            header: response::Header {
-                                mime_type: mime::APPLICATION_JSON.clone(),
-                            },
-                            body: response::BodyVariant::Description(
-                                response::Description {
-                                    tilejson: "2.0.0",
-                                    schema: "xyz",
-                                    name: String::new(),
-                                    description: String::new(),
-                                    attribution: String::new(),
-                                    minzoom: 0,
-                                    maxzoom: 1,
-                                    tiles: Vec::new(),
-                                }
-                            ),
+                let slippy_request = request::SlippyRequest {
+                    header: request::Header {
+                        layer: LayerName::new(),
+                        request_id: generate_id(),
+                        uri: uri.into_string()?,
+                        received_timestamp: Utc::now(),
+                    },
+                    body: request::BodyVariant::ReportStatistics,
+                };
+                let slippy_response = response::SlippyResponse {
+                    header: response::Header {
+                        mime_type: mime::APPLICATION_JSON.clone(),
+                        before_timestamp: Utc::now(),
+                        after_timestamp: Utc::now(),
+                    },
+                    body: response::BodyVariant::Description(
+                        response::Description {
+                            tilejson: "2.0.0",
+                            schema: "xyz",
+                            name: String::new(),
+                            description: String::new(),
+                            attribution: String::new(),
+                            minzoom: 0,
+                            maxzoom: 1,
+                            tiles: Vec::new(),
                         }
                     ),
                 };
-                let (result, _) = proxy.write_response(request, &read_outcome, &handle_result);
-                result.expect("Unexpected error");
+                proxy.write_response(request, &slippy_request, &slippy_response)?;
                 let actual_count = proxy.telemetry_state.write_counter().count;
                 assert_eq!(1, actual_count, "Write observer not called");
                 Ok(())

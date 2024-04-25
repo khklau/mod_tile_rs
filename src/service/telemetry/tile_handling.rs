@@ -1,10 +1,9 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
-use crate::schema::handler::result::HandleRequestResult;
+use crate::schema::http::response::HttpResponse;
+use crate::schema::slippy::error::WriteError;
 use crate::schema::slippy::request;
 use crate::schema::slippy::response;
-use crate::schema::slippy::result::WriteResponseResult;
-use crate::schema::slippy::result::ReadOutcome;
 use crate::schema::tile::age::TileAge;
 use crate::schema::tile::identity::LayerName;
 use crate::schema::tile::source::TileSource;
@@ -83,30 +82,21 @@ impl WriteResponseObserver for TileHandlingAnalysis {
     fn on_write(
         &mut self,
         context: &WriteContext,
-        _response: &response::SlippyResponse,
+        response: &response::SlippyResponse,
         _writer: &dyn HttpResponseWriter,
-        _write_result: &WriteResponseResult,
+        _write_result: &Result<HttpResponse, WriteError>,
         _write_func_name: &'static str,
-        read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        request: &request::SlippyRequest,
     ) -> () {
-        match &read_outcome {
-            ReadOutcome::Processed(read_result) => {
-                let handle_duration = handle_result.after_timestamp - handle_result.before_timestamp;
-                match (read_result, &handle_result.result) {
-                    (Ok(request), Ok(response)) => match &response.body {
-                        response::BodyVariant::Tile(response) => self.on_handled_tile(
-                            context,
-                            request,
-                            response,
-                            &handle_duration,
-                        ),
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            },
-            _ => ()
+        let handle_duration = response.header.after_timestamp - response.header.before_timestamp;
+        match &response.body {
+            response::BodyVariant::Tile(response) => self.on_handled_tile(
+                context,
+                request,
+                response,
+                &handle_duration,
+            ),
+            _ => (),
         }
     }
 }
@@ -240,10 +230,9 @@ pub mod test_utils {
             _context: &WriteContext,
             _response: &response::SlippyResponse,
             _writer: &dyn HttpResponseWriter,
-            _write_result: &WriteResponseResult,
+            _write_result: &Result<HttpResponse, WriteError>,
             _write_func_name: &'static str,
-            _read_outcome: &ReadOutcome,
-            _handle_result: &HandleRequestResult,
+            _request: &request::SlippyRequest,
         ) -> () {
         }
     }
@@ -277,33 +266,29 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let read_outcome = ReadOutcome::Processed(
-                Ok(
-                    request::SlippyRequest {
-                        header: request::Header {
-                            layer: LayerName::new(),
-                            request_id: generate_id(),
-                            uri: uri.into_string()?,
-                            received_timestamp: Utc::now(),
-                        },
-                        body: request::BodyVariant::ServeTile(
-                            request::ServeTileRequest::V3(
-                                request::ServeTileRequestV3 {
-                                    parameter: String::from("foo"),
-                                    x: 1,
-                                    y: 2,
-                                    z: 3,
-                                    extension: String::from("jpg"),
-                                    option: None,
-                                }
-                            )
-                        ),
-                    }
-                )
-            );
+            let slippy_request = request::SlippyRequest {
+                header: request::Header {
+                    layer: LayerName::new(),
+                    request_id: generate_id(),
+                    uri: uri.into_string()?,
+                    received_timestamp: Utc::now(),
+                },
+                body: request::BodyVariant::ServeTile(
+                    request::ServeTileRequest::V3(
+                        request::ServeTileRequestV3 {
+                            parameter: String::from("foo"),
+                            x: 1,
+                            y: 2,
+                            z: 3,
+                            extension: String::from("jpg"),
+                            option: None,
+                        }
+                    )
+                ),
+            };
             let context = WriteContext {
                 host_context: HostContext::new(&module_config, request),
-                read_outcome: &read_outcome,
+                request: &slippy_request,
             };
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
@@ -318,6 +303,8 @@ mod tests {
             let response = response::SlippyResponse {
                 header: response::Header {
                     mime_type: mime::APPLICATION_JSON.clone(),
+                    before_timestamp,
+                    after_timestamp,
                 },
                 body: response::BodyVariant::Tile(
                     response::TileResponse {
@@ -341,7 +328,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &slippy_request);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Cache, &TileAge::Old),
@@ -362,33 +349,29 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let read_outcome = ReadOutcome::Processed(
-                Ok(
-                    request::SlippyRequest {
-                        header: request::Header {
-                            layer: LayerName::new(),
-                            request_id: generate_id(),
-                            uri: uri.into_string()?,
-                            received_timestamp: Utc::now(),
-                        },
-                        body: request::BodyVariant::ServeTile(
-                            request::ServeTileRequest::V3(
-                                request::ServeTileRequestV3 {
-                                    parameter: String::from("foo"),
-                                    x: 1,
-                                    y: 2,
-                                    z: 3,
-                                    extension: String::from("jpg"),
-                                    option: None,
-                                }
-                            )
-                        ),
-                    }
-                )
-            );
+            let slippy_request = request::SlippyRequest {
+                header: request::Header {
+                    layer: LayerName::new(),
+                    request_id: generate_id(),
+                    uri: uri.into_string()?,
+                    received_timestamp: Utc::now(),
+                },
+                body: request::BodyVariant::ServeTile(
+                    request::ServeTileRequest::V3(
+                        request::ServeTileRequestV3 {
+                            parameter: String::from("foo"),
+                            x: 1,
+                            y: 2,
+                            z: 3,
+                            extension: String::from("jpg"),
+                            option: None,
+                        }
+                    )
+                ),
+            };
             let context = WriteContext {
                 host_context: HostContext::new(&module_config, request),
-                read_outcome: &read_outcome,
+                request: &slippy_request,
             };
             let before_timestamp = Utc::now();
             let after_timestamp = before_timestamp + Duration::seconds(2);
@@ -403,6 +386,8 @@ mod tests {
             let response = response::SlippyResponse {
                 header: response::Header {
                     mime_type: mime::APPLICATION_JSON.clone(),
+                    before_timestamp,
+                    after_timestamp,
                 },
                 body: response::BodyVariant::Tile(
                     response::TileResponse {
@@ -426,7 +411,7 @@ mod tests {
             );
             let mut analysis = TileHandlingAnalysis::new(&module_config)?;
             let writer = MockWriter::new();
-            analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
+            analysis.on_write(&context, &response, &writer, &write_result, "mock", &slippy_request);
             assert_eq!(
                 0,
                 analysis.count_handled_tile_by_source_and_age(&TileSource::Render, &TileAge::Old),
@@ -447,33 +432,29 @@ mod tests {
             let uri = CString::new("/mod_tile_rs")?;
             request.uri = uri.clone().into_raw();
             let module_config = ModuleConfig::new();
-            let read_outcome = ReadOutcome::Processed(
-                Ok(
-                    request::SlippyRequest {
-                        header: request::Header {
-                            layer: LayerName::new(),
-                            request_id: generate_id(),
-                            uri: uri.into_string()?,
-                            received_timestamp: Utc::now(),
-                        },
-                        body: request::BodyVariant::ServeTile(
-                            request::ServeTileRequest::V3(
-                                request::ServeTileRequestV3 {
-                                    parameter: String::from("foo"),
-                                    x: 1,
-                                    y: 2,
-                                    z: 3,
-                                    extension: String::from("jpg"),
-                                    option: None,
-                                }
-                            )
-                        ),
-                    }
-                )
-            );
+            let slippy_request = request::SlippyRequest {
+                header: request::Header {
+                    layer: LayerName::new(),
+                    request_id: generate_id(),
+                    uri: uri.into_string()?,
+                    received_timestamp: Utc::now(),
+                },
+                body: request::BodyVariant::ServeTile(
+                    request::ServeTileRequest::V3(
+                        request::ServeTileRequestV3 {
+                            parameter: String::from("foo"),
+                            x: 1,
+                            y: 2,
+                            z: 3,
+                            extension: String::from("jpg"),
+                            option: None,
+                        }
+                    )
+                ),
+            };
             let context = WriteContext {
                 host_context: HostContext::new(&module_config, request),
-                read_outcome: &read_outcome,
+                request: &slippy_request,
             };
             let write_result = Ok(
                 HttpResponse {
@@ -500,6 +481,8 @@ mod tests {
                     let response = response::SlippyResponse {
                         header: response::Header {
                             mime_type: mime::APPLICATION_JSON.clone(),
+                            before_timestamp,
+                            after_timestamp,
                         },
                         body: response::BodyVariant::Tile(
                             response::TileResponse {
@@ -515,8 +498,8 @@ mod tests {
                         result: Ok(response.clone()),
                     };
                     let writer = MockWriter::new();
-                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
-                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &read_outcome, &handle_result);
+                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &slippy_request);
+                    analysis.on_write(&context, &response, &writer, &write_result, "mock", &slippy_request);
                 }
             }
             for age in &all_ages {

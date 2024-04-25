@@ -2,9 +2,10 @@ use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::error::InvalidConfigError;
 use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::request::HttpRequest;
-use crate::schema::slippy::request::{Header, ServeTileRequest};
+use crate::schema::http::response::HttpResponse;
+use crate::schema::slippy::error::{ReadError, WriteError,};
+use crate::schema::slippy::request::{Header, ServeTileRequest, SlippyRequest,};
 use crate::schema::slippy::response::SlippyResponse;
-use crate::schema::slippy::result::{ReadOutcome, WriteResponseResult,};
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::adapter::slippy::interface::{
     ReadContext,
@@ -34,7 +35,7 @@ impl ReadRequestObserver for TransactionTrace {
         &mut self,
         _context: &ReadContext,
         _request: &HttpRequest,
-        _read_outcome: &ReadOutcome,
+        _read_result: &Result<SlippyRequest, ReadError>,
         _read_func_name: &'static str,
     ) -> () {
     }
@@ -77,10 +78,9 @@ impl WriteResponseObserver for TransactionTrace {
         _context: &WriteContext,
         _response: &SlippyResponse,
         _writer: &dyn HttpResponseWriter,
-        _write_result: &WriteResponseResult,
+        _write_result: &Result<HttpResponse, WriteError>,
         _write_func_name: &'static str,
-        _read_outcome: &ReadOutcome,
-        _handle_result: &HandleRequestResult,
+        _request: &SlippyRequest,
     ) -> () {
     }
 }

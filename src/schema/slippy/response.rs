@@ -3,6 +3,7 @@ use crate::schema::tile::age::TileAge;
 use crate::schema::tile::source::TileSource;
 use crate::schema::tile::tile_ref::TileRef;
 
+use chrono::{DateTime, Utc,};
 use mime::Mime;
 use serde::Serialize;
 
@@ -22,6 +23,8 @@ pub struct SlippyResponse {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Header {
     pub mime_type: Mime,
+    pub before_timestamp: DateTime<Utc>,
+    pub after_timestamp: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

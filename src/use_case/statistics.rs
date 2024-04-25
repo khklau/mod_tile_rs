@@ -52,13 +52,15 @@ impl StatisticsHandlerState {
     ) -> HandleRequestResult {
         let before_timestamp = Utc::now();
         let statistics = self.report(&context.services);
+        let after_timestamp = Utc::now();
         let response = response::SlippyResponse {
             header: response::Header {
                 mime_type: mime::TEXT_PLAIN.clone(),
+                before_timestamp,
+                after_timestamp,
             },
             body: response::BodyVariant::Statistics(statistics),
         };
-        let after_timestamp = Utc::now();
         return HandleRequestResult {
             before_timestamp,
             after_timestamp,
@@ -382,6 +384,8 @@ mod tests {
             let expected_response = response::SlippyResponse {
                 header: response::Header {
                     mime_type: mime::TEXT_PLAIN.clone(),
+                    before_timestamp: actual_response.header.before_timestamp, // Don't care
+                    after_timestamp: actual_response.header.after_timestamp, // Don't care
                 },
                 body: response::BodyVariant::Statistics(expected_data),
             };

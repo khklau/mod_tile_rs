@@ -50,13 +50,15 @@ impl DescriptionHandlerState {
         let before_timestamp = Utc::now();
         let layer = &header.layer;
         let description = describe(context.module_config(), layer);
+        let after_timestamp = Utc::now();
         let response = response::SlippyResponse {
             header: response::Header {
                 mime_type: mime::APPLICATION_JSON.clone(),
+                before_timestamp,
+                after_timestamp,
             },
             body: response::BodyVariant::Description(description),
         };
-        let after_timestamp = Utc::now();
         return HandleRequestResult {
             before_timestamp,
             after_timestamp,
@@ -140,6 +142,8 @@ mod tests {
             let expected_response = response::SlippyResponse {
                 header: response::Header {
                     mime_type: mime::APPLICATION_JSON.clone(),
+                    before_timestamp: actual_response.header.before_timestamp, // Don't care
+                    after_timestamp: actual_response.header.after_timestamp, // Don't care
                 },
                 body: response::BodyVariant::Description(expected_data),
             };

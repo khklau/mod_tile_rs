@@ -3,7 +3,6 @@ use crate::schema::slippy::error::WriteError;
 use crate::schema::slippy::response::{
     BodyVariant, Header, Description, SlippyResponse, Statistics, TileResponse,
 };
-use crate::schema::slippy::result::WriteResponseResult;
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::adapter::slippy::interface::WriteContext;
 
@@ -19,7 +18,7 @@ impl SlippyResponseWriter {
         context: &WriteContext,
         response: &SlippyResponse,
         writer: &mut dyn HttpResponseWriter,
-    ) -> WriteResponseResult {
+    ) -> Result<HttpResponse, WriteError> {
         match &response.body {
             BodyVariant::Description(description) => {
                 DescriptionWriter::write(context, &response.header, description, writer)
@@ -41,7 +40,7 @@ impl DescriptionWriter {
         header: &Header,
         description: &Description,
         writer: &mut dyn HttpResponseWriter,
-    ) -> WriteResponseResult {
+    ) -> Result<HttpResponse, WriteError> {
         debug!(context.host().record, "DescriptionWriter::write - start");
         let mut http_headers = HeaderMap::new();
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
@@ -68,10 +67,7 @@ impl DescriptionWriter {
         writer.append_http_header(&cache_key, &cache_value).unwrap();
         http_headers.insert(cache_key, cache_value);
 
-        let request = context.read_outcome.expect_processed_ref().as_ref().expect(
-            "Attempting to write response when read request failed"
-        );
-        let expiry_timestamp = request.header.received_timestamp + max_age_duration;
+        let expiry_timestamp = context.request.header.received_timestamp + max_age_duration;
         let expiry_string = expiry_timestamp.to_rfc2822();
         let expiry_key = EXPIRES.clone();
         let expiry_value = HeaderValue::from_str(expiry_string.as_str()).unwrap();
@@ -100,7 +96,7 @@ impl StatisticsWriter {
         header: &Header,
         statistics: &Statistics,
         writer: &mut dyn HttpResponseWriter,
-    ) -> WriteResponseResult {
+    ) -> Result<HttpResponse, WriteError> {
         debug!(context.host().record, "StatisticsWriter::write - start");
         let mut http_headers = HeaderMap::new();
         let text = match (header.mime_type.type_(), header.mime_type.subtype()) {
@@ -140,7 +136,7 @@ impl TileWriter {
         header: &Header,
         tile: &TileResponse,
         writer: &mut dyn HttpResponseWriter,
-    ) -> WriteResponseResult {
+    ) -> Result<HttpResponse, WriteError> {
         debug!(context.host().record, "TileWriter::write - start");
         let result = if let (mime::IMAGE, mime::PNG) = (header.mime_type.type_(), header.mime_type.subtype()) {
             let mut http_headers = HeaderMap::new();

@@ -1,9 +1,10 @@
 use crate::schema::apache2::config::ModuleConfig;
 use crate::schema::apache2::virtual_host::VirtualHost;
-use crate::schema::handler::result::HandleRequestResult;
 use crate::schema::http::request::HttpRequest;
+use crate::schema::http::response::HttpResponse;
+use crate::schema::slippy::error::{ReadError, WriteError,};
+use crate::schema::slippy::request::SlippyRequest;
 use crate::schema::slippy::response::SlippyResponse;
-use crate::schema::slippy::result::{ ReadOutcome, WriteResponseResult, };
 use crate::io::communication::interface::HttpResponseWriter;
 use crate::framework::apache2::context::HostContext;
 
@@ -22,11 +23,11 @@ impl<'c> ReadContext<'c> {
     }
 }
 
-pub type ReadRequestFunc = fn(&ReadContext, &HttpRequest) -> ReadOutcome;
+pub type ReadRequestFunc = fn(&ReadContext, &HttpRequest) -> Result<SlippyRequest, ReadError>;
 
 pub struct WriteContext<'c> {
     pub host_context: HostContext<'c>,
-    pub read_outcome: &'c ReadOutcome,
+    pub request: &'c SlippyRequest,
 }
 
 impl<'c> WriteContext<'c> {
@@ -39,14 +40,14 @@ impl<'c> WriteContext<'c> {
     }
 }
 
-pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> WriteResponseResult;
+pub type WriteResponseFunc = fn(&WriteContext, &SlippyResponse, &mut dyn HttpResponseWriter) -> Result<HttpResponse, WriteError>;
 
 pub trait ReadRequestObserver {
     fn on_read(
         &mut self,
         context: &ReadContext,
         request: &HttpRequest,
-        read_outcome: &ReadOutcome,
+        read_outcome: &Result<SlippyRequest, ReadError>,
         read_func_name: &'static str,
     ) -> ();
 }
@@ -57,10 +58,9 @@ pub trait WriteResponseObserver {
         context: &WriteContext,
         response: &SlippyResponse,
         writer: &dyn HttpResponseWriter,
-        write_result: &WriteResponseResult,
+        write_result: &Result<HttpResponse, WriteError>,
         write_func_name: &'static str,
-        read_outcome: &ReadOutcome,
-        handle_result: &HandleRequestResult,
+        request: &SlippyRequest,
     ) -> ();
 }
 
@@ -82,7 +82,7 @@ pub mod test_utils {
             &mut self,
             _context: &ReadContext,
             _request: &HttpRequest,
-            _read_outcome: &ReadOutcome,
+            _read_outcome: &Result<SlippyRequest, ReadError>,
             _read_func_name: &'static str,
         ) -> () {
         }
@@ -102,10 +102,9 @@ pub mod test_utils {
             _context: &WriteContext,
             _response: &SlippyResponse,
             _writer: &dyn HttpResponseWriter,
-            _write_result: &WriteResponseResult,
+            _write_result: &Result<HttpResponse, WriteError>,
             _write_func_name: &'static str,
-            _read_outcome: &ReadOutcome,
-            _handle_result: &HandleRequestResult,
+            _request: &SlippyRequest,
         ) -> () {
         }
     }

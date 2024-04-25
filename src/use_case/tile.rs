@@ -122,9 +122,12 @@ impl TileHandlerState {
                 result: Err(HandleError::TileRead(other)),
             },
         };
+        let after_timestamp = Utc::now();
         let response = response::SlippyResponse {
             header: response::Header {
                 mime_type: tile_ref.media_type.clone(),
+                before_timestamp,
+                after_timestamp,
             },
             body: response::BodyVariant::Tile(
                 response::TileResponse {
@@ -134,7 +137,6 @@ impl TileHandlerState {
                 }
             ),
         };
-        let after_timestamp = Utc::now();
         return HandleRequestResult {
             before_timestamp,
             after_timestamp,
