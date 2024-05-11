@@ -20,12 +20,14 @@ fi
 
 # Create a PostGIS container loaded with OSM data
 if [ -z "$(docker image ls | grep '^aus-osm-postgis' | grep '13-3.4')" ]; then
+	docker container stop osm-data-ingestion
+	docker container rm osm-data-ingestion
 	docker container stop osm-postgis
 	docker container rm osm-postgis
 	docker container run --name osm-postgis --network=osm-local --detach -p 5432:5432 osm-postgis:13-3.4 \
 		&& sleep 10 \
 		&& docker container run --name osm-data-ingestion --network=osm-local osm-data-ingestion:1.4.1 \
-		&& docker container commit $(docker container ps --all | grep osm-postgis:13-3.4 | awk '{print $1}') aus-osm-postgis:13-3.4 \
+		&& docker container commit $(docker container ps --all | grep osm-postgis:13-3.4 | awk '{print $1}') aus-osm-postgis:13-3.4
 	docker container stop osm-postgis
 	docker container rm osm-postgis
 fi

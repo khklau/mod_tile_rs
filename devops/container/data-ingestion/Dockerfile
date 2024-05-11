@@ -12,6 +12,7 @@ RUN apt-get update && \
         unattended-upgrades \
         git=1:2.30.2-1+deb11u2 \
         osm2pgsql=1.4.1+ds-2 \
+        git \
         wget
 # Stay up to date with security updates
 RUN unattended-upgrade
@@ -19,6 +20,10 @@ RUN unattended-upgrade
 # Setup user
 RUN adduser --system --group ${PGUSER}
 USER ${PGUSER}
+
+# Download style and transform script
+RUN git clone https://github.com/gravitystorm/openstreetmap-carto.git /home/${PGUSER}/osm-carto
+ENV OSM_CARTO_DIR=/home/${PGUSER}/osm-carto
 
 # Download an OSM data set
 RUN mkdir -p /home/${PGUSER}/osm-data
