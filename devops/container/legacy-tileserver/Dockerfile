@@ -1,8 +1,10 @@
 FROM httpd:2.4.57-bullseye
 
+ARG HTTPDUSER=www-data
 ARG PGDATABASE=osm
 ARG PGUSER=osm
 ARG PGPASSWORD=osm
+ENV HTTPDUSER=${HTTPDUSER}
 ENV PGDATABASE=${PGDATABASE}
 ENV PGUSER=${PGUSER}
 ENV PGPASSWORD=${PGPASSWORD}
@@ -30,18 +32,19 @@ RUN unattended-upgrade
 RUN adduser --system --group ${PGUSER}
 
 # Setup directories
-RUN mkdir -p /etc/systemd/system/renderd.service.d/
+RUN chown -R ${HTTPDUSER} /usr/local/apache2
+#RUN mkdir -p /etc/systemd/system/renderd.service.d/
 RUN mkdir -p /run/renderd
 RUN mkdir -p /var/cache/renderd/tiles
-RUN chown -R osm /run/renderd
-RUN chown -R osm /var/cache/renderd/tiles
+RUN chown -R ${PGUSER} /run/renderd
+RUN chown -R ${PGUSER} /var/cache/renderd/tiles
 
 # Add the configuration files
 COPY renderd.conf /etc/renderd.conf
 COPY style.xml /etc/renderd-style.xml
 COPY httpd.conf /usr/local/apache2/conf/httpd.conf
 COPY tile.conf /etc/apache2/mods-available/tile.conf
-COPY custom.conf /etc/systemd/system/renderd.service.d/custom.conf
+#COPY custom.conf /etc/systemd/system/renderd.service.d/custom.conf
 
 # This is actually the default tile.conf file, removing to avoid confusing
 # it with /etc/renderd.conf which is a different configuration file
@@ -50,6 +53,5 @@ COPY custom.conf /etc/systemd/system/renderd.service.d/custom.conf
 # Enable mod_tile
 RUN a2enmod tile
 
-# Run the renderd & webserver
-CMD systemctl daemon-reload \
-    && systemctl restart renderd apache2
+# Execute https as non-root user
+USER ${HTTPDUSER}
