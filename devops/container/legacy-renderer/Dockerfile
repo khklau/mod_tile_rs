@@ -1,17 +1,19 @@
 FROM httpd:2.4.57-bullseye
 
-ARG HTTPD_USER=www-data
 ARG PGDATABASE=osm
 ARG PGUSER=osm
 ARG PGPASSWORD=osm
-ARG RENDER_GROUP_NAME=render
+ARG RENDER_GROUP=render
 ARG RENDER_GROUP_ID=1111
+ARG RENDER_BASE_DIR=/shared
 ENV HTTPD_USER=${HTTPD_USER}
 ENV PGDATABASE=${PGDATABASE}
 ENV PGUSER=${PGUSER}
 ENV PGPASSWORD=${PGPASSWORD}
-ENV RENDER_GROUP_NAME=${RENDER_GROUP_NAME}
+ENV RENDER_USER=${PGUSER}
+ENV RENDER_GROUP=${RENDER_GROUP}
 ENV RENDER_GROUP_ID=${RENDER_GROUP_ID}
+ENV RENDER_BASE_DIR=${RENDER_BASE_DIR}
 
 # Install the dependencies
 RUN apt-get update && \
@@ -29,21 +31,18 @@ RUN apt-get update && \
 RUN unattended-upgrade
 
 # Setup user and group accounts
-RUN adduser --system --group ${PGUSER}
-RUN addgroup --gid ${RENDER_GROUP_ID} ${RENDER_GROUP_NAME}
-RUN usermod --append --groups ${RENDER_GROUP_NAME} ${PGUSER}
+RUN adduser --system --group ${RENDER_USER}
+RUN addgroup --gid ${RENDER_GROUP_ID} ${RENDER_GROUP}
+RUN usermod --append --groups ${RENDER_GROUP} ${RENDER_USER}
 
 # Add the configuration files
 COPY renderd.conf /etc/renderd.conf
-COPY style.xml /etc/renderd-style.xml
+COPY style.xml /etc/style.xml
+COPY entrypoint.sh /entrypoint.sh
+COPY exec_renderd.sh /exec_renderd.sh
 
 # Setup directories
-RUN mkdir -p /shared/run/renderd
-RUN mkdir -p /shared/cache/renderd/tiles
-RUN chown -R ${PGUSER}:${RENDER_GROUP_NAME} /shared/run/renderd
-RUN chown -R ${PGUSER}:${RENDER_GROUP_NAME} /shared/cache/renderd/tiles
+VOLUME ${RENDER_BASE_DIR}
 
-# Execute https as non-root user
-USER ${PGUSER}
-
-CMD /usr/bin/renderd --foreground --config /etc/renderd.conf
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/exec_renderd.sh"]
