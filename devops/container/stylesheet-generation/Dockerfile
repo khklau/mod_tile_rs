@@ -1,6 +1,6 @@
 FROM httpd:2.4.57-bullseye
 
-ARG PGDATABASE=osm
+ARG PGDATABASE=gis
 ARG PGUSER=osm
 ARG PGPASSWORD=osm
 ENV PGDATABASE=${PGDATABASE}
@@ -39,7 +39,6 @@ RUN git clone https://github.com/gravitystorm/openstreetmap-carto.git /home/${PG
 ENV OSM_CARTO_DIR=/home/${PGUSER}/osm-carto
 WORKDIR ${OSM_CARTO_DIR}
 RUN git checkout v5.3.1
-RUN cat project.mml | sed "s/dbname: \"gis\"/dbname: \"${PGDATABASE}\"/g" > project.osm.mml
 
 # Generate the stylesheet
 CMD python3 scripts/get-external-data.py \
@@ -49,4 +48,4 @@ CMD python3 scripts/get-external-data.py \
     --username "${PGUSER}" \
     --password "${PGPASSWORD}" \
     --verbose \
-    && carto --output mapnik --file style.xml project.osm.mml
+    && carto --output mapnik --file style.xml project.mml
