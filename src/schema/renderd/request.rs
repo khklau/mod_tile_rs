@@ -6,6 +6,7 @@ use crate::binding::renderd_protocol::{
     protoCmd_cmdRenderLow,
     protoCmd_cmdRenderPrio,
     protocol,
+    protocol_v2,
 };
 use crate::schema::tile::identity::{LayerName, TileIdentity};
 use crate::schema::renderd::error::InvalidParameterError;
@@ -22,6 +23,10 @@ pub const MAX_MIME_TYPE_LEN: usize = 40;
 pub const MAX_OPTIONS_LEN: usize = 40;
 
 pub enum RenderPriority {
+    Dirty = 0,
+    Low = 1,
+    Standard = 2,
+    High = 3,
 }
 
 pub enum RenderRequestVersion {
@@ -35,6 +40,11 @@ pub enum RenderRequestCommand {
     RenderPriority = protoCmd_cmdRenderPrio as isize,
     RenderBulk = protoCmd_cmdRenderBulk as isize,
     RenderLow = protoCmd_cmdRenderLow as isize,
+}
+
+pub enum RenderRequest {
+    V2(protocol_v2),
+    V3(protocol),
 }
 
 pub trait Constructable {

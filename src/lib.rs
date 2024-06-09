@@ -87,6 +87,10 @@ mod adapter {
     pub mod http {
         pub mod reader;
     }
+    pub mod render_proto {
+        pub mod interface;
+        pub mod slippy;
+    }
     pub mod slippy {
         pub mod interface;
         pub mod inventory;
